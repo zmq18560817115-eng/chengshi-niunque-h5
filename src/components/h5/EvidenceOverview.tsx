@@ -1,0 +1,1 @@
+export function EvidenceOverview() { return <section className="section" data-component="EvidenceOverview" style={{ textAlign: "center", minHeight: "46svh" }}><p className="eyebrow">Evidence overview</p><h2 className="display" style={{ fontSize: "2.15rem" }}>为宝贝把关<br />看清 3 层证据</h2><p className="placeholder-note">过渡插画与下滑引导待设计确认</p></section>; }

@@ -1,0 +1,1 @@
+export default function LoginPage(){return <main style={{maxWidth:"28rem",margin:"10vh auto",padding:"2rem"}}><p className="eyebrow">Administration</p><h1 className="display" style={{fontSize:"2rem"}}>管理员登录</h1><p>登录能力将在后续阶段实现。</p><div className="placeholder-note">账号、密码、会话与找回策略待确认</div></main>}

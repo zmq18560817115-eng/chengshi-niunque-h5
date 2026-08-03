@@ -1,0 +1,1 @@
+export function PageFooter() { return <footer className="section" data-component="PageFooter" style={{ textAlign:"center", minHeight:"16rem", background:"var(--color-yellow)" }}><strong>诚实营养 · 安心成长</strong><p className="placeholder-note">底部收尾插画与合规信息待设计确认</p></footer>; }
