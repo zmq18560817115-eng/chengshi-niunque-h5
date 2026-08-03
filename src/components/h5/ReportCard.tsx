@@ -1,2 +1,13 @@
+import type { PublicReportCard } from "@/server/services/public-content-service";
 import { ReportViewer } from "./ReportViewer";
-export function ReportCard() { return <article data-component="ReportCard" style={{ padding: "1rem", background: "var(--color-paper)", borderRadius: "var(--radius-md)" }}><strong>报告资料卡片</strong><p style={{ color: "var(--color-muted)" }}>标题、说明、更新时间与资料数量占位。</p><button type="button" disabled style={{ padding: ".75rem 1rem", border: 0, borderRadius: "999px", background: "var(--color-ink)", color: "white" }}>查看报告（占位）</button><ReportViewer /></article>; }
+
+export function ReportCard({ card }: { card: PublicReportCard }) {
+  return (
+    <article data-component="ReportCard" className="report-card">
+      <h3>{card.title}</h3>
+      {card.description && <p>{card.description}</p>}
+      <ReportViewer assets={card.assets} />
+      {card.footerNote && <small>{card.footerNote}</small>}
+    </article>
+  );
+}

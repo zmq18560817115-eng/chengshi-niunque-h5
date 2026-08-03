@@ -1,2 +1,12 @@
 import { NextResponse } from "next/server";
-export async function GET(){return NextResponse.json({status:"ok",service:"honest-nutri-report-h5"},{status:200});}
+import { getHealthStatus } from "@/server/services/health-service";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const result = await getHealthStatus();
+  return NextResponse.json(result.body, {
+    status: result.healthy ? 200 : 503,
+    headers: { "Cache-Control": "no-store" },
+  });
+}

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.9.0",
-  "engines": { "node": ">=20.9.0" },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,9 +17,13 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate"
+    "prisma:seed": "node prisma/seed.mjs",
+    "prisma:validate": "prisma validate",
+    "storage:bootstrap": "tsx --env-file=.env scripts/bootstrap-storage.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1101.0",
+    "@aws-sdk/s3-request-presigner": "^3.1101.0",
     "@prisma/client": "6.14.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
@@ -26,7 +32,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@playwright/test": "^1.55.0",
-    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.0",
@@ -39,6 +45,7 @@
     "postcss": "^8.5.6",
     "prisma": "6.14.0",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
     "yaml": "^2.8.1"

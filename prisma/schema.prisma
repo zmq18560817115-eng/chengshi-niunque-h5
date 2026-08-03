@@ -32,129 +32,150 @@ enum PublishStatus {
 }
 
 model AdminUser {
-  id String @id @default(cuid())
-  email String @unique
-  displayName String
-  passwordHash String
-  status AdminStatus @default(ACTIVE)
-  lastLoginAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  modulesCreated InformationModule[] @relation("ModuleCreator")
-  modulesUpdated InformationModule[] @relation("ModuleUpdater")
-  cardsCreated ReportCard[] @relation("CardCreator")
-  cardsUpdated ReportCard[] @relation("CardUpdater")
-  assetsUploaded ReportAsset[] @relation("AssetUploader")
-  publications PublishVersion[] @relation("Publisher")
-  auditLogs AuditLog[] @relation("AuditOperator")
-  settingsCreated SiteSetting[] @relation("SettingCreator")
-  settingsUpdated SiteSetting[] @relation("SettingUpdater")
+  id              String              @id @default(cuid())
+  email           String              @unique
+  displayName     String
+  passwordHash    String
+  status          AdminStatus         @default(ACTIVE)
+  lastLoginAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  modulesCreated  InformationModule[] @relation("ModuleCreator")
+  modulesUpdated  InformationModule[] @relation("ModuleUpdater")
+  cardsCreated    ReportCard[]        @relation("CardCreator")
+  cardsUpdated    ReportCard[]        @relation("CardUpdater")
+  assetsCreated   ReportAsset[]       @relation("AssetCreator")
+  assetsUpdated   ReportAsset[]       @relation("AssetUpdater")
+  publications    PublishVersion[]    @relation("Publisher")
+  auditLogs       AuditLog[]          @relation("AuditOperator")
+  settingsCreated SiteSetting[]       @relation("SettingCreator")
+  settingsUpdated SiteSetting[]       @relation("SettingUpdater")
 }
 
 model InformationModule {
-  id String @id @default(cuid())
-  slug String @unique
-  title String
-  summary String?
-  sortOrder Int @default(0)
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  description   String?
+  sortOrder     Int           @default(0)
   contentStatus ContentStatus @default(DRAFT)
-  isOnline Boolean @default(false)
-  publishedAt DateTime?
-  offlineAt DateTime?
-  createdById String
-  updatedById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy AdminUser @relation("ModuleCreator", fields: [createdById], references: [id])
-  updatedBy AdminUser @relation("ModuleUpdater", fields: [updatedById], references: [id])
-  cards ReportCard[]
-  @@index([contentStatus, isOnline, sortOrder])
+  isOnline      Boolean       @default(false)
+  publishedAt   DateTime?
+  offlineAt     DateTime?
+  deletedAt     DateTime?
+  createdById   String
+  updatedById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdBy     AdminUser     @relation("ModuleCreator", fields: [createdById], references: [id])
+  updatedBy     AdminUser     @relation("ModuleUpdater", fields: [updatedById], references: [id])
+  cards         ReportCard[]
+
+  @@index([contentStatus, isOnline, deletedAt, sortOrder])
 }
 
 model ReportCard {
-  id String @id @default(cuid())
-  moduleId String
-  title String
-  summary String?
-  buttonText String @default("查看报告")
-  footerNote String?
-  sortOrder Int @default(0)
-  contentStatus ContentStatus @default(DRAFT)
-  isOnline Boolean @default(false)
-  publishedAt DateTime?
-  offlineAt DateTime?
-  createdById String
-  updatedById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  module InformationModule @relation(fields: [moduleId], references: [id], onDelete: Restrict)
-  createdBy AdminUser @relation("CardCreator", fields: [createdById], references: [id])
-  updatedBy AdminUser @relation("CardUpdater", fields: [updatedById], references: [id])
-  assets ReportAsset[]
-  @@index([moduleId, contentStatus, isOnline, sortOrder])
+  id            String            @id @default(cuid())
+  moduleId      String
+  title         String
+  description   String?
+  buttonText    String            @default("查看资料")
+  footerNote    String?
+  sortOrder     Int               @default(0)
+  contentStatus ContentStatus     @default(DRAFT)
+  isOnline      Boolean           @default(false)
+  publishedAt   DateTime?
+  offlineAt     DateTime?
+  deletedAt     DateTime?
+  createdById   String
+  updatedById   String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  module        InformationModule @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  createdBy     AdminUser         @relation("CardCreator", fields: [createdById], references: [id])
+  updatedBy     AdminUser         @relation("CardUpdater", fields: [updatedById], references: [id])
+  assets        ReportAsset[]
+
+  @@index([moduleId, contentStatus, isOnline, deletedAt, sortOrder])
 }
 
 model ReportAsset {
-  id String @id @default(cuid())
-  reportCardId String
-  title String
-  assetType AssetType
-  storageKey String?
-  externalUrl String?
-  mimeType String?
-  byteSize BigInt?
-  sortOrder Int @default(0)
-  isOnline Boolean @default(false)
-  uploadedById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reportCard ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Restrict)
-  uploadedBy AdminUser @relation("AssetUploader", fields: [uploadedById], references: [id])
-  @@index([reportCardId, isOnline, sortOrder])
+  id            String        @id @default(cuid())
+  reportCardId  String
+  title         String
+  description   String?
+  assetType     AssetType
+  storageKey    String?
+  externalUrl   String?
+  mimeType      String?
+  byteSize      BigInt?
+  sortOrder     Int           @default(0)
+  contentStatus ContentStatus @default(DRAFT)
+  isOnline      Boolean       @default(false)
+  publishedAt   DateTime?
+  offlineAt     DateTime?
+  deletedAt     DateTime?
+  createdById   String
+  updatedById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  reportCard    ReportCard    @relation(fields: [reportCardId], references: [id], onDelete: Restrict)
+  createdBy     AdminUser     @relation("AssetCreator", fields: [createdById], references: [id])
+  updatedBy     AdminUser     @relation("AssetUpdater", fields: [updatedById], references: [id])
+
+  @@index([reportCardId, contentStatus, isOnline, deletedAt, sortOrder])
 }
 
 model PublishVersion {
-  id String @id @default(cuid())
-  versionNumber Int @unique
-  status PublishStatus @default(DRAFT)
-  snapshot Json
-  note String?
-  publishedAt DateTime?
-  publishedById String
-  rollbackFromId String?
-  createdAt DateTime @default(now())
-  publishedBy AdminUser @relation("Publisher", fields: [publishedById], references: [id])
-  rollbackFrom PublishVersion? @relation("VersionRollback", fields: [rollbackFromId], references: [id], onDelete: SetNull)
-  rollbacks PublishVersion[] @relation("VersionRollback")
+  id              String          @id @default(cuid())
+  versionNumber   Int             @unique
+  status          PublishStatus   @default(DRAFT)
+  snapshot        Json
+  note            String?
+  publishedAt     DateTime?
+  publishedById   String
+  rollbackFromId  String?
+  createdAt       DateTime        @default(now())
+  publishedBy     AdminUser       @relation("Publisher", fields: [publishedById], references: [id])
+  rollbackFrom    PublishVersion? @relation("VersionRollback", fields: [rollbackFromId], references: [id], onDelete: SetNull)
+  rollbacks       PublishVersion[] @relation("VersionRollback")
 }
 
 model AuditLog {
-  id String @id @default(cuid())
-  operatorId String
-  action String
-  targetType String
-  targetId String?
+  id               String    @id @default(cuid())
+  operatorId       String
+  action           String
+  targetType       String
+  targetId         String?
   publishVersionId String?
-  detail Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
-  operator AdminUser @relation("AuditOperator", fields: [operatorId], references: [id])
+  detail           Json?
+  ipAddress        String?
+  createdAt        DateTime  @default(now())
+  operator         AdminUser @relation("AuditOperator", fields: [operatorId], references: [id])
+
   @@index([targetType, targetId, createdAt])
   @@index([operatorId, createdAt])
 }
 
 model SiteSetting {
-  id String @id @default(cuid())
-  key String @unique
-  value Json
+  id            String        @id @default(cuid())
+  key           String        @unique
+  name          String
+  description   String?
+  value         Json
+  sortOrder     Int           @default(0)
   contentStatus ContentStatus @default(DRAFT)
-  isOnline Boolean @default(false)
-  publishedAt DateTime?
-  offlineAt DateTime?
-  createdById String
-  updatedById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy AdminUser @relation("SettingCreator", fields: [createdById], references: [id])
-  updatedBy AdminUser @relation("SettingUpdater", fields: [updatedById], references: [id])
+  isOnline      Boolean       @default(false)
+  publishedAt   DateTime?
+  offlineAt     DateTime?
+  deletedAt     DateTime?
+  createdById   String
+  updatedById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdBy     AdminUser     @relation("SettingCreator", fields: [createdById], references: [id])
+  updatedBy     AdminUser     @relation("SettingUpdater", fields: [updatedById], references: [id])
+
+  @@index([contentStatus, isOnline, deletedAt, sortOrder])
 }

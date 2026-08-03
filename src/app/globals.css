@@ -35,3 +35,15 @@ button, a { font: inherit; }
 .eyebrow { margin: 0 0 var(--space-2); color: var(--color-muted); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; }
 .display { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.08; }
 .placeholder-note { margin-top: var(--space-6); padding: var(--space-3) var(--space-4); border: 1px dashed var(--color-border); border-radius: var(--radius-sm); color: var(--color-muted); font-size: .8rem; background: rgb(255 250 240 / .65); }
+.module-state { min-height: 10rem; color: var(--color-muted); }
+.information-module { min-height: 12rem; }
+.module-trigger { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0; border: 0; color: inherit; text-align: left; background: transparent; cursor: pointer; }
+.module-title { font-size: 1.8rem; }
+.module-description { margin: var(--space-3) 0 0; color: var(--color-ink); }
+.module-detail { display: grid; gap: var(--space-4); margin-top: var(--space-6); }
+.report-card { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-paper); box-shadow: var(--shadow-paper); }
+.report-card h3 { margin: 0; }
+.report-card p { color: var(--color-muted); }
+.asset-list { display: grid; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.asset-list a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); text-decoration: none; }
+.asset-list small { color: var(--color-muted); }

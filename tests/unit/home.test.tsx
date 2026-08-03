@@ -1,3 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import HomePage from "@/app/page";
-describe("H5 placeholder",()=>{it("renders the evidence structure",()=>{render(<HomePage />);expect(screen.getByRole("heading",{name:/诚实/})).toBeInTheDocument();expect(screen.getByText("检测项目")).toBeInTheDocument();expect(screen.getByText("复核保障")).toBeInTheDocument();expect(screen.getByText("生产溯源")).toBeInTheDocument();expect(screen.getByText("品牌初心")).toBeInTheDocument();});});
+
+describe("H5 public content states", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("renders the loading state while public content is pending", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)));
+    render(<HomePage />);
+    expect(screen.getByText("正在加载公开资料…")).toBeInTheDocument();
+  });
+
+  it("renders an error state when public content fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    render(<HomePage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("公开资料暂时无法加载");
+  });
+});
