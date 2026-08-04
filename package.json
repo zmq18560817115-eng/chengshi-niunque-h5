@@ -19,7 +19,8 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "node prisma/seed.mjs",
     "prisma:validate": "prisma validate",
-    "storage:bootstrap": "tsx --env-file=.env scripts/bootstrap-storage.ts"
+    "storage:bootstrap": "tsx --env-file=.env scripts/bootstrap-storage.ts",
+    "admin:seed": "tsx --env-file=.env scripts/seed-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",

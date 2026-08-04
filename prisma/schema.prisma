@@ -24,6 +24,11 @@ enum AssetType {
   EXTERNAL_LINK
 }
 
+enum AssetOpenMode {
+  SAME_TAB
+  NEW_TAB
+}
+
 enum PublishStatus {
   DRAFT
   PUBLISHED
@@ -51,6 +56,34 @@ model AdminUser {
   auditLogs       AuditLog[]          @relation("AuditOperator")
   settingsCreated SiteSetting[]       @relation("SettingCreator")
   settingsUpdated SiteSetting[]       @relation("SettingUpdater")
+  sessions        AdminSession[]
+  loginAttempts   AdminLoginAttempt[]
+}
+
+model AdminSession {
+  id         String    @id @default(cuid())
+  adminId    String
+  tokenDigest String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  admin      AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, revokedAt, expiresAt])
+}
+
+model AdminLoginAttempt {
+  id             String     @id @default(cuid())
+  adminId        String?
+  identifierHash String
+  ipHash         String?
+  success        Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  admin          AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([identifierHash, success, createdAt])
+  @@index([ipHash, success, createdAt])
 }
 
 model InformationModule {
@@ -106,6 +139,7 @@ model ReportAsset {
   title         String
   description   String?
   assetType     AssetType
+  openMode      AssetOpenMode @default(SAME_TAB)
   storageKey    String?
   externalUrl   String?
   mimeType      String?

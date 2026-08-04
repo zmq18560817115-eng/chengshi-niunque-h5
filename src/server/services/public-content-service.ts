@@ -70,7 +70,7 @@ export class PublicContentService {
             description: asset.description,
             type: asset.assetType,
             href: assetHref(asset),
-            openMode: asset.assetType === "EXTERNAL_LINK" ? "new_tab" : "same_tab",
+            openMode: asset.openMode === "NEW_TAB" ? "new_tab" : "same_tab",
           })),
         })),
       })),

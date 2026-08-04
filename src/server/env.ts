@@ -34,3 +34,17 @@ export function getStorageConfig(): StorageConfig {
     forcePathStyle: forcePathStyle === "true",
   };
 }
+
+export function getSessionSecret(): string {
+  const secret = required("SESSION_SECRET");
+  if (secret.length < 32) throw new Error("SESSION_SECRET must contain at least 32 characters");
+  return secret;
+}
+
+export function getAdminSeedConfig() {
+  return {
+    email: required("ADMIN_SEED_EMAIL").toLowerCase(),
+    displayName: required("ADMIN_SEED_DISPLAY_NAME"),
+    password: required("ADMIN_SEED_PASSWORD"),
+  };
+}
