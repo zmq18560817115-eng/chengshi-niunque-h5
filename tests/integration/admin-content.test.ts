@@ -4,6 +4,7 @@ import { prisma } from "@/server/db/prisma";
 import { AdminContentService } from "@/server/services/admin-content-service";
 import { PublicContentService } from "@/server/services/public-content-service";
 import { getAdminSeedConfig } from "@/server/env";
+import { checkModulePublishReadiness } from "@/server/validation/admin-content";
 
 describe("admin content management", () => {
   const marker = `admin-test-${Date.now()}`;
@@ -35,17 +36,31 @@ describe("admin content management", () => {
     expect(await service.getCard(cardId)).toMatchObject({ title: `${marker}-card-updated`, sortOrder: 1, isOnline: true });
     const asset = await service.createAsset({ reportCardId: cardId, title: `${marker}-asset`, description: "test", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", storageKey: "", sortOrder: 1, status: "PUBLISHED" }, adminId); assetId = asset.id;
     const publicContent = await new PublicContentService().getContent();
-    expect(publicContent.modules.find(item => item.id === moduleId)?.cards[0].assets[0]).toMatchObject({ id: assetId, openMode: "new_tab" });
+    expect(publicContent.modules.find((item) => item.id === moduleId)?.cards[0].assets[0]).toMatchObject({ id: assetId, openMode: "new_tab" });
     await service.updateAsset(assetId, { reportCardId: cardId, title: `${marker}-asset`, assetType: "EXTERNAL_LINK", openMode: "SAME_TAB", externalUrl: "https://example.com/report", sortOrder: 9, status: "OFFLINE" }, adminId);
     expect(await service.getAsset(assetId)).toMatchObject({ contentStatus: "OFFLINE", isOnline: false });
     await service.deleteAsset(assetId, adminId); await service.deleteCard(cardId, adminId); await service.deleteModule(moduleId, adminId);
-    expect((await new PublicContentService().getContent()).modules.some(item => item.id === moduleId)).toBe(false);
+    expect((await new PublicContentService().getContent()).modules.some((item) => item.id === moduleId)).toBe(false);
   });
 
-  it("rejects invalid slug, URL, and storage metadata", async () => {
+  it("rejects invalid internal identifiers, URLs, empty titles, and storage metadata", async () => {
     const service = new AdminContentService();
-    await expect(service.createModule({ title: "x", slug: "Invalid Slug", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/slug/);
-    await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "javascript:alert(1)", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/URL/);
-    await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "PDF", openMode: "SAME_TAB", storageKey: "", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/存储键/);
+    await expect(service.createModule({ title: "x", slug: "Invalid Slug", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/内部标识/);
+    await expect(service.createModule({ title: "", slug: "valid-slug", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/模块名称/);
+    await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "javascript:alert(1)", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/HTTP/);
+    await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "PDF", openMode: "SAME_TAB", storageKey: "", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/文件存储路径/);
+  });
+
+  it("checks publish readiness without changing formal publication state", async () => {
+    const incomplete = checkModulePublishReadiness({ title: "待发布模块", cards: [{ title: "报告卡片", sortOrder: 10, contentStatus: "PUBLISHED", assets: [] }] });
+    expect(incomplete.find((item) => item.label === "有效卡片")?.ok).toBe(true);
+    expect(incomplete.some((item) => !item.ok && item.label === "内容完整度")).toBe(true);
+    const draftOnly = checkModulePublishReadiness({ title: "草稿模块", cards: [{ title: "草稿卡片", sortOrder: 10, contentStatus: "DRAFT", assets: [] }] });
+    expect(draftOnly.find((item) => item.label === "有效卡片")?.ok).toBe(true);
+    expect(draftOnly.find((item) => item.label === "内容完整度")).toMatchObject({ ok: false, detail: "至少需要一张状态为已发布的卡片" });
+    const complete = checkModulePublishReadiness({ title: "可发布模块", cards: [{ title: "报告卡片", sortOrder: 10, contentStatus: "PUBLISHED", assets: [{ title: "报告链接", assetType: "EXTERNAL_LINK", externalUrl: "https://example.com/report", storageKey: null, contentStatus: "PUBLISHED" }] }] });
+    expect(complete.every((item) => item.ok)).toBe(true);
+    const current = await prisma.informationModule.findUnique({ where: { id: "seed-module-inspection" }, select: { contentStatus: true } });
+    expect(current?.contentStatus).toBe("PUBLISHED");
   });
 });

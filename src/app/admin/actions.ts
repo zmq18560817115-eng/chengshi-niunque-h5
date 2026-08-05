@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { AdminAuthService } from "@/server/services/admin-auth-service";
@@ -39,14 +40,22 @@ export async function logoutAction() {
 
 function values(formData: FormData): Record<string, unknown> { return Object.fromEntries(formData.entries()); }
 
-export async function createModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); await new AdminContentService().createModule(values(formData), admin.id); revalidatePath("/admin"); redirect("/admin/modules"); }
-export async function updateModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); await new AdminContentService().updateModule(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${id}`); }
+export async function createModuleAction(formData: FormData) {
+  const admin = await requireCurrentAdmin();
+  const input = values(formData);
+  if (!String(input.slug ?? "").trim()) input.slug = `module-${randomUUID()}`;
+  const created = await new AdminContentService().createModule(input, admin.id);
+  revalidatePath("/admin");
+  redirect(`/admin/modules/${created.id}?saved=1`);
+}
+export async function updateModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); await new AdminContentService().updateModule(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${id}?saved=1`); }
 export async function deleteModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); await new AdminContentService().deleteModule(String(formData.get("id")), admin.id); revalidatePath("/admin"); redirect("/admin/modules"); }
+export async function moveModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const direction = formData.get("direction") === "up" ? "up" : "down"; await new AdminContentService().moveModule(id, direction, admin.id); revalidatePath("/admin/modules"); }
 
-export async function createCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const moduleId = String(formData.get("moduleId")); await new AdminContentService().createCard(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}`); }
-export async function updateCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().updateCard(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}`); }
+export async function createCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const moduleId = String(formData.get("moduleId")); await new AdminContentService().createCard(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1`); }
+export async function updateCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().updateCard(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1`); }
 export async function deleteCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().deleteCard(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}`); }
 
-export async function createAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const reportCardId = String(formData.get("reportCardId")); await new AdminContentService().createAsset(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/cards/${reportCardId}`); }
-export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); await new AdminContentService().updateAsset(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/cards/${reportCardId}`); }
-export async function deleteAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); await new AdminContentService().deleteAsset(id, admin.id); revalidatePath("/admin"); redirect(`/admin/cards/${reportCardId}`); }
+export async function createAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.createAsset(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
+export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.updateAsset(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
+export async function deleteAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.deleteAsset(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }

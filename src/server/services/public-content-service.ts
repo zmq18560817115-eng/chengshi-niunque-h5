@@ -81,4 +81,15 @@ export class PublicContentService {
       })),
     };
   }
+
+  async getModuleBySlug(slug: string): Promise<PublicModule | null> {
+    const content = await this.getContent();
+    return content.modules.find((module) => module.slug === slug) ?? null;
+  }
+
+  async getCard(slug: string, cardId: string): Promise<{ module: PublicModule; card: PublicReportCard } | null> {
+    const category = await this.getModuleBySlug(slug);
+    const card = category?.cards.find((item) => item.id === cardId);
+    return category && card ? { module: category, card } : null;
+  }
 }
