@@ -90,11 +90,6 @@ button, a { font: inherit; }
 .admin-section-heading span { color: var(--color-muted); }
 .site-settings-form { max-width: 54rem; }
 .site-settings-form .admin-section { display: grid; gap: var(--space-4); margin: 0; }
-.h5-hierarchy ol { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); padding: 0; list-style: none; counter-reset: hierarchy; }
-.h5-hierarchy li { position: relative; display: grid; align-content: start; gap: var(--space-2); min-height: 8rem; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white; counter-increment: hierarchy; }
-.h5-hierarchy li::before { color: var(--color-brown); font-weight: 800; content: "0" counter(hierarchy); }
-.h5-hierarchy li:not(:last-child)::after { position: absolute; top: 50%; right: calc(var(--space-3) * -.8); z-index: 2; content: "→"; }
-.h5-hierarchy span { color: var(--color-muted); font-size: .82rem; line-height: 1.5; }
 .admin-toolbar { display: flex; gap: var(--space-4); margin-bottom: var(--space-6); }
 .admin-toolbar label { display: grid; flex: 1; gap: var(--space-2); max-width: 22rem; font-weight: 600; }
 .admin-toolbar input, .admin-toolbar select { min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: .5rem; background: white; }
@@ -102,7 +97,18 @@ button, a { font: inherit; }
 .module-table { width: 100%; border-collapse: collapse; min-width: 56rem; }
 .module-table th, .module-table td { padding: var(--space-3); border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: middle; }
 .module-table th { color: var(--color-muted); font-size: .8rem; }
+.module-state-heading td { padding-top: var(--space-6); color: var(--color-ink); font-weight: 800; background: #f5eee2; }
+.module-state-heading td small { margin-left: var(--space-2); color: var(--color-muted); font-weight: 400; }
+.module-state-heading.state-published td { border-left: 4px solid #5c9654; }
+.module-state-heading.state-offline td { border-left: 4px solid #8b817c; }
+.module-state-heading.state-draft td { border-left: 4px solid #c99a24; }
+.audit-table td:first-child { white-space: nowrap; }
+.audit-table td:nth-child(2) { display: grid; gap: .2rem; }
+.audit-table td small { color: var(--color-muted); }
+.audit-table code { font-size: .75rem; }
 .row-actions { display: flex; align-items: center; gap: var(--space-2); }
+.row-actions form { display: inline-flex; margin: 0; }
+.row-actions button:disabled { opacity: .42; cursor: not-allowed; }
 .row-actions .button { min-height: 2.25rem; padding: var(--space-2) var(--space-3); font-size: .85rem; }
 .more-menu { position: relative; }
 .more-menu > summary { padding: var(--space-2); cursor: pointer; }
@@ -127,10 +133,6 @@ button, a { font: inherit; }
 .advanced-settings, .asset-create { padding: var(--space-4); border: 1px dashed var(--color-border); border-radius: .65rem; background: #fffdf8; }
 .advanced-settings > summary, .asset-create > summary { font-weight: 700; cursor: pointer; }
 .advanced-settings[open] > summary, .asset-create[open] > summary { margin-bottom: var(--space-4); }
-.next-step ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); padding: 0; list-style: none; counter-reset: steps; }
-.next-step li { display: grid; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-sm); background: white; counter-increment: steps; }
-.next-step li::before { color: var(--color-brown); font-weight: 800; content: "0" counter(steps); }
-.next-step li span { color: var(--color-muted); font-size: .9rem; line-height: 1.5; }
 .workspace-page { padding-bottom: 6rem; }
 .workspace-heading > div > div { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
 .workspace-view-switch { display: none; gap: var(--space-2); }
@@ -263,9 +265,6 @@ button, a { font: inherit; }
   .admin-list li { align-items: flex-start; flex-direction: column; }
   .admin-page-heading, .workspace-heading, .admin-toolbar { flex-direction: column; }
   .admin-toolbar label { width: 100%; max-width: none; }
-  .next-step ol { grid-template-columns: 1fr; }
-  .h5-hierarchy ol { grid-template-columns: 1fr; }
-  .h5-hierarchy li:not(:last-child)::after { top: auto; right: 50%; bottom: calc(var(--space-3) * -.9); transform: rotate(90deg); }
   .module-table { min-width: 0; }
   .module-table thead { display: none; }
   .module-table, .module-table tbody, .module-table tr, .module-table td { display: block; width: 100%; }

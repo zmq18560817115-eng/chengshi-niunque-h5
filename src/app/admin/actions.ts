@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { AdminAuthService } from "@/server/services/admin-auth-service";
 import { AdminContentService } from "@/server/services/admin-content-service";
+import { getObjectStorage } from "@/server/storage";
+import { validateReportFile } from "@/server/upload/report-file";
 import { requireCurrentAdmin } from "@/server/auth/request-session";
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/server/auth/token";
 
@@ -40,6 +42,25 @@ export async function logoutAction() {
 
 function values(formData: FormData): Record<string, unknown> { return Object.fromEntries(formData.entries()); }
 
+async function assetValues(formData: FormData): Promise<{ input: Record<string, unknown>; uploadedKey?: string }> {
+  const input = values(formData);
+  const type = String(formData.get("assetType") ?? "");
+  const file = formData.get("file");
+  if ((type === "PDF" || type === "IMAGE") && file instanceof File && file.size > 0) {
+    const checked = await validateReportFile(file, type);
+    const extension = checked.extension;
+    const key = `reports/${new Date().getUTCFullYear()}/${randomUUID()}.${extension}`;
+    await getObjectStorage().put(key, checked.body, checked.contentType);
+    input.storageKey = key;
+    input.mimeType = checked.contentType;
+    input.byteSize = file.size;
+    return { input, uploadedKey: key };
+  }
+  return { input };
+}
+
+async function removeFailedUpload(key?: string) { if (key) await getObjectStorage().remove(key).catch(() => undefined); }
+
 export async function createModuleAction(formData: FormData) {
   const admin = await requireCurrentAdmin();
   const input = values(formData);
@@ -57,6 +78,6 @@ export async function createCardAction(formData: FormData) { const admin = await
 export async function updateCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().updateCard(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1`); }
 export async function deleteCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().deleteCard(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}`); }
 
-export async function createAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.createAsset(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
-export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.updateAsset(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
+export async function createAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); const upload = await assetValues(formData); try { await service.createAsset(upload.input, admin.id); } catch (error) { await removeFailedUpload(upload.uploadedKey); throw error; } revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
+export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); const upload = await assetValues(formData); try { await service.updateAsset(id, upload.input, admin.id); } catch (error) { await removeFailedUpload(upload.uploadedKey); throw error; } revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
 export async function deleteAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.deleteAsset(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
