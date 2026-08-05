@@ -3,6 +3,7 @@ import {
   PublicContentRepository,
   type PublicModuleRecord,
 } from "@/server/repositories/public-content-repository";
+import { defaultH5SiteConfig, resolveH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
 
 export type PublicAsset = {
   id: string;
@@ -34,6 +35,10 @@ export type PublicContent = {
   modules: PublicModule[];
   settings: Array<{ key: string; name: string; value: unknown }>;
 };
+
+export function publicSiteConfig(content: PublicContent): H5SiteConfig {
+  return resolveH5SiteConfig(content.settings.find((setting) => setting.key === "public-site")?.value ?? defaultH5SiteConfig);
+}
 
 function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number]): string {
   if (asset.assetType === "EXTERNAL_LINK") {

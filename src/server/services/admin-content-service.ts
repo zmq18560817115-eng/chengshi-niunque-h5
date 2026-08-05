@@ -1,5 +1,6 @@
 import { AdminContentRepository } from "@/server/repositories/admin-content-repository";
 import { lifecycle, validateAssetInput, validateCardInput, validateModuleInput } from "@/server/validation/admin-content";
+import { defaultH5SiteConfig, resolveH5SiteConfig } from "./h5-site-config";
 
 export class AdminContentService {
   constructor(private readonly repository = new AdminContentRepository()) {}
@@ -11,6 +12,8 @@ export class AdminContentService {
   getAsset(id: string) { return this.repository.getAsset(id); }
   listCards(moduleId: string) { return this.repository.listCards(moduleId); }
   listAssets(cardId: string) { return this.repository.listAssets(cardId); }
+  async getH5SiteSetting() { const setting = await this.repository.getSiteSetting("public-site"); return { config: resolveH5SiteConfig(setting?.value), status: setting?.contentStatus ?? "DRAFT", updatedAt: setting?.updatedAt ?? null }; }
+  saveH5SiteSetting(raw: Record<string, unknown>, adminId: string) { const status = raw.status === "PUBLISHED" || raw.status === "OFFLINE" ? raw.status : "DRAFT"; const required = (key: keyof typeof defaultH5SiteConfig) => { const value = String(raw[key] ?? "").trim(); if (!value) throw new Error(`${key} 不能为空`); return value; }; const config = resolveH5SiteConfig({ brandName: required("brandName"), guideTitle: required("guideTitle"), guideDescription: required("guideDescription"), guideButtonText: required("guideButtonText"), guideDelaySeconds: Number(raw.guideDelaySeconds), archiveEyebrow: required("archiveEyebrow"), archiveTitle: required("archiveTitle"), archiveDescription: required("archiveDescription"), evidenceTitle: required("evidenceTitle"), evidenceSubtitle: required("evidenceSubtitle"), storyEyebrow: required("storyEyebrow"), storyTitle: required("storyTitle"), storyDescription: required("storyDescription") }); return this.repository.saveSiteSetting("public-site", config, status, adminId); }
 
   async createModule(raw: Record<string, unknown>, adminId: string) { const input = validateModuleInput(raw); return this.repository.createModule({ title: input.title, slug: input.slug, description: input.description, sortOrder: input.sortOrder, ...lifecycle(input.status), createdBy: { connect: { id: adminId } }, updatedBy: { connect: { id: adminId } } }, adminId); }
   async updateModule(id: string, raw: Record<string, unknown>, adminId: string) { const current = await this.required(this.repository.getModule(id)); const input = validateModuleInput(raw); return this.repository.updateModule(id, { title: input.title, slug: input.slug, description: input.description, sortOrder: input.sortOrder, ...lifecycle(input.status, current), updatedBy: { connect: { id: adminId } } }, adminId); }
