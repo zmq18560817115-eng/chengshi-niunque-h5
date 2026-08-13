@@ -1,14 +1,15 @@
+import { h5FixedContent } from "@/config/h5-fixed-content";
 import { defaultH5SiteConfig, resolveH5SiteConfig } from "@/server/services/h5-site-config";
 
 describe("H5 site configuration", () => {
-  it("merges maintained values with safe defaults and clamps delay", () => {
-    const config = resolveH5SiteConfig({ archiveTitle: "新的档案标题", guideDelaySeconds: 99 });
-    expect(config.archiveTitle).toBe("新的档案标题");
-    expect(config.guideDelaySeconds).toBe(10);
-    expect(config.guideButtonText).toBe(defaultH5SiteConfig.guideButtonText);
+  it("uses fixed front-end copy and ignores persisted homepage settings", () => {
+    const config = resolveH5SiteConfig({ archiveTitle: "数据库里的旧标题", guideDelaySeconds: 99 });
+    expect(config.archiveTitle).toBe(h5FixedContent.archiveTitle);
+    expect(config.guideDelaySeconds).toBe(0);
+    expect(config.guideButtonText).toBe(h5FixedContent.guideButtonText);
   });
 
-  it("uses defaults for invalid stored JSON", () => {
+  it("uses the same fixed config for invalid stored JSON", () => {
     expect(resolveH5SiteConfig(null)).toEqual(defaultH5SiteConfig);
   });
 });

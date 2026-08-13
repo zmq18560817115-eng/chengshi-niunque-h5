@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/prisma";
+import { FORMAL_H5_CATEGORY_SLUGS } from "@/config/default-h5-content";
 
 const orderBy = [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }, { id: "asc" as const }];
 
@@ -16,14 +17,13 @@ export class AdminContentRepository {
   }
 
   listModules() { return prisma.informationModule.findMany({ where: { deletedAt: null }, orderBy, include: { cards: { where: { deletedAt: null }, select: { id: true, _count: { select: { assets: { where: { deletedAt: null } } } } } } } }); }
+  listFormalModules() { return prisma.informationModule.findMany({ where: { deletedAt: null, slug: { in: [...FORMAL_H5_CATEGORY_SLUGS] } }, orderBy, include: { cards: { where: { deletedAt: null }, select: { id: true, _count: { select: { assets: { where: { deletedAt: null } } } } } } } }); }
   getModuleWorkspace(id: string) { return prisma.informationModule.findFirst({ where: { id, deletedAt: null }, include: { cards: { where: { deletedAt: null }, orderBy, include: { assets: { where: { deletedAt: null }, orderBy } } } } }); }
   getModule(id: string) { return prisma.informationModule.findFirst({ where: { id, deletedAt: null } }); }
-  getCard(id: string) { return prisma.reportCard.findFirst({ where: { id, deletedAt: null }, include: { module: true } }); }
+  getCard(id: string) { return prisma.reportCard.findFirst({ where: { id, deletedAt: null }, include: { module: true, assets: { where: { deletedAt: null }, orderBy } } }); }
   getAsset(id: string) { return prisma.reportAsset.findFirst({ where: { id, deletedAt: null }, include: { reportCard: true } }); }
   listCards(moduleId: string) { return prisma.reportCard.findMany({ where: { moduleId, deletedAt: null }, orderBy }); }
   listAssets(reportCardId: string) { return prisma.reportAsset.findMany({ where: { reportCardId, deletedAt: null }, orderBy }); }
-  getSiteSetting(key: string) { return prisma.siteSetting.findFirst({ where: { key, deletedAt: null } }); }
-  saveSiteSetting(key: string, value: Parameters<typeof prisma.siteSetting.upsert>[0]["create"]["value"], status: "DRAFT" | "PUBLISHED" | "OFFLINE", adminId: string) { const now = new Date(); const lifecycle = status === "PUBLISHED" ? { isOnline: true, publishedAt: now, offlineAt: null } : status === "OFFLINE" ? { isOnline: false, offlineAt: now } : { isOnline: false }; return prisma.$transaction(async (tx) => { const item = await tx.siteSetting.upsert({ where: { key }, update: { value, contentStatus: status, ...lifecycle, deletedAt: null, updatedById: adminId }, create: { key, name: "H5 全局页面设置", description: "品牌引导页与档案首页的公共内容和交互配置。", value, sortOrder: 10, contentStatus: status, ...lifecycle, createdById: adminId, updatedById: adminId } }); await tx.auditLog.create({ data: { operatorId: adminId, action: "SITE_SETTING_UPDATE", targetType: "SiteSetting", targetId: item.id, detail: { key, status } } }); return item; }); }
   listAuditLogs(limit = 100) { return prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: Math.min(200, Math.max(1, limit)), include: { operator: { select: { displayName: true, email: true } } } }); }
 
   createModule(data: Parameters<typeof prisma.informationModule.create>[0]["data"], adminId: string) { return prisma.$transaction(async (tx) => { const item = await tx.informationModule.create({ data }); await tx.auditLog.create({ data: { operatorId: adminId, action: "MODULE_CREATE", targetType: "InformationModule", targetId: item.id } }); return item; }); }

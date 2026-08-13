@@ -1,12 +1,5 @@
-import { updateH5SiteSettingAction } from "@/app/admin/actions";
-import { AdminContentService } from "@/server/services/admin-content-service";
+import { redirect } from "next/navigation";
 
-export default async function SiteSettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
-  const [{ config, status, updatedAt }, query] = await Promise.all([new AdminContentService().getH5SiteSetting(), searchParams]);
-  return <main><div className="admin-page-heading"><div><p className="eyebrow">页面内容</p><h1>页面文案</h1><p>这里只维护用户可见的文字。页面布局、配色、字体、动效和跳转规则由开发版本统一控制。</p></div><a className="button button-secondary" href="/" target="_blank" rel="noreferrer">预览 H5</a></div>{query.saved === "1" && <p className="save-message" role="status">页面文案已保存。</p>}
-    <form action={updateH5SiteSettingAction} className="admin-form site-settings-form"><section className="admin-section"><div className="admin-section-heading"><div><h2>品牌引导页文案</h2><span>对应首次进入 H5 时展示的文字内容</span></div></div><label>品牌名称<input name="brandName" defaultValue={config.brandName} required maxLength={100}/></label><label>主标题<span>可换行输入。</span><textarea name="guideTitle" defaultValue={config.guideTitle} required/></label><label>引导说明<input name="guideDescription" defaultValue={config.guideDescription} required/></label><label>按钮文字<input name="guideButtonText" defaultValue={config.guideButtonText} required/></label></section>
-      <section className="admin-section"><h2>档案首页</h2><label>顶部小标题<input name="archiveEyebrow" defaultValue={config.archiveEyebrow} required/></label><label>页面主标题<input name="archiveTitle" defaultValue={config.archiveTitle} required/></label><label>页面说明<textarea name="archiveDescription" defaultValue={config.archiveDescription} required/></label><label>证据区主标题<input name="evidenceTitle" defaultValue={config.evidenceTitle} required/></label><label>证据区副标题<input name="evidenceSubtitle" defaultValue={config.evidenceSubtitle} required/></label></section>
-      <section className="admin-section"><h2>品牌初心区</h2><label>顶部小标题<input name="storyEyebrow" defaultValue={config.storyEyebrow} required/></label><label>主标题<textarea name="storyTitle" defaultValue={config.storyTitle} required/></label><label>说明文案<textarea name="storyDescription" defaultValue={config.storyDescription} required/></label></section>
-      <section className="admin-section"><h2>发布控制</h2><label>文案状态<select name="status" defaultValue={status}><option value="DRAFT">保存草稿，不应用到 H5</option><option value="PUBLISHED">发布并应用到 H5</option><option value="OFFLINE">下线，H5 使用默认文案</option></select></label>{updatedAt && <small>最后保存：{updatedAt.toLocaleString("zh-CN")}</small>}</section><button className="button button-primary">保存页面文案</button></form>
-  </main>;
+export default function SiteSettingsPage() {
+  redirect("/admin");
 }

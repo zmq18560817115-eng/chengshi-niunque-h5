@@ -7,7 +7,7 @@ import { getAdminSeedConfig } from "@/server/env";
 import { checkModulePublishReadiness } from "@/server/validation/admin-content";
 
 describe("admin content management", () => {
-  const marker = `admin-test-${Date.now()}`;
+  const marker = `联调验收-H5全链路-${Date.now()}`;
   let adminId = "";
   let moduleId = "";
   let cardId = "";
@@ -26,19 +26,23 @@ describe("admin content management", () => {
     expect(response.status).toBe(401);
   });
 
-  it("creates, updates, sorts, publishes and soft-deletes module, card and asset metadata", async () => {
+  it("moves isolated acceptance data through draft, publish, sort, offline and soft-delete", async () => {
     const service = new AdminContentService();
-    const createdModule = await service.createModule({ title: marker, slug: marker, description: "test", sortOrder: 7, status: "PUBLISHED" }, adminId); moduleId = createdModule.id;
-    expect(createdModule).toMatchObject({ contentStatus: "PUBLISHED", isOnline: true, offlineAt: null }); expect(createdModule.publishedAt).toBeInstanceOf(Date);
-    await service.updateModule(createdModule.id, { title: marker, slug: marker, description: "updated", sortOrder: 3, status: "PUBLISHED" }, adminId);
-    const card = await service.createCard({ moduleId, title: `${marker}-card`, description: "test", buttonText: "查看", footerNote: "", sortOrder: 2, status: "PUBLISHED" }, adminId); cardId = card.id;
-    await service.updateCard(cardId, { moduleId, title: `${marker}-card-updated`, description: "updated", buttonText: "查看", footerNote: "", sortOrder: 1, status: "PUBLISHED" }, adminId);
-    expect(await service.getCard(cardId)).toMatchObject({ title: `${marker}-card-updated`, sortOrder: 1, isOnline: true });
-    const asset = await service.createAsset({ reportCardId: cardId, title: `${marker}-asset`, description: "test", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", storageKey: "", sortOrder: 1, status: "PUBLISHED" }, adminId); assetId = asset.id;
+    const slug = `acceptance-h5-${Date.now()}`;
+    const createdModule = await service.createModule({ title: marker, slug, description: "联调草稿", sortOrder: 7, status: "DRAFT" }, adminId); moduleId = createdModule.id;
+    const card = await service.createCard({ moduleId, title: `${marker}-卡片`, description: "联调草稿", buttonText: "查看", footerNote: "", sortOrder: 2, status: "DRAFT" }, adminId); cardId = card.id;
+    const asset = await service.createAsset({ reportCardId: cardId, title: `${marker}-资料`, description: "联调草稿", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", storageKey: "", sortOrder: 2, status: "DRAFT" }, adminId); assetId = asset.id;
+    expect((await new PublicContentService().getContent()).modules.some((item) => item.id === moduleId)).toBe(false);
+
+    await service.updateAsset(assetId, { reportCardId: cardId, title: `${marker}-资料`, assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", sortOrder: 1, status: "PUBLISHED" }, adminId);
+    await service.updateCard(cardId, { moduleId, title: `${marker}-卡片`, description: "已发布", buttonText: "查看", footerNote: "", sortOrder: 1, status: "PUBLISHED" }, adminId);
+    await service.updateModule(createdModule.id, { title: marker, slug, description: "已发布", sortOrder: 3, status: "PUBLISHED" }, adminId);
+    expect(await service.getCard(cardId)).toMatchObject({ title: `${marker}-卡片`, sortOrder: 1, isOnline: true });
     const publicContent = await new PublicContentService().getContent();
     expect(publicContent.modules.find((item) => item.id === moduleId)?.cards[0].assets[0]).toMatchObject({ id: assetId, openMode: "new_tab" });
-    await service.updateAsset(assetId, { reportCardId: cardId, title: `${marker}-asset`, assetType: "EXTERNAL_LINK", openMode: "SAME_TAB", externalUrl: "https://example.com/report", sortOrder: 9, status: "OFFLINE" }, adminId);
+    await service.updateAsset(assetId, { reportCardId: cardId, title: `${marker}-资料`, assetType: "EXTERNAL_LINK", openMode: "SAME_TAB", externalUrl: "https://example.com/report", sortOrder: 9, status: "OFFLINE" }, adminId);
     expect(await service.getAsset(assetId)).toMatchObject({ contentStatus: "OFFLINE", isOnline: false });
+    expect((await new PublicContentService().getContent()).modules.find((item) => item.id === moduleId)?.cards[0].assets).toHaveLength(0);
     await service.deleteAsset(assetId, adminId); await service.deleteCard(cardId, adminId); await service.deleteModule(moduleId, adminId);
     expect((await new PublicContentService().getContent()).modules.some((item) => item.id === moduleId)).toBe(false);
   });
@@ -49,6 +53,13 @@ describe("admin content management", () => {
     await expect(service.createModule({ title: "", slug: "valid-slug", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/模块名称/);
     await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "javascript:alert(1)", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/HTTP/);
     await expect(service.createAsset({ reportCardId: cardId || "x", title: "x", assetType: "PDF", openMode: "SAME_TAB", storageKey: "", sortOrder: 0, status: "DRAFT" }, adminId)).rejects.toThrow(/文件存储路径/);
+  });
+
+  it("blocks publishing a card without a published asset", async () => {
+    const service = new AdminContentService();
+    const category = await service.getModule("seed-module-inspection");
+    expect(category).not.toBeNull();
+    await expect(service.updateCard("seed-card-inspection-freshness", { moduleId: category!.id, title: "油脂新鲜度", description: "", buttonText: "查看报告", footerNote: "", sortOrder: 20, status: "PUBLISHED" }, adminId)).rejects.toThrow(/至少一项报告资料/);
   });
 
   it("checks publish readiness without changing formal publication state", async () => {

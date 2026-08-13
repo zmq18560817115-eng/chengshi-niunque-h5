@@ -66,19 +66,30 @@ export function lifecycle(contentStatus: ContentStatus, previous?: { publishedAt
   return { contentStatus, isOnline: contentStatus === "PUBLISHED", publishedAt: contentStatus === "PUBLISHED" ? previous?.publishedAt ?? now : previous?.publishedAt ?? null, offlineAt: contentStatus === "OFFLINE" ? now : null };
 }
 
-type CheckModule = { title: string; cards: Array<{ title: string; sortOrder: number; contentStatus: ContentStatus; assets: Array<{ title: string; assetType: AssetType; externalUrl: string | null; storageKey: string | null; contentStatus: ContentStatus }> }> };
+type CheckModule = { title: string; cards: Array<{ title: string; sortOrder: number; contentStatus: ContentStatus; assets: Array<{ title: string; assetType: AssetType; externalUrl: string | null; storageKey: string | null; contentStatus: ContentStatus; sortOrder?: number }> }> };
 export function checkModulePublishReadiness(module: CheckModule): PublishCheckItem[] {
   const titledCards = module.cards.filter((card) => card.title.trim());
   const publishedCards = titledCards.filter((card) => card.contentStatus === "PUBLISHED");
   const cardOrders = titledCards.map((card) => card.sortOrder);
   const assets = publishedCards.flatMap((card) => card.assets.filter((asset) => asset.contentStatus === "PUBLISHED"));
   const invalidAssets = assets.filter((asset) => !asset.title.trim() || (asset.assetType === "EXTERNAL_LINK" ? !asset.externalUrl || !/^https?:\/\//.test(asset.externalUrl) : !asset.storageKey));
+  const duplicateAssetOrders = publishedCards.some((card) => {
+    const orders = card.assets.filter((asset) => asset.contentStatus === "PUBLISHED" && asset.sortOrder !== undefined).map((asset) => asset.sortOrder);
+    return new Set(orders).size !== orders.length;
+  });
   const contentComplete = publishedCards.length > 0 && publishedCards.every((card) => card.assets.some((asset) => asset.contentStatus === "PUBLISHED"));
   return [
     { ok: Boolean(module.title.trim()), label: "模块名称", detail: "模块需要清晰的展示名称" },
     { ok: titledCards.length > 0, label: "有效卡片", detail: "至少需要一张已填写标题的卡片" },
     { ok: new Set(cardOrders).size === cardOrders.length, label: "卡片排序", detail: "卡片的页面排序不能重复" },
     { ok: invalidAssets.length === 0, label: "资料配置", detail: invalidAssets.length ? `有 ${invalidAssets.length} 条资料配置不完整` : "资料名称和链接/存储路径有效" },
+    { ok: !duplicateAssetOrders, label: "资料排序", detail: duplicateAssetOrders ? "同一卡片内的资料排序不能重复" : "资料排序有效" },
     { ok: contentComplete, label: "内容完整度", detail: publishedCards.length > 0 ? "每张已发布卡片至少配置一条已发布资料" : "至少需要一张状态为已发布的卡片" },
   ];
+}
+
+export function cardPublishError(card: { title: string; assets: Array<{ contentStatus: ContentStatus }> }): string | null {
+  if (!card.title.trim()) return "请先填写卡片名称";
+  if (!card.assets.some((asset) => asset.contentStatus === "PUBLISHED")) return "请先为卡片添加并发布至少一项报告资料";
+  return null;
 }

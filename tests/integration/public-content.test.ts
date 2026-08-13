@@ -11,14 +11,9 @@ describe("public content integration", () => {
       expect.arrayContaining(["草稿卡片", "已删除卡片"]),
     );
     const inspection = content.modules.find((module) => module.title === "检测项目");
-    expect(inspection?.cards.map((card) => card.title)).toEqual([
-      "营养成分检测",
-      "安全指标检测",
-    ]);
-    expect(inspection?.cards[0].assets.map((asset) => asset.title)).toEqual([
-      "检测方法公开说明",
-      "营养成分检测报告",
-    ]);
+    expect(inspection?.cards.map((card) => card.title)).toEqual(["核心营养含量"]);
+    expect(inspection?.cards[0].assets.map((asset) => asset.title)).toEqual(["检测方法公开说明"]);
+    expect(inspection?.cards[0].assets.map((asset) => asset.type)).toEqual(["EXTERNAL_LINK"]);
   });
 
   it("does not expose internal records, storage keys, or secrets", async () => {

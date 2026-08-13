@@ -42,6 +42,19 @@ export async function logoutAction() {
 
 function values(formData: FormData): Record<string, unknown> { return Object.fromEntries(formData.entries()); }
 
+function adminError(error: unknown): string {
+  return error instanceof Error ? error.message : "操作未完成，请检查填写内容后重试";
+}
+
+function moduleEditorUrl(moduleId: string, options: { saved?: boolean; published?: boolean; select?: string; error?: string } = {}) {
+  const query = new URLSearchParams();
+  if (options.saved) query.set("saved", "1");
+  if (options.published) query.set("published", "1");
+  if (options.select) query.set("select", options.select);
+  if (options.error) query.set("error", options.error);
+  return `/admin/modules/${moduleId}${query.size ? `?${query.toString()}` : ""}`;
+}
+
 async function assetValues(formData: FormData): Promise<{ input: Record<string, unknown>; uploadedKey?: string }> {
   const input = values(formData);
   const type = String(formData.get("assetType") ?? "");
@@ -69,15 +82,32 @@ export async function createModuleAction(formData: FormData) {
   revalidatePath("/admin");
   redirect(`/admin/modules/${created.id}?saved=1`);
 }
-export async function updateModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); await new AdminContentService().updateModule(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${id}?saved=1`); }
+export async function updateModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); try { await new AdminContentService().updateModule(id, values(formData), admin.id); } catch (error) { redirect(moduleEditorUrl(id, { error: adminError(error) })); } revalidatePath("/admin"); redirect(moduleEditorUrl(id, { saved: true })); }
 export async function deleteModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); await new AdminContentService().deleteModule(String(formData.get("id")), admin.id); revalidatePath("/admin"); redirect("/admin/modules"); }
 export async function moveModuleAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const direction = formData.get("direction") === "up" ? "up" : "down"; await new AdminContentService().moveModule(id, direction, admin.id); revalidatePath("/admin/modules"); }
-export async function updateH5SiteSettingAction(formData: FormData) { const admin = await requireCurrentAdmin(); await new AdminContentService().saveH5SiteSetting(values(formData), admin.id); revalidatePath("/"); revalidatePath("/reports"); revalidatePath("/admin/site"); redirect("/admin/site?saved=1"); }
-
-export async function createCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const moduleId = String(formData.get("moduleId")); await new AdminContentService().createCard(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1`); }
-export async function updateCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().updateCard(id, values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1`); }
+export async function createCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const moduleId = String(formData.get("moduleId")); const created = await new AdminContentService().createCard(values(formData), admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}?saved=1&select=card:${created.id}`); }
+export async function updateCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); try { await new AdminContentService().updateCard(id, values(formData), admin.id); } catch (error) { redirect(moduleEditorUrl(moduleId, { select: `card:${id}`, error: adminError(error) })); } revalidatePath("/admin"); redirect(moduleEditorUrl(moduleId, { saved: true, select: `card:${id}` })); }
 export async function deleteCardAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const moduleId = String(formData.get("moduleId")); await new AdminContentService().deleteCard(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${moduleId}`); }
 
-export async function createAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); const upload = await assetValues(formData); try { await service.createAsset(upload.input, admin.id); } catch (error) { await removeFailedUpload(upload.uploadedKey); throw error; } revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
-export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); const upload = await assetValues(formData); try { await service.updateAsset(id, upload.input, admin.id); } catch (error) { await removeFailedUpload(upload.uploadedKey); throw error; } revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }
+async function createAsset(formData: FormData, publishCard: boolean) {
+  const admin = await requireCurrentAdmin();
+  const reportCardId = String(formData.get("reportCardId"));
+  const service = new AdminContentService();
+  const card = await service.getCard(reportCardId);
+  if (!card) redirect("/admin/modules?error=card-not-found");
+  const upload = await assetValues(formData);
+  if (publishCard) upload.input.status = "PUBLISHED";
+  let createdId: string;
+  try { const created = await service.createAsset(upload.input, admin.id); createdId = created.id; }
+  catch (error) { await removeFailedUpload(upload.uploadedKey); redirect(moduleEditorUrl(card.moduleId, { select: `card:${reportCardId}`, error: adminError(error) })); }
+  if (publishCard) {
+    try { await service.updateCard(reportCardId, { moduleId: card.moduleId, title: card.title, description: card.description ?? "", buttonText: card.buttonText, footerNote: card.footerNote ?? "", sortOrder: card.sortOrder, status: "PUBLISHED" }, admin.id); }
+    catch (error) { redirect(moduleEditorUrl(card.moduleId, { select: `card:${reportCardId}`, error: `资料已保存，但卡片未上线：${adminError(error)}` })); }
+  }
+  revalidatePath("/admin");
+  redirect(moduleEditorUrl(card.moduleId, publishCard ? { saved: true, published: true, select: `card:${reportCardId}` } : { saved: true, select: `asset:${createdId}` }));
+}
+export async function createAssetAction(formData: FormData) { return createAsset(formData, false); }
+export async function createAndPublishAssetAction(formData: FormData) { return createAsset(formData, true); }
+export async function updateAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) redirect("/admin/modules?error=card-not-found"); const upload = await assetValues(formData); try { await service.updateAsset(id, upload.input, admin.id); } catch (error) { await removeFailedUpload(upload.uploadedKey); redirect(moduleEditorUrl(card.moduleId, { select: `asset:${id}`, error: adminError(error) })); } revalidatePath("/admin"); redirect(moduleEditorUrl(card.moduleId, { saved: true, select: `asset:${id}` })); }
 export async function deleteAssetAction(formData: FormData) { const admin = await requireCurrentAdmin(); const id = String(formData.get("id")); const reportCardId = String(formData.get("reportCardId")); const service = new AdminContentService(); const card = await service.getCard(reportCardId); if (!card) throw new Error("所属卡片不存在"); await service.deleteAsset(id, admin.id); revalidatePath("/admin"); redirect(`/admin/modules/${card.moduleId}?saved=1`); }

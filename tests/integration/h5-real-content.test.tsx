@@ -7,7 +7,7 @@ describe("H5 real public content chain", () => {
     const content = await new PublicContentService().getContent();
     render(<ReportsArchive modules={content.modules} />);
     for (const category of content.modules) {
-      expect(screen.getByRole("link", { name: new RegExp(category.title) })).toHaveAttribute("href", `/reports/${category.slug}`);
+      expect(screen.getByRole("button", { name: new RegExp(category.title) })).toHaveAttribute("data-slug", category.slug);
     }
   });
 });

@@ -1,11 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import HomePage from "@/app/page";
+import GoPage from "@/app/go/page";
+
+const { redirect } = vi.hoisted(() => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect }));
 
 describe("brand guide", () => {
-  it("renders the fixed brand entry with early-enter affordances", async () => {
-    render(await HomePage());
-    expect(screen.getByRole("heading", { name: /每一份安心/ })).toBeInTheDocument();
-    expect(screen.getByRole("button")).toHaveAccessibleName(/进入档案/);
-    expect(screen.getByText("3 秒后自动进入")).toBeInTheDocument();
+  it("redirects the root entry to the canonical /go route", () => {
+    HomePage();
+    expect(redirect).toHaveBeenCalledWith("/go");
+  });
+
+  it("renders the fixed brand guide at /go", () => {
+    render(<GoPage/>);
+    expect(screen.getByRole("heading", { name: "Honest Nutri 品牌引导" })).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAccessibleName("进入档案");
+    expect(screen.getByText("向左滑动，或点击滑动提示进入档案")).toBeInTheDocument();
   });
 });
