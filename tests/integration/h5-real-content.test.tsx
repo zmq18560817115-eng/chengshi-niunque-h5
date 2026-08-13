@@ -1,31 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import HomePage from "@/app/page";
-import { GET } from "@/app/api/public/content/route";
+import { render, screen } from "@testing-library/react";
+import { ReportsArchive } from "@/components/h5/ReportsArchive";
+import { PublicContentService } from "@/server/services/public-content-service";
 
 describe("H5 real public content chain", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn(async () => GET()));
-  });
-
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("renders seeded modules and enforces one expanded module", async () => {
-    render(<HomePage />);
-
-    const first = await screen.findByRole("button", { name: /检测项目/ });
-    const second = screen.getByRole("button", { name: /复核保障/ });
-    expect(first).toHaveAttribute("aria-expanded", "true");
-    expect(second).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("营养成分检测")).toBeInTheDocument();
-
-    fireEvent.click(second);
-    expect(first).toHaveAttribute("aria-expanded", "false");
-    expect(second).toHaveAttribute("aria-expanded", "true");
-    expect(screen.queryByText("营养成分检测")).not.toBeInTheDocument();
-    expect(screen.getByText("复核流程")).toBeInTheDocument();
-
-    fireEvent.click(second);
-    expect(second).toHaveAttribute("aria-expanded", "false");
-    expect(within(screen.getByLabelText("公开资料模块")).queryByText("复核流程")).not.toBeInTheDocument();
+  it("renders every published module as a whole clickable category", async () => {
+    const content = await new PublicContentService().getContent();
+    render(<ReportsArchive modules={content.modules} />);
+    for (const category of content.modules) {
+      expect(screen.getByRole("button", { name: new RegExp(category.title) })).toHaveAttribute("data-slug", category.slug);
+    }
   });
 });

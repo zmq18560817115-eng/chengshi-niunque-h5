@@ -1,0 +1,83 @@
+{
+  "master": {
+    "width": 1000,
+    "height": 5557
+  },
+  "moduleOne": {
+    "sourceCrop": [
+      652,
+      408,
+      2652,
+      4336
+    ],
+    "runtimeBounds": [
+      0,
+      0,
+      1000,
+      1964
+    ]
+  },
+  "unlockInitialVisibleRatio": 0.2,
+  "fish": [
+    {
+      "index": 1,
+      "detectedBox": [
+        62,
+        256,
+        178,
+        280
+      ],
+      "canvasAlphaBounds": [
+        61,
+        4418,
+        187,
+        4486
+      ]
+    },
+    {
+      "index": 2,
+      "detectedBox": [
+        343,
+        256,
+        433,
+        280
+      ],
+      "canvasAlphaBounds": [
+        307,
+        4418,
+        435,
+        4480
+      ]
+    },
+    {
+      "index": 3,
+      "detectedBox": [
+        551,
+        259,
+        672,
+        280
+      ],
+      "canvasAlphaBounds": [
+        550,
+        4422,
+        678,
+        4483
+      ]
+    },
+    {
+      "index": 4,
+      "detectedBox": [
+        834,
+        249,
+        921,
+        280
+      ],
+      "canvasAlphaBounds": [
+        799,
+        4411,
+        923,
+        4487
+      ]
+    }
+  ]
+}

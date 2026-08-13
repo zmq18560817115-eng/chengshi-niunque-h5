@@ -1,0 +1,40 @@
+{
+  "masterWidth": 1000,
+  "masterHeight": 5557,
+  "group": {
+    "x": 250,
+    "y": 4797,
+    "width": 539,
+    "height": 215
+  },
+  "lines": [
+    {
+      "name": "story-line-01",
+      "x": 266,
+      "y": 4798,
+      "width": 496,
+      "height": 35
+    },
+    {
+      "name": "story-line-02",
+      "x": 310,
+      "y": 4846,
+      "width": 399,
+      "height": 31
+    },
+    {
+      "name": "story-line-03",
+      "x": 254,
+      "y": 4928,
+      "width": 512,
+      "height": 36
+    },
+    {
+      "name": "story-line-04",
+      "x": 456,
+      "y": 4978,
+      "width": 112,
+      "height": 30
+    }
+  ]
+}

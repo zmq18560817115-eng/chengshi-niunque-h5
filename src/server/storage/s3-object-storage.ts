@@ -2,6 +2,7 @@ import {
   CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
@@ -44,6 +45,16 @@ export class S3ObjectStorage implements ObjectStorage {
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
       { expiresIn: expiresInSeconds },
     );
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.config.bucket, Key: key }));
+      return true;
+    } catch (error) {
+      if ((error as S3Error).$metadata?.httpStatusCode === 404) return false;
+      throw error;
+    }
   }
 
   async checkConnection(): Promise<void> {

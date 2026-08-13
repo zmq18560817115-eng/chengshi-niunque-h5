@@ -1,9 +1,65 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminContentService } from "@/server/services/admin-content-service";
-import { createCardAction, deleteModuleAction, updateModuleAction } from "../../../actions";
+import { PublicContentService } from "@/server/services/public-content-service";
+import { ModuleWorkspace } from "@/components/admin/ModuleWorkspace";
 
-export default async function ModulePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params; const service = new AdminContentService(); const item = await service.getModule(id); if (!item) notFound(); const cards = await service.listCards(id);
-  return <main><p><Link href="/admin/modules">← 返回模块</Link></p><h1>{item.title}</h1><form action={updateModuleAction} className="admin-form"><input type="hidden" name="id" value={id}/><input name="title" defaultValue={item.title} required/><input name="slug" defaultValue={item.slug} required/><textarea name="description" defaultValue={item.description ?? ""}/><input name="sortOrder" type="number" min="0" defaultValue={item.sortOrder}/><select name="status" defaultValue={item.contentStatus}><option value="DRAFT">草稿</option><option value="PUBLISHED">已发布</option><option value="OFFLINE">已下线</option></select><button>保存模块</button></form><form action={deleteModuleAction}><input type="hidden" name="id" value={id}/><button className="danger">软删除模块</button></form><h2>新建卡片</h2><form action={createCardAction} className="admin-form"><input type="hidden" name="moduleId" value={id}/><input name="title" placeholder="标题" required/><textarea name="description" placeholder="说明"/><input name="buttonText" placeholder="按钮文字" defaultValue="查看资料"/><input name="footerNote" placeholder="页脚说明"/><input name="sortOrder" type="number" min="0" defaultValue="0"/><select name="status" defaultValue="DRAFT"><option value="DRAFT">草稿</option><option value="PUBLISHED">已发布</option><option value="OFFLINE">已下线</option></select><button>创建卡片</button></form><ul className="admin-list">{cards.map(card=><li key={card.id}><Link href={`/admin/cards/${card.id}`}>{card.title}</Link><span>{card.contentStatus} · 排序 {card.sortOrder}</span></li>)}</ul></main>;
+type ModulePageSearchParams = {
+  saved?: string;
+  published?: string;
+  select?: string;
+  error?: string;
+};
+
+export default async function ModulePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<ModulePageSearchParams> }) {
+  const { id } = await params;
+  const adminService = new AdminContentService();
+  const [item, publicContent, moduleRows] = await Promise.all([
+    adminService.getModuleWorkspace(id),
+    new PublicContentService().getContent(),
+    adminService.listModules(),
+  ]);
+  if (!item) notFound();
+  const { saved, published, select, error } = await searchParams;
+  const initialSelection = select?.startsWith("card:")
+    ? { type: "card" as const, id: select.slice(5) }
+    : select?.startsWith("asset:")
+      ? { type: "asset" as const, id: select.slice(6) }
+      : undefined;
+
+  return <ModuleWorkspace
+    saved={saved === "1"}
+    published={published === "1"}
+    error={error}
+    initialSelection={initialSelection}
+    publishedModules={publicContent.modules}
+    moduleOrders={moduleRows.map((module) => ({ id: module.id, sortOrder: module.sortOrder }))}
+    initialModule={{
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      description: item.description,
+      sortOrder: item.sortOrder,
+      contentStatus: item.contentStatus,
+      cards: item.cards.map((card) => ({
+        id: card.id,
+        title: card.title,
+        description: card.description,
+        buttonText: card.buttonText,
+        footerNote: card.footerNote,
+        sortOrder: card.sortOrder,
+        contentStatus: card.contentStatus,
+        assets: card.assets.map((asset) => ({
+          id: asset.id,
+          title: asset.title,
+          description: asset.description,
+          assetType: asset.assetType,
+          openMode: asset.openMode,
+          storageKey: asset.storageKey,
+          externalUrl: asset.externalUrl,
+          sortOrder: asset.sortOrder,
+          contentStatus: asset.contentStatus,
+        })),
+      })),
+    }}
+  />;
 }

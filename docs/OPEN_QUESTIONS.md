@@ -29,3 +29,9 @@ These are not blockers for the skeleton.
 14. Confirm production database/storage provider, region, capacity, access, RPO/RTO.
 15. Confirm analytics platform/events and WeChat share/JSSDK prerequisites.
 16. Reconcile the execution-plan dates with the requirement document's 2026-08-27 launch target.
+
+## Multi-page H5 follow-ups
+
+17. Confirm the final artwork, font, illustration, copy, and easing curves for the guide, archive, category, and report pages; the current implementation intentionally uses structural placeholders.
+18. Confirm whether `/go` should remain a temporary 307 redirect to `/`, become permanent, or preserve channel tracking parameters.
+19. Confirm whether report images require pinch-to-zoom, drag boundaries, and landscape rules beyond the current 1–3x controls.

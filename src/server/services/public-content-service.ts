@@ -3,6 +3,7 @@ import {
   PublicContentRepository,
   type PublicModuleRecord,
 } from "@/server/repositories/public-content-repository";
+import { defaultH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
 
 export type PublicAsset = {
   id: string;
@@ -34,6 +35,11 @@ export type PublicContent = {
   modules: PublicModule[];
   settings: Array<{ key: string; name: string; value: unknown }>;
 };
+
+export function publicSiteConfig(_content: PublicContent): H5SiteConfig {
+  void _content;
+  return defaultH5SiteConfig;
+}
 
 function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number]): string {
   if (asset.assetType === "EXTERNAL_LINK") {
@@ -80,5 +86,16 @@ export class PublicContentService {
         value: setting.value,
       })),
     };
+  }
+
+  async getModuleBySlug(slug: string): Promise<PublicModule | null> {
+    const content = await this.getContent();
+    return content.modules.find((module) => module.slug === slug) ?? null;
+  }
+
+  async getCard(slug: string, cardId: string): Promise<{ module: PublicModule; card: PublicReportCard } | null> {
+    const category = await this.getModuleBySlug(slug);
+    const card = category?.cards.find((item) => item.id === cardId);
+    return category && card ? { module: category, card } : null;
   }
 }

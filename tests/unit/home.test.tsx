@@ -1,18 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import HomePage from "@/app/page";
+import GoPage from "@/app/go/page";
 
-describe("H5 public content states", () => {
-  afterEach(() => vi.unstubAllGlobals());
+const { redirect } = vi.hoisted(() => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect }));
 
-  it("renders the loading state while public content is pending", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)));
-    render(<HomePage />);
-    expect(screen.getByText("正在加载公开资料…")).toBeInTheDocument();
+describe("brand guide", () => {
+  it("redirects the root entry to the canonical /go route", () => {
+    HomePage();
+    expect(redirect).toHaveBeenCalledWith("/go");
   });
 
-  it("renders an error state when public content fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
-    render(<HomePage />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("公开资料暂时无法加载");
+  it("renders the fixed brand guide at /go", () => {
+    render(<GoPage/>);
+    expect(screen.getByRole("heading", { name: "Honest Nutri 品牌引导" })).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAccessibleName("进入档案");
+    expect(screen.getByText("向左滑动，或点击滑动提示进入档案")).toBeInTheDocument();
   });
 });
