@@ -58,8 +58,9 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ReportsArchive modules={modules}/>);
     const links = [...container.querySelectorAll<HTMLButtonElement>(".archive-category-hotspot")];
     expect(links.map((link) => link.dataset.slug)).toEqual(["inspection-projects", "review-assurance", "production-traceability"]);
-    expect(links.map((link) => link.style.top)).toEqual(["48.4%", "58.2%", "62%"]);
-    expect(links.map((link) => link.style.left)).toEqual(["43%", "4%", "43%"]);
+    expect(links.map((link) => link.style.top)).toEqual(["48.4%", "54.2%", "62%"]);
+    expect(links.map((link) => link.style.left)).toEqual(["43%", "3%", "43%"]);
+    expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
   it("keeps the approved archive artwork as the sole visual and preserves navigation hotspots", () => {

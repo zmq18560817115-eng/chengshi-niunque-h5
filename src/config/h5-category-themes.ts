@@ -21,12 +21,12 @@ export const categoryCardLayouts = {
   "inspection-projects": [
     { x: 59, y: 527, width: 823, height: 381, contentX: 49, contentY: 65, contentWidth: 716 },
     { x: 59, y: 987, width: 823, height: 374, contentX: 49, contentY: 65, contentWidth: 716 },
-    { x: 59, y: 1427, width: 823, height: 389, contentX: 49, contentY: 65, contentWidth: 716 },
+    { x: 59, y: 1427, width: 823, height: 389, contentX: 49, contentY: 92, contentWidth: 716 },
   ],
   "review-assurance": [
     { x: 59, y: 527, width: 823, height: 376, contentX: 49, contentY: 65, contentWidth: 716 },
     { x: 59, y: 987, width: 823, height: 369, contentX: 49, contentY: 65, contentWidth: 716 },
-    { x: 59, y: 1421, width: 823, height: 391, contentX: 49, contentY: 65, contentWidth: 716 },
+    { x: 59, y: 1421, width: 823, height: 391, contentX: 49, contentY: 92, contentWidth: 716 },
   ],
   "production-traceability": [
     { x: 59, y: 528, width: 823, height: 375, contentX: 49, contentY: 65, contentWidth: 716 },

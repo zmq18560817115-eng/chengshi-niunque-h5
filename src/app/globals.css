@@ -385,9 +385,9 @@ button, a { font: inherit; }
 .archive-category-hotspot, .category-card-hotspot { position: absolute; z-index: 2; display: block; min-width: 44px; min-height: 44px; border-radius: 1rem; color: transparent; text-decoration: none; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
 .archive-category-hotspot span, .category-card-hotspot span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .archive-category-hotspot:focus-visible, .category-card-hotspot:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
-.archive-category-hotspot { padding: 0; border: 0; opacity: 0; background: transparent; transform: translate3d(0, .75rem, 0) scale(.985); transition: opacity .5s ease, transform .7s cubic-bezier(.22, 1, .36, 1), filter .08s ease; }
-.archive-category-hotspot.is-visible { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-.archive-category-hotspot.is-pressed { filter: brightness(.94); transform: translate3d(0,2px,0) scale(.992); }
+.archive-category-hotspot { padding: 0; border: 0; opacity: 0; background: transparent; transform: none; transition: filter .08s ease; }
+.archive-category-hotspot.is-visible { opacity: 1; transform: none; }
+.archive-category-hotspot.is-pressed { filter: brightness(.94); transform: none; }
 .archive-motion-layers { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 .archive-motion { position: absolute; display: block; width: auto; height: auto; opacity: 0; animation-play-state: paused; }
 .archive-motion.is-visible { animation-play-state: running; }
