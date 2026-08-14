@@ -337,33 +337,37 @@ button, a { font: inherit; }
 .archive-latest-circle-trigger { position: absolute; top: 24.8%; left: 10.2%; width: 46.5%; height: 1.8%; pointer-events: none; }
 .archive-latest-circle-base,
 .archive-latest-circle-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
-.archive-latest-circle-image.is-animated { clip-path: inset(0 100% 0 0); opacity: 0; will-change: clip-path, opacity; }
+.archive-latest-circle-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.archive-latest-circle-raster { opacity: 1; }
+.archive-latest-circle-stroke { fill: none; stroke: #fff; stroke-width: 28; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.archive-latest-circle-svg.is-animated { will-change: opacity; }
 .archive-latest-circle .motion-stage.is-loading .motion-stage-fallback .archive-latest-circle-image { opacity: 0; }
-.archive-latest-circle.is-ready.is-visible:not(.is-complete) .archive-latest-circle-image.is-animated { animation: archive-latest-circle-draw var(--archive-circle-duration) cubic-bezier(.22,1,.36,1) var(--archive-circle-delay) both; }
-.archive-latest-circle.is-complete .archive-latest-circle-image.is-animated { clip-path: inset(0); opacity: 1; }
-@keyframes archive-latest-circle-draw { from { clip-path: inset(0 100% 0 0); opacity: 1; } to { clip-path: inset(0); opacity: 1; } }
+.archive-latest-circle.is-ready.is-visible:not(.is-complete) .archive-latest-circle-stroke { animation: archive-latest-circle-stroke-draw var(--archive-circle-duration) cubic-bezier(.22,1,.36,1) var(--archive-circle-delay) both; }
+.archive-latest-circle.is-complete .archive-latest-circle-stroke { stroke-dashoffset: 0; }
+@keyframes archive-latest-circle-stroke-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .archive-unlock-tab-motion { position: absolute; z-index: 11; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-unlock-tab-motion > .motion-stage { overflow: hidden; }
 .archive-unlock-tab-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
-.archive-unlock-tab-head { opacity: 1; }
-.archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) 0 var(--archive-unlock-start-bottom) var(--archive-unlock-left)); transform: none; will-change: clip-path; }
-.archive-unlock-tab-motion.is-ready.is-revealing .archive-unlock-tab-image.is-moving { clip-path: inset(var(--archive-unlock-reveal-top) 0 var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transition: clip-path var(--archive-unlock-duration) cubic-bezier(.22,1,.36,1); }
+.archive-unlock-tab-image.is-moving { opacity: .85; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-start-bottom) var(--archive-unlock-left)); transform: none; will-change: clip-path, opacity; }
+.archive-unlock-tab-motion.is-ready.is-revealing .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transition: clip-path var(--archive-unlock-duration) cubic-bezier(.22,1,.36,1), opacity var(--archive-unlock-duration) cubic-bezier(.22,1,.36,1); }
 .archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving,
-.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) 0 var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transform: none; }
-.archive-unlock-tab-motion.is-fallback .archive-unlock-tab-head { display: none; }
+.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transform: none; }
 .archive-unlock-tab-motion.is-fallback .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: none; transform: none; }
 .archive-unlock-tab-motion:not(.is-fallback) .motion-stage.is-loading .motion-stage-fallback .is-moving { opacity: 0; }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-result-color > .motion-stage { position: absolute; inset: 0; }
 .archive-result-color-trigger { position: absolute; top: 29.6%; left: 9%; width: 72%; height: 4%; pointer-events: none; }
 .archive-result-color-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.archive-result-color-normal { opacity: 1; }
 .archive-result-color-passed { opacity: 0; }
 .archive-result-color-passed.is-static, .motion-stage-fallback .archive-result-color-passed { opacity: 1; }
-.archive-result-color .motion-stage.is-loading .motion-stage-fallback .archive-result-color-passed { opacity: 0; }
-.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-normal { opacity: 0; transition: opacity var(--archive-result-duration) ease-out; }
-.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-passed { opacity: 1; transition: opacity var(--archive-result-duration) ease-out; }
+.archive-result-color .motion-stage.is-loading .motion-stage-fallback .archive-result-color-normal { opacity: 1; }
+.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-normal { animation: archive-result-normal-out var(--archive-result-duration) var(--archive-result-easing) var(--archive-result-delay) both; }
+.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-passed { animation: archive-result-passed-in var(--archive-result-duration) var(--archive-result-easing) var(--archive-result-delay) both; }
 .archive-result-color.is-complete .archive-result-color-normal { opacity: 0; }
 .archive-result-color.is-complete .archive-result-color-passed { opacity: 1; }
+@keyframes archive-result-normal-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes archive-result-passed-in { from { opacity: 0; } to { opacity: 1; } }
 .reports-archive-clean-base { position: relative; z-index: 10; }
 .reports-archive-final-overlay { position: absolute; z-index: 29; inset: 0; pointer-events: none; }
 .archive-fish-float { position: absolute; z-index: 23; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
@@ -402,11 +406,17 @@ button, a { font: inherit; }
 .category-page-final .category-card-hotspot:disabled { pointer-events: none; }
 .category-card-hotspot { left: calc(var(--category-card-x) * .1cqw); top: calc(var(--category-card-y) * .1cqw); width: calc(var(--category-card-width) * .1cqw); height: calc(var(--category-card-height) * .1cqw); margin: 0; padding: 0; border: 0; font: inherit; text-align: left; appearance: none; background: transparent; }
 .category-card-hotspot .category-card-copy { position: absolute; left: calc(var(--category-copy-x) * .1cqw); top: calc(var(--category-copy-y) * .1cqw); width: calc(var(--category-copy-width) * .1cqw); height: auto; display: flex; overflow: visible; clip-path: none; flex-direction: column; align-items: flex-start; white-space: normal; color: #5f3d24; text-align: left; pointer-events: none; }
-.category-card-copy strong { display: block; font-family: var(--font-display); font-size: 4.55cqw; font-weight: 750; line-height: 1.12; }
-.category-card-copy small { display: block; max-width: 82%; margin-top: 2.2cqw; color: rgb(95 61 36 / .58); font-size: 2.45cqw; line-height: 1.42; }
-.category-card-copy b { display: block; margin-top: 1.35cqw; padding: .55cqw 2.35cqw .65cqw; border-radius: 999px; font-size: 3.05cqw; font-weight: 750; line-height: 1.08; background: rgb(166 213 126 / .88); }
-.category-page-final[data-category="review-assurance"] .category-card-copy b { background: rgb(180 225 238 / .9); }
-.category-page-final[data-category="production-traceability"] .category-card-copy b { background: rgb(246 205 86 / .92); }
+.category-card-copy strong { display: block; font-family: var(--font-display); font-size: 5.05cqw; font-weight: 750; line-height: 1.08; }
+.category-card-copy small { display: block; max-width: 64cqw; margin-top: 1.15cqw; color: rgb(95 61 36 / .52); font-size: 2.85cqw; line-height: 1.42; }
+.category-card-copy b { position: absolute; top: 18.2cqw; left: 0; display: flex; width: 45cqw; height: 10.2cqw; margin: 0; padding: 0 2.4cqw 0 9.2cqw; align-items: center; box-sizing: border-box; border-radius: 999px; color: #5f3d24; font-size: 5cqw; font-weight: 750; line-height: 1; white-space: nowrap; background: center / 100% 100% no-repeat url("/design/final-v1/category-button-inspection.png"); }
+.category-card-copy b::before { position: absolute; top: 50%; left: 2.2cqw; width: 6.3cqw; height: 6.3cqw; content: ""; transform: translateY(-50%); background: center / contain no-repeat url("/design/final-v1/category-search-inspection.png"); }
+.category-card-hotspot::after { position: absolute; top: 18.2cqw; left: 57.5cqw; width: 12.5cqw; height: 14cqw; content: ""; background: center / contain no-repeat url("/design/final-v1/category-arrow-inspection.png"); pointer-events: none; }
+.category-page-final[data-category="review-assurance"] .category-card-copy b { background-image: url("/design/final-v1/category-button-review.png"); }
+.category-page-final[data-category="review-assurance"] .category-card-copy b::before { background-image: url("/design/final-v1/category-search-review.png"); }
+.category-page-final[data-category="review-assurance"] .category-card-hotspot::after { background-image: url("/design/final-v1/category-arrow-review.png"); }
+.category-page-final[data-category="production-traceability"] .category-card-copy b { background-image: url("/design/final-v1/category-button-production.png"); }
+.category-page-final[data-category="production-traceability"] .category-card-copy b::before { background-image: url("/design/final-v1/category-search-production.png"); }
+.category-page-final[data-category="production-traceability"] .category-card-hotspot::after { background-image: url("/design/final-v1/category-arrow-production.png"); }
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
 .reports-archive-art { animation: archive-art-enter .65s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes archive-art-enter { from { opacity: .82; transform: scale(1.012); } to { opacity: 1; transform: scale(1); } }

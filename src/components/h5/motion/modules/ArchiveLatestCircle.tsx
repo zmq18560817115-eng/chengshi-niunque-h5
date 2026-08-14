@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { MotionBoundary } from "../MotionBoundary";
 import { MotionStage } from "../MotionStage";
 import { H5_MOTION_ACCEPTANCE, H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "../motion-config";
@@ -9,8 +9,13 @@ import { H5_MOTION_ACCEPTANCE, H5_MOTION_ENABLED, h5MotionModules, h5MotionTimin
 const circleAsset = "/design/final-v1/motion/archive-clean/archive-latest-circle-canvas.webp";
 const assets = [circleAsset] as const;
 const completedKey = "archive-latest-circle-complete-v3";
+// The mask centreline is derived from the alpha bounds of the approved
+// 1000 x 5557 circle asset. It starts at the open end on the upper-left,
+// follows the hand-drawn loop, and finishes at the second open end.
+const circleStrokePath = "M 172 1590 C 110 1592 24 1606 25 1635 C 25 1664 130 1677 236 1674 C 350 1670 484 1655 480 1617 C 476 1594 330 1597 213 1600";
 
 export function ArchiveLatestCircle({ preview = false }: { preview?: boolean }) {
+  const maskId = `archive-latest-circle-mask-${useId().replaceAll(":", "")}`;
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -63,7 +68,15 @@ export function ArchiveLatestCircle({ preview = false }: { preview?: boolean }) 
     <div ref={trigger} className="archive-latest-circle-trigger"/>
     <MotionBoundary fallback={fallback}>
       <MotionStage masterWidth={1000} masterHeight={5557} assets={assets} enabled={enabled} crossfadeMs={0} fallback={fallback} onStateChange={handleMotionState}>
-        <Image className="archive-latest-circle-image is-animated" src={circleAsset} alt="" fill sizes="(max-width: 750px) 100vw, 750px" unoptimized/>
+        <svg className="archive-latest-circle-svg is-animated" viewBox="0 0 1000 5557" preserveAspectRatio="none" focusable="false">
+          <defs>
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="5557">
+              <rect width="1000" height="5557" fill="black"/>
+              <path className="archive-latest-circle-stroke" d={circleStrokePath} pathLength="1"/>
+            </mask>
+          </defs>
+          <image className="archive-latest-circle-raster" href={circleAsset} x="0" y="0" width="1000" height="5557" preserveAspectRatio="none" mask={`url(#${maskId})`}/>
+        </svg>
       </MotionStage>
     </MotionBoundary>
   </div>;

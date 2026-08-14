@@ -5,10 +5,10 @@
   },
   "moduleOne": {
     "sourceCrop": [
-      652,
-      408,
-      2652,
-      4336
+      812,
+      2,
+      2812,
+      3930
     ],
     "runtimeBounds": [
       0,
@@ -17,7 +17,16 @@
       1964
     ]
   },
-  "unlockInitialVisibleRatio": 0.2,
+  "unlock": {
+    "runtimeBounds": [
+      840,
+      1872,
+      918,
+      2144
+    ],
+    "initialVisibleRatio": 0.2,
+    "initialVisibleHeight": 54
+  },
   "fish": [
     {
       "index": 1,

@@ -38,8 +38,8 @@ describe("CategoryDetail dynamic card copy", () => {
 
     expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("59");
     expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("527");
-    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("49");
-    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("65");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("66");
+    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("48");
     expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("716");
   });
 });

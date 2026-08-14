@@ -21,9 +21,9 @@ describe("H5 category report themes", () => {
     expect(getCategoryTheme(slug)).toMatchObject({ artwork });
   });
 
-  it("uses per-card master coordinates instead of forcing the third card copy upward", () => {
-    expect(categoryCardLayouts["inspection-projects"].map((card) => card.contentY)).toEqual([65, 65, 92]);
-    expect(categoryCardLayouts["review-assurance"].map((card) => card.contentY)).toEqual([65, 65, 92]);
-    expect(categoryCardLayouts["production-traceability"].map((card) => card.contentY)).toEqual([65, 65]);
+  it("uses the reference-aligned copy origin for each card artwork", () => {
+    expect(categoryCardLayouts["inspection-projects"].map((card) => [card.contentX, card.contentY])).toEqual([[66, 48], [66, 48], [66, 92]]);
+    expect(categoryCardLayouts["review-assurance"].map((card) => [card.contentX, card.contentY])).toEqual([[66, 48], [66, 48], [66, 92]]);
+    expect(categoryCardLayouts["production-traceability"].map((card) => [card.contentX, card.contentY])).toEqual([[66, 48], [66, 48]]);
   });
 });

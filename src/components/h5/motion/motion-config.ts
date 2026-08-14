@@ -37,16 +37,17 @@ export const h5MotionTiming = {
     swipeReadyMs: 420,
   },
   archiveLatestCircle: {
-    delayMs: 120,
-    durationMs: 1100,
+    delayMs: 250,
+    durationMs: 850,
     threshold: 0.3,
   },
   archiveUnlockTab: {
     triggerDistancePx: 24,
-    durationMs: 1100,
+    durationMs: 650,
   },
   archiveResultColor: {
-    durationMs: 900,
+    delayAfterCircleMs: 200,
+    durationMs: 700,
     threshold: 0.3,
   },
   archiveStoryCopy: {

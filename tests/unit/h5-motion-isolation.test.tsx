@@ -44,10 +44,35 @@ describe("H5 motion isolation", () => {
   });
 
   it("keeps archive motion visible long enough to be perceived", () => {
-    expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeGreaterThanOrEqual(1000);
-    expect(h5MotionTiming.archiveUnlockTab.durationMs).toBeGreaterThanOrEqual(1000);
-    expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(800);
+    expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeGreaterThanOrEqual(200);
+    expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeLessThanOrEqual(300);
+    expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeGreaterThanOrEqual(700);
+    expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeLessThanOrEqual(900);
+    expect(h5MotionTiming.archiveUnlockTab.durationMs).toBe(650);
+    expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeGreaterThanOrEqual(150);
+    expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeLessThanOrEqual(250);
+    expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
+    expect(h5MotionTiming.archiveResultColor.durationMs).toBeLessThanOrEqual(800);
     expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBeGreaterThanOrEqual(1200);
     expect(h5MotionTiming.archiveStoryCopy.linePauseMs).toBeGreaterThanOrEqual(250);
+  });
+
+  it("draws the archive circle along an SVG stroke instead of a rectangular reveal", () => {
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveLatestCircle.tsx", "utf8");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(component).toContain("archive-latest-circle-stroke");
+    expect(component).toContain("circleStrokePath");
+    expect(css).toContain("stroke-dashoffset");
+    expect(css).not.toContain("@keyframes archive-latest-circle-draw");
+  });
+
+  it("crossfades aligned normal and passed result canvases after the circle completes", () => {
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveResultColorMotion.tsx", "utf8");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(component).toContain("archive-result-normal-canvas.webp");
+    expect(component).toContain("archive-result-passed-canvas.webp");
+    expect(component).toContain("archiveLatestCircle.durationMs");
+    expect(css).toContain("@keyframes archive-result-normal-out");
+    expect(css).toContain("@keyframes archive-result-passed-in");
   });
 });

@@ -14,7 +14,11 @@ OUTPUT = ROOT / "public/design/final-v1/motion/archive-clean"
 REFERENCE = ROOT / "public/design/final-v1/archive-reference.webp"
 STORY_INITIAL = ROOT / "public/design/final-v1/motion/archive-story-copy/archive-story-base.webp"
 MASTER = (1000, 5557)
-DESIGN_CROP = (652, 408, 2652, 4336)
+# Pixel registration against the formal 2000 x 11114 reference establishes
+# one shared module-one transform: scale 0.5 and canvas origin (-406, -1).
+# Keep the 2000 x 3928 source crop so every generated layer remains aligned
+# on the existing 1000 x 1964 runtime canvas.
+DESIGN_CROP = (812, 2, 2812, 3930)
 MODULE_ONE_SIZE = (1000, 1964)
 # The legacy full-page base contains a second baked purple report tab below
 # module one through y=2144. Restore official paper texture through 2160 while
@@ -22,6 +26,7 @@ MODULE_ONE_SIZE = (1000, 1964)
 MODULE_ONE_REPLACE_END = 2160
 MODULE_THREE_Y = 4164
 MODULE_THREE_SIZE = (1000, 1393)
+UNLOCK_RUNTIME_BOUNDS = (840, 1872, 918, 2144)
 
 
 def transform_module_one(name: str) -> Image.Image:
@@ -29,6 +34,20 @@ def transform_module_one(name: str) -> Image.Image:
     if image.size != (3034, 4334):
         raise ValueError(f"unexpected module-one canvas: {name} {image.size}")
     return image.crop(DESIGN_CROP).resize(MODULE_ONE_SIZE, Image.Resampling.LANCZOS)
+
+
+def transform_unlock_full(name: str) -> Image.Image:
+    source = Image.open(SOURCE / "长图模块1" / name).convert("RGBA")
+    if source.size != (3034, 4334):
+        raise ValueError(f"unexpected unlock canvas: {name} {source.size}")
+    bbox = source.getchannel("A").getbbox()
+    if bbox is None:
+        raise ValueError("unlock layer has no visible pixels")
+    x1, y1, x2, y2 = UNLOCK_RUNTIME_BOUNDS
+    runtime = source.crop(bbox).resize((x2 - x1, y2 - y1), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", MASTER)
+    canvas.alpha_composite(runtime, (x1, y1))
+    return canvas
 
 
 def alpha_composite(canvas: Image.Image, layer: Image.Image, xy=(0, 0)) -> None:
@@ -95,19 +114,18 @@ def main() -> None:
         "h5长图-工牌.png",
         "h5长图-最新公开批次信息.png",
         "h5长图-已通过模块.png",
-        "h5长图-已通过模块文案-无绿色字.png",
     ):
         alpha_composite(module_one, transform_module_one(name))
 
     # The initial unlock state is an independent full-master canvas. Keep it
     # out of the clean base so loading/idle/revealing never render two tabs.
-    unlock = transform_module_one("h5长图-下滑条.png")
+    unlock = transform_unlock_full("h5长图-下滑条.png")
     unlock_bbox = unlock.getchannel("A").getbbox()
     if unlock_bbox is None:
         raise ValueError("unlock layer has no visible pixels")
     head_height = max(1, round((unlock_bbox[3] - unlock_bbox[1]) * 0.2))
-    unlock_head = Image.new("RGBA", MODULE_ONE_SIZE)
-    unlock_head.alpha_composite(unlock.crop((0, unlock_bbox[1], 1000, unlock_bbox[1] + head_height)), (0, unlock_bbox[1]))
+    unlock_head = Image.new("RGBA", MASTER)
+    unlock_head.alpha_composite(unlock.crop((0, unlock_bbox[1], MASTER[0], unlock_bbox[1] + head_height)), (0, unlock_bbox[1]))
 
     clean = Image.open(STORY_INITIAL).convert("RGBA")
     clean.paste(module_one, (0, 0))
@@ -151,18 +169,16 @@ def main() -> None:
         clean.paste(texture_patch, (x, y), mask)
 
     clean.save(OUTPUT / "archive-base-clean.webp", "WEBP", lossless=True, method=6)
-    unlock_head_canvas = Image.new("RGBA", MASTER)
-    unlock_head_canvas.alpha_composite(unlock_head)
-    unlock_head_canvas.save(OUTPUT / "archive-unlock-tab-head-canvas.webp", "WEBP", lossless=True, method=6)
+    unlock_head.save(OUTPUT / "archive-unlock-tab-head-canvas.webp", "WEBP", lossless=True, method=6)
     for name, source_name in (
         ("archive-latest-circle-canvas.webp", "h5长图-最新公开批次信息-线圈.png"),
-        ("archive-unlock-tab-canvas.webp", "h5长图-下滑条.png"),
         ("archive-result-normal-canvas.webp", "h5长图-已通过模块文案-无绿色字.png"),
         ("archive-result-passed-canvas.webp", "h5长图-已通过模块文案.png"),
     ):
         canvas = Image.new("RGBA", MASTER)
         canvas.alpha_composite(transform_module_one(source_name))
         canvas.save(OUTPUT / name, "WEBP", lossless=True, method=6)
+    unlock.save(OUTPUT / "archive-unlock-tab-canvas.webp", "WEBP", lossless=True, method=6)
     for index, canvas in enumerate(fish_canvases, start=1):
         canvas.save(OUTPUT / f"archive-fish-{index:02d}-canvas.webp", "WEBP", lossless=True, method=6)
 
@@ -177,7 +193,11 @@ def main() -> None:
     manifest = {
         "master": {"width": 1000, "height": 5557},
         "moduleOne": {"sourceCrop": DESIGN_CROP, "runtimeBounds": [0, 0, 1000, 1964]},
-        "unlockInitialVisibleRatio": 0.2,
+        "unlock": {
+            "runtimeBounds": list(UNLOCK_RUNTIME_BOUNDS),
+            "initialVisibleRatio": 0.2,
+            "initialVisibleHeight": head_height,
+        },
         "fish": [
             {"index": index, "detectedBox": [int(value) for value in box[:4]], "canvasAlphaBounds": fish_canvases[index - 1].getchannel("A").getbbox()}
             for index, box in enumerate(fish_boxes, start=1)
