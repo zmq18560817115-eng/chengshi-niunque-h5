@@ -32,4 +32,14 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("第2项资料")).toBeInTheDocument();
     expect(screen.getAllByText("资料整理中，正式发布后可在此查看。")).toHaveLength(2);
   });
+  it("maps card and copy coordinates directly from the shared 1000px master", () => {
+    const { container } = render(<CategoryDetail module={moduleFixture} preview />);
+    const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
+
+    expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("59");
+    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("527");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("49");
+    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("65");
+    expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("716");
+  });
 });

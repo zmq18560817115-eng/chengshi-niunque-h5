@@ -56,9 +56,9 @@ describe("archive story copy motion", () => {
     act(() => notify?.([{ isIntersecting: true, intersectionRatio: .3 } as IntersectionObserverEntry], {} as IntersectionObserver));
     expect(root).toHaveAttribute("data-motion-started", "true");
     expect(disconnect).toHaveBeenCalled();
-    await waitFor(() => expect(root).toHaveAttribute("data-motion-complete", "true"), { timeout: 5500 });
+    await waitFor(() => expect(root).toHaveAttribute("data-motion-complete", "true"), { timeout: 8000 });
     expect(sessionStorage.getItem("archive-story-copy-complete-v2")).toBe("true");
-  });
+  }, 9000);
 
   it("uses the complete static artwork for reduced motion and asset failure", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));

@@ -139,7 +139,7 @@ describe("multi-page H5 interactions", () => {
     scrollY = 124;
     fireEvent.scroll(window);
     await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealing"));
-    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealed"), { timeout: 1000 });
+    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealed"), { timeout: 1500 });
     expect(sessionStorage.getItem("archive-unlock-tab-complete-v3")).toBe("true");
     scrollY = 60;
     fireEvent.scroll(window);
@@ -260,12 +260,25 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-hint-start-ms", "420");
     expect(stage).toHaveAttribute("data-hint-duration-ms", "260");
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).not.toBeInTheDocument();
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready"));
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
+    expect(container.querySelector(".brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 460)); });
     expect(onEnter).toHaveBeenCalledOnce();
+    consoleError.mockRestore();
+  });
+
+  it("switches from the complete first frame to the final fallback when a critical guide asset fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { container } = render(<BrandGuide/>);
+    expect(container.querySelector(".brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    await act(async () => pendingImages[0]?.reject());
+    await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
+    expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
     consoleError.mockRestore();
   });
 

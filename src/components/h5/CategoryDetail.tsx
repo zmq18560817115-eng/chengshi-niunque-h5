@@ -25,13 +25,13 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         const label = card ? `${card.title}，查看${card.assets.length}份资料` : `第${index + 1}项资料，资料整理中`;
         const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{card?.title ?? `第${index + 1}项资料`}</strong><small>{card?.description ?? "资料整理中，正式发布后可在此查看。"}</small><b>{card ? (card.buttonText || `查看${card.assets.length}份报告`) : "查看报告"}</b></span><span className="sr-only">{label}</span></>;
         const style = {
-          "--category-card-x": `${layout.x / 10}%`,
-          "--category-card-y": `${layout.y / 21.66}%`,
-          "--category-card-width": `${layout.width / 10}%`,
-          "--category-card-height": `${layout.height / 21.66}%`,
-          "--category-copy-x": `${layout.contentX / layout.width * 100}%`,
-          "--category-copy-y": `${layout.contentY / layout.height * 100}%`,
-          "--category-copy-width": `${layout.contentWidth / layout.width * 100}%`,
+          "--category-card-x": layout.x,
+          "--category-card-y": layout.y,
+          "--category-card-width": layout.width,
+          "--category-card-height": layout.height,
+          "--category-copy-x": layout.contentX,
+          "--category-copy-y": layout.contentY,
+          "--category-copy-width": layout.contentWidth,
         } as CSSProperties;
         return preview ? <article key={cardId} className="category-card-hotspot" data-index={index} style={style}>{copy}</article> :
           <button key={cardId} type="button" className="category-card-hotspot" data-index={index} style={style} data-card-id={cardId} data-placeholder={!card || undefined} aria-label={label} disabled={leaving} onClick={() => { if (leaving) return; setLeaving(true); window.setTimeout(() => router.push(`/reports/${module.slug}/items/${cardId}/reports`), 220); }}>{copy}</button>;

@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import { MotionBoundary } from "@/components/h5/motion/MotionBoundary";
 import { MotionStage } from "@/components/h5/motion/MotionStage";
-import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
+import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "@/components/h5/motion/motion-config";
 
 function BrokenMotion(): never { throw new Error("motion failed"); }
 
@@ -34,5 +35,19 @@ describe("H5 motion isolation", () => {
     const { container } = render(<MotionStage enabled={false} masterWidth={750} masterHeight={1625} fallback={<div data-testid="fallback"/>}><div/></MotionStage>);
     expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
     expect(screen.getByTestId("fallback")).toBeInTheDocument();
+  });
+
+  it("does not force the guide fallback visible after the dynamic stage is ready", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).not.toContain(".motion-stage .brand-guide-fallback");
+    expect(css).toContain(".motion-stage-fallback .brand-guide-fallback");
+  });
+
+  it("keeps archive motion visible long enough to be perceived", () => {
+    expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeGreaterThanOrEqual(1000);
+    expect(h5MotionTiming.archiveUnlockTab.durationMs).toBeGreaterThanOrEqual(1000);
+    expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(800);
+    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBeGreaterThanOrEqual(1200);
+    expect(h5MotionTiming.archiveStoryCopy.linePauseMs).toBeGreaterThanOrEqual(250);
   });
 });

@@ -15,7 +15,11 @@ const guideAssetNames = [
   "swipe-hint-text.webp", "swipe-hint-arrow.webp",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
-const guideAssets = guideAssetNames.map(assetUrl);
+const guideAssets = [...guideAssetNames.map(assetUrl), assetUrl("guide-first-frame.webp"), assetUrl("guide-final-fallback.webp")];
+
+function GuideFirstFrame({ onError }: { onError: () => void }) {
+  return <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>;
+}
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
@@ -85,6 +89,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, []);
   const startAnimation = useCallback(() => setAnimationStarted(true), []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
+  const firstFrame = <GuideFirstFrame onError={() => handleLayerError("guide-first-frame.webp")}/>;
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -110,7 +115,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     }}>
     <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-hint-start-ms={h5MotionTiming.guide.hintStartMs} data-hint-duration-ms={h5MotionTiming.guide.hintDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       <MotionBoundary fallback={fallback}>
-        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled={motionEnabled} crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
+        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled={motionEnabled} crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
           <GuideLayers onError={handleLayerError}/>
         </MotionStage>
       </MotionBoundary>

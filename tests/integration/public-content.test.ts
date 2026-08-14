@@ -5,15 +5,37 @@ import { prisma } from "@/server/db/prisma";
 describe("public content integration", () => {
   it("returns only published, online, non-deleted content in sort order", async () => {
     const content = await new PublicContentService().getContent();
-    const expectedModules = await prisma.informationModule.findMany({ where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { title: true } });
+    const expectedModules = await prisma.informationModule.findMany({
+      where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      select: {
+        title: true,
+        slug: true,
+        cards: {
+          where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+          select: {
+            title: true,
+            assets: {
+              where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+              select: { title: true, assetType: true },
+            },
+          },
+        },
+      },
+    });
     expect(content.modules.map((module) => module.title)).toEqual(expectedModules.map((module) => module.title));
     expect(content.modules.flatMap((module) => module.cards).map((card) => card.title)).not.toEqual(
       expect.arrayContaining(["草稿卡片", "已删除卡片"]),
     );
-    const inspection = content.modules.find((module) => module.title === "检测项目");
-    expect(inspection?.cards.map((card) => card.title)).toEqual(["核心营养含量"]);
-    expect(inspection?.cards[0].assets.map((asset) => asset.title)).toEqual(["检测方法公开说明"]);
-    expect(inspection?.cards[0].assets.map((asset) => asset.type)).toEqual(["EXTERNAL_LINK"]);
+    for (const expectedModule of expectedModules) {
+      const actualModule = content.modules.find((module) => module.slug === expectedModule.slug);
+      expect(actualModule?.cards.map((card) => card.title)).toEqual(expectedModule.cards.map((card) => card.title));
+      expect(actualModule?.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.type })))).toEqual(
+        expectedModule.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.assetType }))),
+      );
+    }
   });
 
   it("does not expose internal records, storage keys, or secrets", async () => {
