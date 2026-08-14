@@ -269,11 +269,10 @@ button, a { font: inherit; }
 .brand-guide-foreground-top { z-index: 35; }
 .brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
 .brand-guide-swipe-arrow { animation: guide-hint-float 1.4s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
-.brand-guide-first-frame { z-index: 45; visibility: visible; opacity: 1; transition: opacity .1s linear, visibility 0s linear .1s; }
+.brand-guide-first-frame { z-index: 45; visibility: visible; opacity: 1; }
 .brand-guide-fallback { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
 .brand-guide.is-ready .brand-guide-dynamic-stage { opacity: 1; }
-.brand-guide.is-ready .brand-guide-first-frame, .brand-guide.is-failed .brand-guide-first-frame { visibility: hidden; opacity: 0; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
@@ -465,7 +464,6 @@ button, a { font: inherit; }
   .reports-archive.reports-entry-transition { animation: reports-fade-in 150ms ease both; }
   .archive-category-hotspot { opacity: 1; transform: none; transition: none; }
   .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
-  .brand-guide.is-ready .brand-guide-first-frame { visibility: hidden; opacity: 0; transition: none; }
   .brand-guide.is-ready .brand-guide-fallback, .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; transition: none; }
   .archive-module-one { opacity: 1; transform: none; transition: none; }
   .archive-module-circle, .archive-module-result-passed { clip-path: inset(0); opacity: 1; animation: none !important; }

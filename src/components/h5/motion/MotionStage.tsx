@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { H5_MOTION_ENABLED, MOTION_ASSET_TIMEOUT_MS } from "./motion-config";
 
 type MotionState = "disabled" | "loading" | "ready" | "failed" | "reduced";
-type Props = { children: ReactNode; fallback: ReactNode; assets?: readonly string[]; masterWidth: number; masterHeight: number; enabled?: boolean; crossfadeMs?: number; onStateChange?: (state: MotionState) => void; onAnimationReady?: () => void };
+type Props = { children: ReactNode; fallback: ReactNode; loadingFallback?: ReactNode; assets?: readonly string[]; masterWidth: number; masterHeight: number; enabled?: boolean; crossfadeMs?: number; onStateChange?: (state: MotionState) => void; onAnimationReady?: () => void };
 
-export function MotionStage({ children, fallback, assets = [], masterWidth, masterHeight, enabled = H5_MOTION_ENABLED, crossfadeMs = 180, onStateChange, onAnimationReady }: Props) {
+export function MotionStage({ children, fallback, loadingFallback, assets = [], masterWidth, masterHeight, enabled = H5_MOTION_ENABLED, crossfadeMs = 180, onStateChange, onAnimationReady }: Props) {
   const [state, setState] = useState<MotionState>(enabled ? "loading" : "disabled");
   const assetKey = useMemo(() => assets.join("\n"), [assets]);
   useEffect(() => {
@@ -48,6 +48,6 @@ export function MotionStage({ children, fallback, assets = [], masterWidth, mast
   if (state === "disabled" || state === "reduced" || state === "failed") return fallback;
   return <div className={`motion-stage is-${state}`} data-motion-state={state} style={{ "--motion-master-ratio": `${masterWidth} / ${masterHeight}`, "--motion-crossfade-ms": `${crossfadeMs}ms` } as CSSProperties}>
     <div className="motion-stage-content" aria-hidden={state !== "ready"}>{children}</div>
-    <div className="motion-stage-fallback">{fallback}</div>
+    <div className="motion-stage-fallback">{loadingFallback ?? fallback}</div>
   </div>;
 }
