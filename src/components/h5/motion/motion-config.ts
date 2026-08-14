@@ -9,6 +9,7 @@ const moduleEnabled = (name: string, explicit: string | undefined) => {
 };
 
 export const H5_MOTION_ENABLED = process.env.NEXT_PUBLIC_H5_MOTION_ENABLED !== "false";
+export const H5_MOTION_ACCEPTANCE = localAcceptance;
 export const MOTION_ASSET_TIMEOUT_MS = 5000;
 
 export const h5MotionModules = {
@@ -37,22 +38,22 @@ export const h5MotionTiming = {
   },
   archiveLatestCircle: {
     delayMs: 120,
-    durationMs: 700,
+    durationMs: 1100,
     threshold: 0.3,
   },
   archiveUnlockTab: {
     triggerDistancePx: 24,
-    durationMs: 820,
+    durationMs: 1100,
   },
   archiveResultColor: {
-    durationMs: 400,
+    durationMs: 900,
     threshold: 0.3,
   },
   archiveStoryCopy: {
-    delayMs: 250,
-    lineDurationMs: 850,
-    linePauseMs: 100,
-    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    delayMs: 300,
+    lineDurationMs: 1400,
+    linePauseMs: 320,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
     threshold: 0.3,
   },
   revealThreshold: 0.3,

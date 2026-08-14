@@ -139,7 +139,7 @@ describe("multi-page H5 interactions", () => {
     scrollY = 124;
     fireEvent.scroll(window);
     await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealing"));
-    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealed"), { timeout: 1000 });
+    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealed"), { timeout: 1500 });
     expect(sessionStorage.getItem("archive-unlock-tab-complete-v3")).toBe("true");
     scrollY = 60;
     fireEvent.scroll(window);

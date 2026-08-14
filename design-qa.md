@@ -9,16 +9,22 @@
 
 ## Implementation evidence
 
-- `test-results/current-visual-fix/inspection-390.png`
-- `test-results/current-visual-fix/review-390.png`
-- `test-results/current-visual-fix/trace-390.png`
+- `test-results/category-visual-alignment/inspection-projects-375.png`
+- `test-results/category-visual-alignment/inspection-projects-390.png`
+- `test-results/category-visual-alignment/inspection-projects-414.png`
+- `test-results/category-visual-alignment/review-assurance-375.png`
+- `test-results/category-visual-alignment/review-assurance-390.png`
+- `test-results/category-visual-alignment/review-assurance-414.png`
+- `test-results/category-visual-alignment/production-traceability-375.png`
+- `test-results/category-visual-alignment/production-traceability-390.png`
+- `test-results/category-visual-alignment/production-traceability-414.png`
 - `test-results/current-visual-fix/guide-start-390.png`
 - `test-results/current-visual-fix/guide-middle-390.png`
 - `test-results/current-visual-fix/guide-final-390.png`
 
 ## Overlay and interaction review
 
-- Category card rectangles use the same 1000 x 2166 coordinate origin as the artwork. Copy offsets are local to each paper rectangle, preventing lower-card drift.
+- Category card rectangles and copy layers use raw 1000 x 2166 master pixels converted by container query units. The 9-case Chromium check verified each card and copy origin at 375, 390, and 414px with no horizontal overflow.
 - Guide papers share one 420ms start and one 1500ms duration. Only transform and opacity vary; final coordinates remain the approved artwork coordinates.
 - Archive ribbon uses the pixel seam at y=1678 and reveals continuously to y=1951. The short head and moving body do not overlap.
 - Fish canvases use the archive 1000 x 5557 origin. Browser inspection confirmed the module changes from `is-ready` to `is-visible` when its trigger enters the viewport.

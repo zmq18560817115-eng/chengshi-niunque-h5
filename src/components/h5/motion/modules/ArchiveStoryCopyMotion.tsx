@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { MotionBoundary } from "../MotionBoundary";
 import { MotionStage } from "../MotionStage";
-import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "../motion-config";
+import { H5_MOTION_ACCEPTANCE, H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "../motion-config";
 
 const lineAssets = [1, 2, 3, 4].map((index) => `/design/final-v1/motion/archive-clean/story-line-${String(index).padStart(2, "0")}-canvas.webp`);
 const completedKey = "archive-story-copy-complete-v2";
@@ -22,7 +22,7 @@ export function ArchiveStoryCopyMotion({ preview = false }: { preview?: boolean 
 
   useEffect(() => {
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const restored = sessionStorage.getItem(completedKey) === "true";
+    const restored = !H5_MOTION_ACCEPTANCE && sessionStorage.getItem(completedKey) === "true";
     if (!enabled || reduced || restored || typeof IntersectionObserver === "undefined") {
       setComplete(true);
       return;
