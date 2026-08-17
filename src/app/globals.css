@@ -590,7 +590,12 @@ button, a { font: inherit; }
   left: 55.1cqw !important;
 }
 
-/* 检测项目：批次核验气泡框 + 角色腮红 */
+/* 生产溯源：状态标签垂直校准 */
+.category-page-final[data-category="production-traceability"] .category-card-status {
+  top: -3.6cqw !important;
+}
+
+.reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
 .category-speech-bubble {
   position: absolute;
   z-index: 3;

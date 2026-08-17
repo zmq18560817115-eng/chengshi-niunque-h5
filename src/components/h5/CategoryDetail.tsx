@@ -17,6 +17,8 @@ const legacySeedDescriptions = new Set([
   "稳定性与感官复核资料。",
   "生产主体与资质资料。",
   "生产过程中的质量管理资料。",
+  "DHA,ARA有没有达到标签标示量。妈妈只看报告结论是否“符合/通过”，不用自己算公式。",
+  "DHA,ARA有没有达到标签标示量。妈妈只看报告结论是否 \"符合/通过\" ，不用自己算公式。",
 ]);
 
 function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback: CategoryCardFallback) {
