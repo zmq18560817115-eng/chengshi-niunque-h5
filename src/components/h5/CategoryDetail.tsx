@@ -21,9 +21,13 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
     <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
+        const fallback = theme.cardFallbacks[index];
         const cardId = card?.id ?? placeholderCardId(index);
-        const label = card ? `${card.title}，查看${card.assets.length}份资料` : `第${index + 1}项资料，资料整理中`;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{card?.title ?? `第${index + 1}项资料`}</strong><small>{card?.description ?? "资料整理中，正式发布后可在此查看。"}</small><b>{card ? (card.buttonText || `查看${card.assets.length}份报告`) : "查看报告"}</b></span><span className="sr-only">{label}</span></>;
+        const title = card?.title || fallback.title;
+        const description = card?.description || fallback.description;
+        const buttonText = card ? (card.buttonText || `查看${card.assets.length}份报告`) : fallback.buttonText;
+        const label = `${title}，${buttonText}`;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true">{fallback.statusText}</span><span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,
