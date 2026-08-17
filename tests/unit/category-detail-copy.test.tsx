@@ -37,10 +37,21 @@ describe("CategoryDetail dynamic card copy", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} preview />);
     const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
 
-    expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("59");
-    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("527");
-    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("66");
+    expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("63");
+    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("529");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("58");
     expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("76");
-    expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("716");
+    expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("742");
+  });
+
+  it("replaces legacy seed placeholders while preserving explicit managed copy", () => {
+    const legacyModule = {
+      ...moduleFixture,
+      cards: [{ ...moduleFixture.cards[0], title: "第1项资料", description: "资料整理中，正式发布后可在此查看。", buttonText: "查看报告" }],
+    };
+    render(<CategoryDetail module={legacyModule} preview />);
+    expect(screen.getByText("核心营养含量")).toBeInTheDocument();
+    expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
+    expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 });

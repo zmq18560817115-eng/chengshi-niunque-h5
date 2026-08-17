@@ -28,18 +28,18 @@ const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈�
 // The runtime scales the complete composition; it never repositions cards per viewport.
 export const categoryCardLayouts = {
   "inspection-projects": [
-    { x: 59, y: 527, width: 823, height: 381, contentX: 66, contentY: 76, contentWidth: 716 },
-    { x: 59, y: 987, width: 823, height: 374, contentX: 66, contentY: 86, contentWidth: 716 },
-    { x: 59, y: 1427, width: 823, height: 389, contentX: 66, contentY: 128, contentWidth: 716 },
+    { x: 63, y: 529, width: 874, height: 434, contentX: 58, contentY: 76, contentWidth: 742 },
+    { x: 65, y: 1001, width: 874, height: 442, contentX: 58, contentY: 76, contentWidth: 742 },
+    { x: 61, y: 1487, width: 876, height: 434, contentX: 58, contentY: 76, contentWidth: 742 },
   ],
   "review-assurance": [
-    { x: 59, y: 527, width: 823, height: 376, contentX: 66, contentY: 76, contentWidth: 716 },
-    { x: 59, y: 987, width: 823, height: 369, contentX: 66, contentY: 86, contentWidth: 716 },
-    { x: 59, y: 1421, width: 823, height: 391, contentX: 66, contentY: 128, contentWidth: 716 },
+    { x: 61, y: 553, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
+    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
+    { x: 55, y: 1495, width: 876, height: 404, contentX: 68, contentY: 66, contentWidth: 742 },
   ],
   "production-traceability": [
-    { x: 59, y: 528, width: 823, height: 375, contentX: 66, contentY: 76, contentWidth: 716 },
-    { x: 59, y: 987, width: 823, height: 370, contentX: 66, contentY: 86, contentWidth: 716 },
+    { x: 61, y: 557, width: 874, height: 402, contentX: 58, contentY: 66, contentWidth: 742 },
+    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
   ],
 } satisfies Record<string, CategoryCardLayout[]>;
 
