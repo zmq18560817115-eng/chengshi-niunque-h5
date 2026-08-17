@@ -1,0 +1,51 @@
+[1mdiff --git a/src/components/h5/CategoryDetail.tsx b/src/components/h5/CategoryDetail.tsx[m
+[1mindex 510e38d..50758ca 100644[m
+[1m--- a/src/components/h5/CategoryDetail.tsx[m
+[1m+++ b/src/components/h5/CategoryDetail.tsx[m
+[36m@@ -3,10 +3,34 @@[m
+ import Image from "next/image";[m
+ import { useRouter } from "next/navigation";[m
+ import { useEffect, useMemo, useState, type CSSProperties } from "react";[m
+[31m-import { getCategoryTheme, placeholderCardId } from "@/config/h5-category-themes";[m
+[32m+[m[32mimport { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";[m
+ import { SwipeBackPage } from "@/components/h5/SwipeBackPage";[m
+ import type { PublicModule } from "@/server/services/public-content-service";[m
+ [m
+[32m+[m[32mconst legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";[m
+[32m+[m[32mconst legacySeedDescriptions = new Set([[m
+[32m+[m[32m  "DHA、ARA 等核心营养指标检测结果。",[m
+[32m+[m[32m  "查看油脂新鲜度相关检测资料。",[m
+[32m+[m[32m  "重金属、微生物及污染物等安全指标资料。",[m
+[32m+[m[32m  "配方与标签复核资料。",[m
+[32m+[m[32m  "原料与生产工艺复核资料。",[m
+[32m+[m[32m  "稳定性与感官复核资料。",[m
+[32m+[m[32m  "生产主体与资质资料。",[m
+[32m+[m[32m  "生产过程中的质量管理资料。",[m
+[32m+[m[32m]);[m
+[32m+[m
+[32m+[m[32mfunction resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback: CategoryCardFallback) {[m
+[32m+[m[32m  const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim());[m
+[32m+[m[32m  const description = card?.description?.trim();[m
+[32m+[m[32m  const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);[m
+[32m+[m[32m  const genericButton = !card?.buttonText?.trim() || ["查看报告", "查看资料"].includes(card.buttonText.trim());[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    title: placeholderTitle ? fallback.title : card?.title ?? fallback.title,[m
+[32m+[m[32m    description: placeholderDescription ? fallback.description : description,[m
+[32m+[m[32m    buttonText: genericButton ? fallback.buttonText : card?.buttonText ?? fallback.buttonText,[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+ export function CategoryDetail({ module, preview = false }: { module: PublicModule; preview?: boolean }) {[m
+   const router = useRouter();[m
+   const [leaving, setLeaving] = useState(false);[m
+[36m@@ -23,9 +47,7 @@[m [mexport function CategoryDetail({ module, preview = false }: { module: PublicModu[m
+         const layout = theme.cardLayouts[index];[m
+         const fallback = theme.cardFallbacks[index];[m
+         const cardId = card?.id ?? placeholderCardId(index);[m
+[31m-        const title = card?.title || fallback.title;[m
+[31m-        const description = card?.description || fallback.description;[m
+[31m-        const buttonText = card ? (card.buttonText || `查看${card.assets.length}份报告`) : fallback.buttonText;[m
+[32m+[m[32m        const { title, description, buttonText } = resolveArtworkCopy(card, fallback);[m
+         const label = `${title}，${buttonText}`;[m
+         const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true">{fallback.statusText}</span><span className="sr-only">{label}</span></>;[m
+         const style = {[m

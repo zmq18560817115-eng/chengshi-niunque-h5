@@ -3,9 +3,33 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { getCategoryTheme, placeholderCardId } from "@/config/h5-category-themes";
+import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import type { PublicModule } from "@/server/services/public-content-service";
+
+const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
+const legacySeedDescriptions = new Set([
+  "DHA、ARA 等核心营养指标检测结果。",
+  "查看油脂新鲜度相关检测资料。",
+  "重金属、微生物及污染物等安全指标资料。",
+  "配方与标签复核资料。",
+  "原料与生产工艺复核资料。",
+  "稳定性与感官复核资料。",
+  "生产主体与资质资料。",
+  "生产过程中的质量管理资料。",
+]);
+
+function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback: CategoryCardFallback) {
+  const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim());
+  const description = card?.description?.trim();
+  const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);
+  const genericButton = !card?.buttonText?.trim() || ["查看报告", "查看资料"].includes(card.buttonText.trim());
+  return {
+    title: placeholderTitle ? fallback.title : card?.title ?? fallback.title,
+    description: placeholderDescription ? fallback.description : description,
+    buttonText: genericButton ? fallback.buttonText : card?.buttonText ?? fallback.buttonText,
+  };
+}
 
 export function CategoryDetail({ module, preview = false }: { module: PublicModule; preview?: boolean }) {
   const router = useRouter();
@@ -23,9 +47,7 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         const layout = theme.cardLayouts[index];
         const fallback = theme.cardFallbacks[index];
         const cardId = card?.id ?? placeholderCardId(index);
-        const title = card?.title || fallback.title;
-        const description = card?.description || fallback.description;
-        const buttonText = card ? (card.buttonText || `查看${card.assets.length}份报告`) : fallback.buttonText;
+        const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
         const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true">{fallback.statusText}</span><span className="sr-only">{label}</span></>;
         const style = {
