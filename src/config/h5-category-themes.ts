@@ -22,7 +22,7 @@ export type CategoryCardFallback = {
   statusText: string;
 };
 
-const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈只看报告结论是否“符合/通过”，不用自己算公式。";
+const sharedCardDescription = "DHA,ARA有没有达到标签标示量。妈妈只看报告结论是否“符合/通过”，不用自己算公式。";
 
 // Coordinates use the same 1000 x 2166 master as every category artwork.
 // The runtime scales the complete composition; it never repositions cards per viewport.
@@ -32,11 +32,11 @@ export const categoryCardLayouts = {
     { x: 65, y: 1001, width: 874, height: 442, contentX: 58, contentY: 76, contentWidth: 742 },
     { x: 61, y: 1487, width: 876, height: 434, contentX: 58, contentY: 76, contentWidth: 742 },
   ],
-  "review-assurance": [
-    { x: 61, y: 553, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
-    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
-    { x: 55, y: 1495, width: 876, height: 404, contentX: 68, contentY: 66, contentWidth: 742 },
-  ],
+"review-assurance": [
+  { x: 61, y: 553, width: 874, height: 404, contentX: 58, contentY: 52, contentWidth: 742 },
+  { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 52, contentWidth: 742 },
+  { x: 55, y: 1495, width: 876, height: 404, contentX: 68, contentY: 52, contentWidth: 742 },
+],
   "production-traceability": [
     { x: 61, y: 557, width: 874, height: 402, contentX: 58, contentY: 66, contentWidth: 742 },
     { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
