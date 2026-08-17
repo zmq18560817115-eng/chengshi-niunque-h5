@@ -22,7 +22,7 @@ export type CategoryCardFallback = {
   statusText: string;
 };
 
-const sharedCardDescription = "DHA,ARA有没有达到标签标示量。妈妈只看报告结论是否“符合/通过”，不用自己算公式。";
+const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈只看报告结论是否\"符合/通过\",不用自己算公式。";
 
 // Coordinates use the same 1000 x 2166 master as every category artwork.
 // The runtime scales the complete composition; it never repositions cards per viewport.
