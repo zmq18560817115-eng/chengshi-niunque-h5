@@ -411,13 +411,102 @@ button, a { font: inherit; }
 .category-card-copy b { position: absolute; top: 19.7cqw; left: 0; display: flex; width: 47.5cqw; height: 10.2cqw; margin: 0; padding: 0 2.4cqw 0 9.2cqw; align-items: center; box-sizing: border-box; border-radius: 999px; color: #5f3d24; font-size: 5cqw; font-weight: 700; line-height: 1; white-space: nowrap; background: center / 100% 100% no-repeat url("/design/final-v1/category-button-inspection.png"); }
 .category-card-copy b::before { position: absolute; top: 50%; left: 2.2cqw; width: 6.3cqw; height: 6.3cqw; content: ""; transform: translateY(-50%); background: center / contain no-repeat url("/design/final-v1/category-search-inspection.png"); }
 .category-card-hotspot::after { position: absolute; top: 22.5cqw; left: 55.5cqw; width: 12.5cqw; height: 14cqw; content: ""; background: center / contain no-repeat url("/design/final-v1/category-arrow-inspection.png"); pointer-events: none; }
-.category-card-status { position: absolute !important; top: -.6cqw !important; left: 58.6cqw !important; display: flex !important; width: 20.6cqw !important; height: 9.4cqw !important; overflow: visible !important; clip-path: none !important; align-items: center; justify-content: center; color: #e9863f; font-family: var(--font-display); font-size: 4cqw; font-weight: 700; line-height: 1; white-space: nowrap !important; pointer-events: none; }
+.category-card-status { position: absolute !important; top: -2.8cqw !important; left: 58.6cqw !important; display: flex !important; width: 20.6cqw !important; height: 9.4cqw !important; overflow: visible !important; clip-path: none !important; align-items: center; justify-content: center; color: #e9863f; font-family: var(--font-display); font-size: 4cqw; font-weight: 700; line-height: 1; white-space: nowrap !important; pointer-events: none; }
+.category-page-final[data-category="review-assurance"] .category-card-status
+.category-page-final[data-category="review-assurance"] .category-card-hotspot {
+  overflow: visible;
+}
 .category-page-final[data-category="review-assurance"] .category-card-copy b { background-image: url("/design/final-v1/category-button-review.png"); }
 .category-page-final[data-category="review-assurance"] .category-card-copy b::before { background-image: url("/design/final-v1/category-search-review.png"); }
 .category-page-final[data-category="review-assurance"] .category-card-hotspot::after { background-image: url("/design/final-v1/category-arrow-review.png"); }
 .category-page-final[data-category="production-traceability"] .category-card-copy b { background-image: url("/design/final-v1/category-button-production.png"); }
 .category-page-final[data-category="production-traceability"] .category-card-copy b::before { background-image: url("/design/final-v1/category-search-production.png"); }
 .category-page-final[data-category="production-traceability"] .category-card-hotspot::after { background-image: url("/design/final-v1/category-arrow-production.png"); }
+/* 复核保障：最终视觉校准 */
+
+/* 标题 */
+.category-page-final[data-category="review-assurance"] .category-card-copy strong {
+  margin-left: .65cqw;
+  letter-spacing: .08em;
+  transform: none;
+}
+
+/* 正文 */
+.category-page-final[data-category="review-assurance"] .category-card-copy small {
+  max-width: 67cqw;
+  margin-top: 1.05cqw;
+  margin-left: .45cqw;
+
+  color: rgb(95 61 36 / .42);
+
+  font-size: 2.75cqw;
+  line-height: 1.42;
+
+  transform: none;
+}
+
+/* 查看报告按钮 */
+.category-page-final[data-category="review-assurance"] .category-card-copy b {
+  height: 11cqw;
+
+  font-size: 6.1cqw;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* 蓝色手绘箭头——已经对齐，不再修改 */
+.category-page-final[data-category="review-assurance"] .category-card-hotspot::after {
+  top: 14cqw;
+  left: 52.4cqw;
+  width: 20cqw;
+  height: 22cqw;
+}
+
+/* 黄色状态标签 */
+.category-page-final[data-category="review-assurance"] .category-card-status {
+  position: absolute !important;
+  z-index: 8 !important;
+
+  top: -2.8cqw !important;
+  left: 57.8cqw !important;
+
+  display: flex !important;
+  width: 20.6cqw !important;
+  height: 9.4cqw !important;
+
+  box-sizing: border-box;
+
+  align-items: center;
+  justify-content: center;
+
+  /* PNG 右侧有尾巴，文字向主体区域左移 */
+  padding: .25cqw 2.2cqw 0 0;
+
+  overflow: visible !important;
+  clip-path: none !important;
+
+  color: #e9863f;
+  font-family: var(--font-display);
+  font-size: 4cqw;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap !important;
+
+  background:
+    center / 100% 100%
+    no-repeat
+    url("/design/final-v1/category-status-review.png");
+
+  pointer-events: none;
+}
+
+.category-page-final[data-category="review-assurance"] .category-card-status::after {
+  content: none;
+}
+
+.category-page-final[data-category="review-assurance"] .category-card-hotspot {
+  overflow: visible;
+}
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
 .reports-archive-art { animation: archive-art-enter .65s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes archive-art-enter { from { opacity: .82; transform: scale(1.012); } to { opacity: 1; transform: scale(1); } }
