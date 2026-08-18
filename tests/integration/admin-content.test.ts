@@ -59,7 +59,13 @@ describe("admin content management", () => {
     const service = new AdminContentService();
     const category = await service.getModule("seed-module-inspection");
     expect(category).not.toBeNull();
-    await expect(service.updateCard("seed-card-inspection-freshness", { moduleId: category!.id, title: "油脂新鲜度", description: "", buttonText: "查看报告", footerNote: "", sortOrder: 20, status: "PUBLISHED" }, adminId)).rejects.toThrow(/至少一项报告资料/);
+    const emptyCard = await service.createCard({ moduleId: category!.id, title: `${marker}-无资料卡片`, description: "", buttonText: "查看报告", footerNote: "", sortOrder: 999, status: "DRAFT" }, adminId);
+    try {
+      await expect(service.updateCard(emptyCard.id, { moduleId: category!.id, title: `${marker}-无资料卡片`, description: "", buttonText: "查看报告", footerNote: "", sortOrder: 999, status: "PUBLISHED" }, adminId)).rejects.toThrow(/至少一项报告资料/);
+    } finally {
+      await prisma.auditLog.deleteMany({ where: { targetId: emptyCard.id } });
+      await prisma.reportCard.delete({ where: { id: emptyCard.id } });
+    }
   });
 
   it("checks publish readiness without changing formal publication state", async () => {

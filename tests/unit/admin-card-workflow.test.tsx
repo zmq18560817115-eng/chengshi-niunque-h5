@@ -68,6 +68,17 @@ describe("admin card publishing workflow", () => {
     expect(screen.getByText("推荐：资料确认无误后直接上线；尚未准备好时再选择仅保存草稿。")).toBeInTheDocument();
   });
 
+  it("keeps card editing independent from the required asset fields", () => {
+    render(<ModuleWorkspace initialModule={baseModule} initialSelection={{ type: "card", id: "card-1" }} publishedModules={[]} moduleOrders={[]} />);
+
+    const cardForm = screen.getByDisplayValue("营养成分检测").closest("form");
+    const assetForm = screen.getByPlaceholderText("例如：营养成分检测报告").closest("form");
+
+    expect(cardForm).toHaveAttribute("id", "card-editor");
+    expect(assetForm).not.toBe(cardForm);
+    expect(cardForm).not.toContainElement(screen.getByPlaceholderText("例如：营养成分检测报告"));
+  });
+
   it("shows server validation errors inside the editor", () => {
     render(<ModuleWorkspace initialModule={baseModule} error="请先上传有效资料" publishedModules={[]} moduleOrders={[]} />);
 
