@@ -7,14 +7,14 @@ const dummyHash = "scrypt$v1$N=16384,r=8,p=1,keyLength=64$AAAAAAAAAAAAAAAAAAAAAA
 export class AdminAuthService {
   constructor(private readonly repository = new AdminAuthRepository()) {}
 
-  async login(emailInput: string, password: string, ipAddress?: string) {
-    const email = emailInput.trim().toLowerCase();
-    const identifierHash = privacyHash(email);
+  async login(accountInput: string, password: string, ipAddress?: string) {
+    const account = accountInput.trim().toLowerCase();
+    const identifierHash = privacyHash(account);
     const ipHash = ipAddress ? privacyHash(ipAddress) : null;
-    const admin = await this.repository.findAdminByEmail(email);
+    const admin = await this.repository.findAdminByEmail(account);
     const passwordValid = await verifyPassword(password, admin?.passwordHash ?? dummyHash);
     const failures = await this.repository.countRecentFailures(identifierHash, ipHash, new Date(Date.now() - 15 * 60 * 1000));
-    const allowed = failures < 5;
+    const allowed = failures.identifier < 5 && failures.ip < 25;
     const validAdmin = admin?.status === "ACTIVE" && admin.deletedAt === null;
     const success = Boolean(passwordValid && allowed && validAdmin);
     await this.repository.recordAttempt({ adminId: admin?.id, identifierHash, ipHash: ipHash ?? undefined, success });

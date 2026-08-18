@@ -21,7 +21,9 @@
     "content:seed": "tsx --env-file=.env scripts/seed-default-h5-content.ts",
     "prisma:validate": "prisma validate",
     "storage:bootstrap": "tsx --env-file=.env scripts/bootstrap-storage.ts",
-    "admin:seed": "tsx --env-file=.env scripts/seed-admin.ts"
+    "storage:ensure": "tsx --env-file=.env scripts/ensure-storage.ts",
+    "admin:seed": "tsx --env-file=.env scripts/seed-admin.ts",
+    "admin:verify": "tsx --env-file=.env scripts/verify-admin-login.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",

@@ -21,8 +21,9 @@ async function main() {
       where: { revokedAt: null },
       data: { revokedAt },
     }),
+    prisma.adminLoginAttempt.deleteMany(),
   ]);
-  console.log(JSON.stringify({ status: "ready", email: admin.email, updated: true }));
+  console.log(JSON.stringify({ status: "ready", account: admin.email, updated: true }));
 }
 
 main().catch((error) => {

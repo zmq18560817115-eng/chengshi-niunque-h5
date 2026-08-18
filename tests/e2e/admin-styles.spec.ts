@@ -27,12 +27,12 @@ test("production pages apply the shared H5 and admin styles", async ({ page }) =
   await expect(form).toHaveCSS("display", "grid");
   await expect(submitButton).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
-  const email = page.locator("input[name='email']");
+  const account = page.locator("input[name='account']");
   const password = page.locator("input[name='password']");
-  await expect(email).toBeVisible();
+  await expect(account).toBeVisible();
   await expect(password).toBeVisible();
-  await expect(email).toHaveAttribute("type", "text");
-  const emailBox = await email.boundingBox();
+  await expect(account).toHaveAttribute("type", "text");
+  const emailBox = await account.boundingBox();
   const passwordBox = await password.boundingBox();
   expect(emailBox && passwordBox && passwordBox.y > emailBox.y + emailBox.height).toBeTruthy();
 
@@ -42,7 +42,7 @@ test("production pages apply the shared H5 and admin styles", async ({ page }) =
   expect(mobileBox && mobileBox.width <= 390 && mobileBox.x >= 0).toBeTruthy();
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  await email.fill(localEnv("ADMIN_SEED_EMAIL"));
+  await account.fill(localEnv("ADMIN_SEED_USERNAME"));
   await password.fill(localEnv("ADMIN_SEED_PASSWORD"));
   await submitButton.click();
   await expect(page).toHaveURL(/\/admin$/);

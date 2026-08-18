@@ -14,11 +14,11 @@ import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/server/auth/tok
 export type LoginState = { error?: string };
 
 export async function loginAction(_state: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "");
+  const account = String(formData.get("account") ?? "");
   const password = String(formData.get("password") ?? "");
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const result = await new AdminAuthService().login(email, password, ipAddress);
+  const result = await new AdminAuthService().login(account, password, ipAddress);
   if (!result) return { error: "账号或密码不正确，或尝试次数过多，请稍后再试。" };
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, result.token, {

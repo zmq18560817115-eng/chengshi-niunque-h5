@@ -33,7 +33,7 @@
 - `DATABASE_URL`。
 - `S3_ENDPOINT`、`S3_REGION`、`S3_BUCKET`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_FORCE_PATH_STYLE`。
 - `SESSION_SECRET`。
-- 首次初始化使用的 `ADMIN_SEED_*`。
+- 管理员初始化使用的 `ADMIN_SEED_USERNAME`、`ADMIN_SEED_DISPLAY_NAME`、`ADMIN_SEED_PASSWORD`。
 - `NEXT_PUBLIC_SITE_URL`。
 
 `.env.example` 仅用于说明变量名，不能直接作为生产凭据。`.dockerignore` 已排除真实 `.env`，避免其进入 Docker 构建上下文。
@@ -52,20 +52,20 @@
 2. 对目标提交运行 `pnpm install --frozen-lockfile`。
 3. 依次通过 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm prisma:validate`、`pnpm build`。
 4. 构建带唯一版本号的应用镜像，不覆盖旧镜像标签。
-5. 在单独的迁移任务中运行 `pnpm prisma migrate deploy`；当前运行镜像不包含迁移执行入口，部署平台必须显式安排此步骤。
-6. 替换 `app` 容器，保持 PostgreSQL、S3/MinIO 和 `.env` 不变。
+5. 替换 `app` 容器，保持 PostgreSQL、S3/MinIO 和 `.env` 不变。容器入口会依次执行数据库迁移、对象存储连通与 bucket 检查、管理员初始化及登录自检，任一步失败都不会启动 Web 服务。
+6. 修改管理员账号或密码后，更新服务器 `.env` 并重新创建 `app` 容器；初始化会停用旧管理员、撤销旧会话并清理旧登录限流记录。
 7. 验证 `/api/health`、`/api/public/content`、前台 `/go` 与 `/reports`、后台 `/admin` 与 `/admin/modules`。
 8. 若失败，先回滚应用镜像；涉及不兼容数据库迁移时，按迁移方案处理，禁止直接覆盖数据卷。
 
 ## 当前生产编排边界
 
-`compose.production.yaml` 只启动 `app` 与 `nginx`。它假定 PostgreSQL 和 S3 兼容对象存储已经由外部平台提供，并通过 `.env` 注入连接信息。若目标服务器需要把数据库和 MinIO 一起部署，必须另建生产基础设施编排并设置持久卷、备份、监控和访问控制，不能直接把本地 `compose.yaml` 当作生产方案。
+`compose.production.yaml` 启动 `app` 与 `nginx`，并等待应用健康检查通过后才开放 Nginx。它假定 PostgreSQL 和 S3 兼容对象存储已经由外部平台提供，并通过 `.env` 注入连接信息。若目标服务器需要把数据库和 MinIO 一起部署，必须另建生产基础设施编排并设置持久卷、备份、监控和访问控制，不能直接把本地 `compose.yaml` 当作生产方案。
 
 ## 上线前仍需确认
 
 - 生产域名、HTTPS 证书和反向代理安全头。
 - PostgreSQL 与对象存储的生产地址、持久卷、备份周期和恢复演练。
-- 数据库迁移任务由谁执行、失败后如何回滚。
+- 数据库迁移失败后的回滚负责人和处理流程。
 - 管理员初始账号交付及密码轮换方式。
-- `/api/health` 是否扩展为数据库和对象存储就绪检查；当前只代表应用存活。
+- 由运维平台持续探测 `/api/health`；该接口会同时检查数据库和对象存储，任一异常时返回 503。
 - 仓库根目录中的 `h origin main`、`h origin maingit status` 是已跟踪的异常文本文件，运行时不需要；删除前需确认是否仍有取证价值。

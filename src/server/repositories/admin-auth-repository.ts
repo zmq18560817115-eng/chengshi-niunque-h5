@@ -29,13 +29,12 @@ export class AdminAuthRepository {
   }
 
   countRecentFailures(identifierHash: string, ipHash: string | null, since: Date) {
-    return prisma.adminLoginAttempt.count({
-      where: {
-        success: false,
-        createdAt: { gte: since },
-        OR: [{ identifierHash }, ...(ipHash ? [{ ipHash }] : [])],
-      },
-    });
+    return Promise.all([
+      prisma.adminLoginAttempt.count({ where: { identifierHash, success: false, createdAt: { gte: since } } }),
+      ipHash
+        ? prisma.adminLoginAttempt.count({ where: { ipHash, success: false, createdAt: { gte: since } } })
+        : Promise.resolve(0),
+    ]).then(([identifier, ip]) => ({ identifier, ip }));
   }
 
   recordAttempt(input: { adminId?: string; identifierHash: string; ipHash?: string; success: boolean }) {

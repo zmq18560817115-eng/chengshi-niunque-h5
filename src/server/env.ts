@@ -42,8 +42,11 @@ export function getSessionSecret(): string {
 }
 
 export function getAdminSeedConfig() {
+  const configuredUsername = process.env.ADMIN_SEED_USERNAME?.trim();
   return {
-    email: required("ADMIN_SEED_EMAIL").toLowerCase(),
+    // AdminUser.email is retained as the legacy database identifier column,
+    // while deployments now configure and present this value as a username.
+    email: (configuredUsername || required("ADMIN_SEED_EMAIL")).toLowerCase(),
     displayName: required("ADMIN_SEED_DISPLAY_NAME"),
     password: required("ADMIN_SEED_PASSWORD"),
   };
