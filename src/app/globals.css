@@ -689,7 +689,7 @@ button, a { font: inherit; }
   line-height: 1.36;
 }
 
-/* 3. “查看X份报告”：与其它页统一的药丸文字比例（正文整体上移后按钮下移补偿保持贴合药丸） */
+/* 3. “查看X份报告”：与其它页统一的药丸文字比例 */
 .category-page-final[data-category="production-traceability"] .category-card-copy b {
   top: 19.5cqw;
 
