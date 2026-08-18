@@ -14,12 +14,14 @@
 - Current category reference, implementation, overlay, and difference images: `test-results/category-visual-acceptance/`.
 - Current eight-viewport category results: `test-results/category-visual-acceptance/viewport-results.json`.
 - Guide motion frames: `test-results/current-visual-fix/guide-start-390.png`, `guide-middle-390.png`, `guide-final-390.png`.
+- Current 375 x 812 user-flow captures: `docs/audit-2026-08-18-mobile-user/flow-inspection-projects-375x812.png` and `flow-review-assurance-375x812.png`.
 
 ## Overlay and interaction review
 
 - Category card rectangles and copy layers use raw 1000 x 2166 master pixels converted by container query units.
 - Current 24-case Chromium inspection covers three category pages at 320, 360, 375 x 667, 375 x 812, 390, 393, 414, and 430px; all retain the expected slot count and have no horizontal overflow.
 - Category title, description, report button, arrow, and status label now follow the reference master coordinates.
+- The first two category pages reuse the original transparent status-text artwork. Page one is `已通过 / 符合标准 / 已通过`; page two is `已核对 / 已留档 / 持续关注`, matching `报告点击页-01.jpg` and `报告点击页-02.jpg` without browser-font substitution.
 - Backend card title, description, and button text take priority. Reference copy is used only for an empty fixed slot, so category and report maintenance remains data-driven.
 - Each complete card remains the click target; visual copy, arrow, and status layers do not intercept pointer events.
 - Guide papers share one 420ms start and one 1500ms duration. Only transform and opacity vary; final coordinates remain the approved artwork coordinates.
@@ -29,6 +31,7 @@
 ## Deviations
 
 - Category copy remains HTML so the management backend can update titles and descriptions. Its font outline cannot be pixel-identical to baked artwork, but its baseline, size, wrapping, and placement are aligned inside the supplied paper regions.
+- The home/archive composition intentionally remains a vertically scrollable long image. Acceptance is based on full-width fitting and zero horizontal overflow, not one-screen height.
 - Motion frames intentionally differ from the final reference only during animation; completed states return to the reference coordinates.
 
 ## Deployment review
@@ -40,4 +43,6 @@
 ## Final QA result
 
 - Category visual implementation: **passed**.
+- First and second category status identifiers: **passed** against the supplied original artwork.
+- Mobile-width acceptance: **passed** at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932.
 - Full deployment readiness: **conditional** on database/object-storage connectivity, migration status, and application service wiring.

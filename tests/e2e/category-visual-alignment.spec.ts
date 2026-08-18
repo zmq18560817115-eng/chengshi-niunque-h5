@@ -13,10 +13,14 @@ for (const width of widths) {
       await page.goto(`/reports/${slug}`);
       const stage = page.locator(".category-page-final");
       await expect(stage).toBeVisible();
+      // Measure after the 280 ms page-enter transform has settled; otherwise
+      // boundingBox() includes the transient 7 px animation offset.
+      await page.waitForTimeout(350);
 
       const stageBox = await stage.boundingBox();
-      expect(stageBox?.width).toBe(width);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+      expect(stageBox?.width).toBe(clientWidth);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(clientWidth);
 
       const layouts = categoryCardLayouts[slug];
       const cards = page.locator(".category-card-hotspot");

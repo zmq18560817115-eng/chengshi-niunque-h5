@@ -492,7 +492,7 @@ button, a { font: inherit; }
 .category-card-copy b::before { position: absolute; top: 50%; left: 2.2cqw; width: 6.3cqw; height: 6.3cqw; content: ""; transform: translateY(-50%); background: center / contain no-repeat url("/design/final-v1/category-search-inspection.png"); }
 .category-card-hotspot::after { position: absolute; top: 22.5cqw; left: 55.5cqw; width: 12.5cqw; height: 14cqw; content: ""; background: center / contain no-repeat url("/design/final-v1/category-arrow-inspection.png"); pointer-events: none; }
 .category-card-status { position: absolute !important; top: -2.8cqw !important; left: 58.6cqw !important; display: flex !important; width: 20.6cqw !important; height: 9.4cqw !important; overflow: visible !important; clip-path: none !important; align-items: center; justify-content: center; color: #e9863f; font-family: var(--font-display); font-size: 4cqw; font-weight: 700; line-height: 1; white-space: nowrap !important; pointer-events: none; }
-.category-page-final[data-category="review-assurance"] .category-card-status
+.category-page-final[data-category="review-assurance"] .category-card-status,
 .category-page-final[data-category="review-assurance"] .category-card-hotspot {
   overflow: visible;
 }
@@ -565,7 +565,7 @@ button, a { font: inherit; }
   overflow: visible !important;
   clip-path: none !important;
 
-  color: #e9863f;
+  color: transparent;
   font-family: var(--font-display);
   font-size: 4cqw;
   font-weight: 700;
@@ -578,6 +578,55 @@ button, a { font: inherit; }
     url("/design/final-v1/category-status-review.png");
 
   pointer-events: none;
+}
+
+/* 状态字直接复用正式原稿的透明图层，避免网页字体造成字形和对位漂移。 */
+.category-page-final:is([data-category="inspection-projects"], [data-category="review-assurance"])
+.category-card-status::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--category-status-text-width);
+  height: 4.08cqw;
+  content: "";
+  transform: translate(-50%, -48%);
+  background: center / contain no-repeat var(--category-status-text-image);
+  pointer-events: none;
+}
+
+.category-page-final[data-category="inspection-projects"]
+.category-card-hotspot:is([data-index="0"], [data-index="2"])
+.category-card-status {
+  --category-status-text-width: 9.79cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-inspection-passed.png");
+}
+
+.category-page-final[data-category="inspection-projects"]
+.category-card-hotspot[data-index="1"]
+.category-card-status {
+  --category-status-text-width: 12.99cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-inspection-standard.png");
+}
+
+.category-page-final[data-category="review-assurance"]
+.category-card-hotspot[data-index="0"]
+.category-card-status {
+  --category-status-text-width: 9.75cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-review-checked.png");
+}
+
+.category-page-final[data-category="review-assurance"]
+.category-card-hotspot[data-index="1"]
+.category-card-status {
+  --category-status-text-width: 9.75cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-review-archived.png");
+}
+
+.category-page-final[data-category="review-assurance"]
+.category-card-hotspot[data-index="2"]
+.category-card-status {
+  --category-status-text-width: 13.03cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-review-watch.png");
 }
 
 .category-page-final[data-category="review-assurance"] .category-card-status::after {
@@ -643,8 +692,7 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"] .category-card-status {
   top: 0.2cqw !important;
 
-  font-size: 4cqw;
-  font-weight: 700;
+  color: transparent;
 }
 
 

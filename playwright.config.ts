@@ -1,2 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-export default defineConfig({ testDir: "./tests/e2e", webServer: { command: "pnpm dev", url: "http://127.0.0.1:3000", reuseExistingServer: !process.env.CI }, use: { baseURL: "http://127.0.0.1:3000", ...devices["iPhone 13"], launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : undefined } });
+
+const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+
+export default defineConfig({ testDir: "./tests/e2e", webServer: { command: "pnpm dev", url: baseURL, reuseExistingServer: !process.env.CI }, use: { baseURL, ...devices["iPhone 13"], launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : undefined } });
