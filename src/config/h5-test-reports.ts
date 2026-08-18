@@ -8,6 +8,8 @@ const TEST_REPORT_SOURCES = [
   { title: "检验检测报告（测试样例一）", src: "/design/reports/test-report-1.webp" },
   { title: "检验检测报告（测试样例二）", src: "/design/reports/test-report-2.webp" },
   { title: "检验检测报告（测试样例三）", src: "/design/reports/test-report-3.webp" },
+  { title: "分析报告 COA（测试样例四）", src: "/design/reports/test-report-4.webp" },
+  { title: "羊毛脂研究资料（测试样例五）", src: "/design/reports/test-report-5.webp" },
 ] as const;
 
 const placeholderDescription = "测试占位报告，正式检测资料发布后将自动替换。";
