@@ -355,7 +355,8 @@ button, a { font: inherit; }
   will-change: -webkit-mask-position, mask-position;
 }
 
-.archive-story-copy.is-ready.is-started:not(.is-complete)
+.archive-story-copy.is-ready.is-started
+
 .archive-story-copy-line {
   animation:
     archive-story-line
@@ -367,8 +368,6 @@ button, a { font: inherit; }
     )
     both;
 }
-
-.archive-story-copy.is-complete .archive-story-copy-line,
 .archive-story-copy-line.is-static {
   opacity: 1;
   -webkit-mask-image: none;
@@ -705,20 +704,67 @@ button, a { font: inherit; }
   height: 22cqw;
 }
 
-/* 3. 状态文字：上移并左移，压准画面里已烤进鱼形徽标上的文字 */
-.category-page-final[data-category="production-traceability"] .category-card-status {
-  top: -5.1cqw !important;
-  left: 57.2cqw !important;
+/* =========================================================
+   生产溯源：黄色状态徽章独立前景层
+   复用仓库已有状态徽章组件，避免被白色卡片遮挡
+   ========================================================= */
 
-  font-size: 4cqw;
-  font-weight: 700;
+.category-page-final[data-category="production-traceability"]
+.category-card-hotspot {
+  overflow: visible;
 }
 
-/* 第二张鱼形徽标略高，状态文字再上移对齐 */
+.category-page-final[data-category="production-traceability"]
+.category-card-status {
+  position: absolute !important;
+  z-index: 8 !important;
+
+  top: -3.6cqw !important;
+  left: 57.2cqw !important;
+
+  display: flex !important;
+  width: 20.6cqw !important;
+  height: 9.4cqw !important;
+
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+
+  /* 鱼形徽章尾巴在右侧，所以文字略向左收 */
+  padding: .25cqw 2.2cqw 0 0;
+
+  overflow: visible !important;
+  clip-path: none !important;
+
+  color: #e9863f;
+  font-family: var(--font-display);
+  font-size: 4cqw;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap !important;
+
+  /* 直接复用仓库已有黄色鱼形状态徽章 */
+  background:
+    center / 100% 100%
+    no-repeat
+    url("/design/final-v1/category-status-review.png");
+
+  pointer-events: none;
+}
+
+/* 第一张：已核验 */
+.category-page-final[data-category="production-traceability"]
+.category-card-hotspot[data-index="0"]
+.category-card-status {
+  top: -3.6cqw !important;
+  left: 57.2cqw !important;
+}
+
+/* 第二张：已核对 */
 .category-page-final[data-category="production-traceability"]
 .category-card-hotspot[data-index="1"]
 .category-card-status {
-  top: -5.3cqw !important;
+  top: -3.6cqw !important;
   left: 56.6cqw !important;
 }
 
