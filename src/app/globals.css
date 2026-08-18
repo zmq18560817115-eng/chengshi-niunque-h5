@@ -314,14 +314,84 @@ button, a { font: inherit; }
 .archive-story-copy .motion-stage-content { position: absolute; inset: 0; }
 .archive-story-copy-base { position: absolute; inset: 0; }
 .archive-story-copy-trigger { position: absolute; z-index: 2; top: 85.5%; left: 20%; width: 60%; height: 8%; pointer-events: none; }
-@property --archive-story-reveal { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
-/* 逐字渐显：用一条从左到右移动、带柔边的遮罩，使每行文字逐字淡入 */
-.archive-story-copy-line { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; object-fit: fill; opacity: 0; --archive-story-reveal: -8%; -webkit-mask-image: linear-gradient(90deg, #000 var(--archive-story-reveal), rgba(0,0,0,0) calc(var(--archive-story-reveal) + 8%)); mask-image: linear-gradient(90deg, #000 var(--archive-story-reveal), rgba(0,0,0,0) calc(var(--archive-story-reveal) + 8%)); pointer-events: none; will-change: --archive-story-reveal; }
-.archive-story-copy.is-ready.is-started:not(.is-complete) .archive-story-copy-line { animation: archive-story-line var(--archive-story-duration) var(--archive-story-easing) calc(var(--archive-story-delay) + var(--archive-story-index) * var(--archive-story-step)) both; }
-.archive-story-copy.is-complete .archive-story-copy-line { opacity: 1; -webkit-mask-image: none; mask-image: none; }
-.archive-story-copy-line.is-static { opacity: 1; -webkit-mask-image: none; mask-image: none; }
-.archive-story-copy .motion-stage.is-loading .motion-stage-fallback .archive-story-copy-line.is-static { opacity: 0; }
-@keyframes archive-story-line { 0% { opacity: 1; --archive-story-reveal: -8%; } 100% { opacity: 1; --archive-story-reveal: 108%; } }
+/* 首页下方文字：每行从左到右逐字柔和渐显 */
+
+.archive-story-copy-line {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  opacity: 1;
+  pointer-events: none;
+
+  /* 初始遮住文字，柔边扫过时形成逐字渐显 */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 0%,
+    #000 42%,
+    rgba(0, 0, 0, 0.65) 47%,
+    transparent 53%,
+    transparent 100%
+  );
+  -webkit-mask-size: 220% 100%;
+  -webkit-mask-position: 100% 0;
+  -webkit-mask-repeat: no-repeat;
+
+  mask-image: linear-gradient(
+    90deg,
+    #000 0%,
+    #000 42%,
+    rgba(0, 0, 0, 0.65) 47%,
+    transparent 53%,
+    transparent 100%
+  );
+  mask-size: 220% 100%;
+  mask-position: 100% 0;
+  mask-repeat: no-repeat;
+
+  will-change: -webkit-mask-position, mask-position;
+}
+
+.archive-story-copy.is-ready.is-started:not(.is-complete)
+.archive-story-copy-line {
+  animation:
+    archive-story-line
+    3.2s
+    linear
+    calc(
+      0.15s +
+      var(--archive-story-index) * 2.15s
+    )
+    both;
+}
+
+.archive-story-copy.is-complete .archive-story-copy-line,
+.archive-story-copy-line.is-static {
+  opacity: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.archive-story-copy .motion-stage.is-loading
+.motion-stage-fallback
+.archive-story-copy-line.is-static {
+  opacity: 0;
+}
+
+@keyframes archive-story-line {
+  from {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+  }
+
+  to {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
 .reports-archive-module-base { position: absolute; z-index: 0; top: 0; left: 0; display: block; width: 100%; height: auto; pointer-events: none; }
 .motion-stage { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; contain: layout paint; }
 .motion-stage-content, .motion-stage-fallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity var(--motion-crossfade-ms, 180ms) ease; }
