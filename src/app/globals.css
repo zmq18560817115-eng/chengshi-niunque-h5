@@ -257,11 +257,11 @@ button, a { font: inherit; }
 .brand-guide-base, .brand-guide-arch, .brand-guide-window-mask, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 15; visibility: visible; opacity: 1; }
-.brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration); animation-delay: var(--guide-paper-start); animation-timing-function: cubic-bezier(.16,1,.3,1); animation-fill-mode: both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
-.brand-guide-paper-top { animation-name: guide-paper-from-top; }
-.brand-guide-paper-left { animation-name: guide-paper-from-left; }
-.brand-guide-paper-right { animation-name: guide-paper-from-right; }
-.brand-guide-paper-bottom { animation-name: guide-paper-from-bottom; }
+.brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-paper-top { --paper-offset: 0ms; animation-name: guide-paper-from-top, guide-paper-fade; }
+.brand-guide-paper-left { --paper-offset: 80ms; animation-name: guide-paper-from-left, guide-paper-fade; }
+.brand-guide-paper-right { --paper-offset: 150ms; animation-name: guide-paper-from-right, guide-paper-fade; }
+.brand-guide-paper-bottom { --paper-offset: 220ms; animation-name: guide-paper-from-bottom, guide-paper-fade; }
 .brand-guide-character { z-index: 20; backface-visibility: hidden; }
 .brand-guide-character-open { will-change: opacity; }
 .brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
@@ -289,10 +289,12 @@ button, a { font: inherit; }
 .brand-guide-enter-action { position: absolute; z-index: 50; right: 3%; bottom: max(1.5%, env(safe-area-inset-bottom)); width: 46%; height: 11%; padding: 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .brand-guide-enter-action:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
 @keyframes guide-blink-closed { 0% { opacity: 0; } 25%, 75% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes guide-paper-from-top { 0% { transform: translate3d(-1.1%,-18%,0) rotate(-3.2deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.7,.22,1); } 30% { transform: translate3d(1.2%,-10.5%,0) rotate(2deg); opacity: .5; animation-timing-function: cubic-bezier(.2,.65,.18,1); } 57% { transform: translate3d(-.65%,-4.2%,0) rotate(-1deg); opacity: .86; animation-timing-function: cubic-bezier(.16,1,.3,1); } 82% { transform: translate3d(.18%,-.42%,0) rotate(.22deg); opacity: 1; animation-timing-function: ease-out; } 93% { transform: translate3d(-.05%,.12%,0) rotate(-.06deg); opacity: 1; } 100% { transform: translate3d(0,0,0) rotate(0); opacity: 1; } }
-@keyframes guide-paper-from-left { 0% { transform: translate3d(-31%,-1.1%,0) rotate(-3.4deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.7,.22,1); } 30% { transform: translate3d(-18%,1.1%,0) rotate(2.1deg); opacity: .5; animation-timing-function: cubic-bezier(.2,.65,.18,1); } 57% { transform: translate3d(-7%,-.55%,0) rotate(-1deg); opacity: .86; animation-timing-function: cubic-bezier(.16,1,.3,1); } 82% { transform: translate3d(-.6%,.18%,0) rotate(.2deg); opacity: 1; animation-timing-function: ease-out; } 93% { transform: translate3d(.12%,-.04%,0) rotate(-.05deg); opacity: 1; } 100% { transform: translate3d(0,0,0) rotate(0); opacity: 1; } }
-@keyframes guide-paper-from-right { 0% { transform: translate3d(39%,-1.2%,0) rotate(3.4deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.7,.22,1); } 30% { transform: translate3d(22%,1%,0) rotate(-2.1deg); opacity: .5; animation-timing-function: cubic-bezier(.2,.65,.18,1); } 57% { transform: translate3d(8.5%,-.5%,0) rotate(1deg); opacity: .86; animation-timing-function: cubic-bezier(.16,1,.3,1); } 82% { transform: translate3d(.7%,.16%,0) rotate(-.2deg); opacity: 1; animation-timing-function: ease-out; } 93% { transform: translate3d(-.12%,-.04%,0) rotate(.05deg); opacity: 1; } 100% { transform: translate3d(0,0,0) rotate(0); opacity: 1; } }
-@keyframes guide-paper-from-bottom { 0% { transform: translate3d(1.2%,21%,0) rotate(3deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.7,.22,1); } 30% { transform: translate3d(-1.1%,12%,0) rotate(-1.9deg); opacity: .5; animation-timing-function: cubic-bezier(.2,.65,.18,1); } 57% { transform: translate3d(.65%,5%,0) rotate(.95deg); opacity: .86; animation-timing-function: cubic-bezier(.16,1,.3,1); } 82% { transform: translate3d(-.18%,.5%,0) rotate(-.2deg); opacity: 1; animation-timing-function: ease-out; } 93% { transform: translate3d(.05%,-.12%,0) rotate(.06deg); opacity: 1; } 100% { transform: translate3d(0,0,0) rotate(0); opacity: 1; } }
+/* 单曲线平滑落入（保留原起止坐标），去掉多段缓动切换造成的速度突变=卡顿 */
+@keyframes guide-paper-from-top { from { transform: translate3d(-1.1%,-18%,0) rotate(-3.2deg); } to { transform: translate3d(0,0,0) rotate(0); } }
+@keyframes guide-paper-from-left { from { transform: translate3d(-31%,-1.1%,0) rotate(-3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
+@keyframes guide-paper-from-right { from { transform: translate3d(39%,-1.2%,0) rotate(3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
+@keyframes guide-paper-from-bottom { from { transform: translate3d(1.2%,21%,0) rotate(3deg); } to { transform: translate3d(0,0,0) rotate(0); } }
+@keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-hint-in { 0% { transform: translate3d(0, 2.2%, 0); opacity: 0; } 38% { transform: translate3d(0, 1.2%, 0); opacity: .38; } 72% { transform: translate3d(0, .35%, 0); opacity: .82; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
 @keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.35rem, 0, 0); } }
 .reports-archive { animation: reports-enter .32s ease both; }
@@ -312,12 +314,12 @@ button, a { font: inherit; }
 .archive-story-copy .motion-stage-content { position: absolute; inset: 0; }
 .archive-story-copy-base { position: absolute; inset: 0; }
 .archive-story-copy-trigger { position: absolute; z-index: 2; top: 85.5%; left: 20%; width: 60%; height: 8%; pointer-events: none; }
-.archive-story-copy-line { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; object-fit: fill; clip-path: inset(0 100% 0 0); opacity: .85; pointer-events: none; }
-.archive-story-copy.is-ready.is-started:not(.is-complete) .archive-story-copy-line { animation: archive-story-line var(--archive-story-duration) var(--archive-story-easing) calc(var(--archive-story-delay) + var(--archive-story-index) * var(--archive-story-gap)) both; }
-.archive-story-copy.is-complete .archive-story-copy-line { clip-path: inset(0); opacity: 1; }
-.archive-story-copy-line.is-static { clip-path: inset(0); opacity: 1; }
+.archive-story-copy-line { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; object-fit: fill; opacity: 0; transform: translate3d(0, 6px, 0); pointer-events: none; will-change: opacity, transform; }
+.archive-story-copy.is-ready.is-started:not(.is-complete) .archive-story-copy-line { animation: archive-story-line var(--archive-story-duration) var(--archive-story-easing) calc(var(--archive-story-delay) + var(--archive-story-index) * var(--archive-story-step)) both; }
+.archive-story-copy.is-complete .archive-story-copy-line { opacity: 1; transform: none; }
+.archive-story-copy-line.is-static { opacity: 1; transform: none; }
 .archive-story-copy .motion-stage.is-loading .motion-stage-fallback .archive-story-copy-line.is-static { opacity: 0; }
-@keyframes archive-story-line { from { clip-path: inset(0 100% 0 0); opacity: .85; } to { clip-path: inset(0); opacity: 1; } }
+@keyframes archive-story-line { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
 .reports-archive-module-base { position: absolute; z-index: 0; top: 0; left: 0; display: block; width: 100%; height: auto; pointer-events: none; }
 .motion-stage { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; contain: layout paint; }
 .motion-stage-content, .motion-stage-fallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity var(--motion-crossfade-ms, 180ms) ease; }
@@ -373,11 +375,11 @@ button, a { font: inherit; }
 .archive-fish-float { position: absolute; z-index: 23; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-fish-float > .motion-stage { position: absolute; inset: 0; }
 .archive-fish-float-trigger { position: absolute; top: 79.38%; left: 3%; width: 94%; height: 1.4%; pointer-events: none; }
-.archive-fish-float-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; transform: translate3d(0,4px,0); will-change: transform; }
+.archive-fish-float-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; transform: translate3d(0, var(--archive-fish-amp, 9px), 0); will-change: transform; }
 .archive-fish-float.is-ready.is-visible .archive-fish-float-layer { opacity: 1; animation: archive-fish-float var(--archive-fish-duration) ease-in-out var(--archive-fish-delay) infinite alternate; transition: opacity .4s cubic-bezier(.22,1,.36,1), transform .4s cubic-bezier(.22,1,.36,1); }
 .archive-fish-float.is-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
 .archive-fish-float-layer.is-static, .motion-stage-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
-@keyframes archive-fish-float { from { transform: translate3d(0,4px,0); } to { transform: translate3d(0,-4px,0); } }
+@keyframes archive-fish-float { from { transform: translate3d(0, var(--archive-fish-amp, 9px), 0); } to { transform: translate3d(0, calc(-1 * var(--archive-fish-amp, 9px)), 0); } }
 .archive-module-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .archive-module-circle { clip-path: inset(0 100% 0 0); opacity: 0; }
 .archive-module-one.is-started .archive-module-circle { animation: archive-module-circle-reveal .65s ease-out .15s both; }

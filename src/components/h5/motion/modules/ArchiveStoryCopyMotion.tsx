@@ -60,7 +60,7 @@ export function ArchiveStoryCopyMotion({ preview = false }: { preview?: boolean 
 
   useEffect(() => {
     if (!ready || !started || complete) return;
-    const total = h5MotionTiming.archiveStoryCopy.delayMs + lineAssets.length * h5MotionTiming.archiveStoryCopy.lineDurationMs + (lineAssets.length - 1) * h5MotionTiming.archiveStoryCopy.linePauseMs;
+    const total = h5MotionTiming.archiveStoryCopy.delayMs + (lineAssets.length - 1) * h5MotionTiming.archiveStoryCopy.lineStepMs + h5MotionTiming.archiveStoryCopy.lineDurationMs;
     const timer = window.setTimeout(() => {
       setComplete(true);
       sessionStorage.setItem(completedKey, "true");
@@ -77,7 +77,7 @@ export function ArchiveStoryCopyMotion({ preview = false }: { preview?: boolean 
   const style = {
     "--archive-story-delay": `${h5MotionTiming.archiveStoryCopy.delayMs}ms`,
     "--archive-story-duration": `${h5MotionTiming.archiveStoryCopy.lineDurationMs}ms`,
-    "--archive-story-gap": `${h5MotionTiming.archiveStoryCopy.lineDurationMs + h5MotionTiming.archiveStoryCopy.linePauseMs}ms`,
+    "--archive-story-step": `${h5MotionTiming.archiveStoryCopy.lineStepMs}ms`,
     "--archive-story-easing": h5MotionTiming.archiveStoryCopy.easing,
   } as CSSProperties;
 

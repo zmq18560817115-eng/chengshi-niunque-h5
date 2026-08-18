@@ -53,8 +53,8 @@ describe("H5 motion isolation", () => {
     expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeLessThanOrEqual(250);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeLessThanOrEqual(800);
-    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBeGreaterThanOrEqual(1200);
-    expect(h5MotionTiming.archiveStoryCopy.linePauseMs).toBeGreaterThanOrEqual(250);
+    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBeGreaterThanOrEqual(450);
+    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBeGreaterThanOrEqual(450);
   });
 
   it("draws the archive circle along an SVG stroke instead of a rectangular reveal", () => {

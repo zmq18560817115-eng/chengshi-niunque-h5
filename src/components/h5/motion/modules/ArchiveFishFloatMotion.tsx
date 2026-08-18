@@ -48,7 +48,7 @@ export function ArchiveFishFloatMotion({ preview = false }: { preview?: boolean 
     <div ref={trigger} className="archive-fish-float-trigger" />
     <MotionBoundary fallback={staticFish}>
       <MotionStage masterWidth={1000} masterHeight={5557} assets={fishAssets} enabled={enabled} crossfadeMs={0} fallback={staticFish} onStateChange={onStateChange}>
-        {fishAssets.map((src, index) => <Image key={src} className="archive-fish-float-layer" src={src} alt="" fill unoptimized style={{ "--archive-fish-delay": `${index * 180}ms`, "--archive-fish-duration": `${2700 + index * 160}ms` } as CSSProperties} />)}
+        {fishAssets.map((src, index) => <Image key={src} className="archive-fish-float-layer" src={src} alt="" fill unoptimized style={{ "--archive-fish-delay": `${index * 180}ms`, "--archive-fish-duration": `${2700 + index * 160}ms`, "--archive-fish-amp": `${[10, 8, 11, 9][index] ?? 9}px` } as CSSProperties} />)}
       </MotionStage>
     </MotionBoundary>
   </div>;

@@ -51,9 +51,11 @@ export const h5MotionTiming = {
     threshold: 0.3,
   },
   archiveStoryCopy: {
-    delayMs: 300,
-    lineDurationMs: 1400,
-    linePauseMs: 320,
+    delayMs: 240,
+    // 统一的渐显：每行淡入时长一致，整行（含换行）同时显现，不再逐列擦除
+    lineDurationMs: 620,
+    // 行与行之间保持一致、可辨识的节拍，避免"逐行太快"的观感
+    lineStepMs: 700,
     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
     threshold: 0.3,
   },
