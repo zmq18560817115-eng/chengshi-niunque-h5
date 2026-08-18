@@ -26,6 +26,7 @@
 - Each complete card remains the click target; visual copy, arrow, and status layers do not intercept pointer events.
 - Guide papers share one 420ms start and one 1500ms duration. Only transform and opacity vary; final coordinates remain the approved artwork coordinates.
 - Archive ribbon uses the pixel seam at y=1678 and reveals continuously to y=1951. The short head and moving body do not overlap.
+- Archive result-colour motion uses the original-pixel crop at master bounds `(63, 1820, 691, 1933)`. Only the 628 x 113 changing region is composited, and it shares the latest-circle trigger/root margin so the two motions remain one continuous sequence during scrolling.
 - Fish canvases use the archive 1000 x 5557 origin. Browser inspection confirmed the module changes from `is-ready` to `is-visible` when its trigger enters the viewport.
 
 ## Deviations

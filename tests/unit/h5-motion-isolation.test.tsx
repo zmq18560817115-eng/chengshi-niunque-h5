@@ -66,13 +66,15 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("@keyframes archive-latest-circle-draw");
   });
 
-  it("crossfades aligned normal and passed result canvases after the circle completes", () => {
+  it("fades the aligned result patch after the circle completes without animating full-page canvases", () => {
     const component = readFileSync("src/components/h5/motion/modules/ArchiveResultColorMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(component).toContain("archive-result-normal-canvas.webp");
-    expect(component).toContain("archive-result-passed-canvas.webp");
+    expect(component).toContain("archive-result-normal-patch.webp");
+    expect(component).toContain("archive-result-passed-patch.webp");
+    expect(component).toContain("masterWidth={628} masterHeight={113}");
     expect(component).toContain("archiveLatestCircle.durationMs");
-    expect(css).toContain("@keyframes archive-result-normal-out");
+    expect(css).toContain("top: 32.751485%");
+    expect(css).not.toContain("@keyframes archive-result-normal-out");
     expect(css).toContain("@keyframes archive-result-passed-in");
   });
 });

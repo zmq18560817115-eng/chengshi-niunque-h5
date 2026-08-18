@@ -19,7 +19,7 @@ export async function loginAction(_state: LoginState, formData: FormData): Promi
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
   const result = await new AdminAuthService().login(email, password, ipAddress);
-  if (!result) return { error: "邮箱或密码不正确，或尝试次数过多，请稍后再试。" };
+  if (!result) return { error: "账号或密码不正确，或尝试次数过多，请稍后再试。" };
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, result.token, {
     httpOnly: true,

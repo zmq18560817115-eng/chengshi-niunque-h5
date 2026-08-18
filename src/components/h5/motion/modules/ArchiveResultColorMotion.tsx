@@ -6,9 +6,9 @@ import { MotionBoundary } from "../MotionBoundary";
 import { MotionStage } from "../MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "../motion-config";
 
-const normalAsset = "/design/final-v1/motion/archive-clean/archive-result-normal-canvas.webp";
-const passedAsset = "/design/final-v1/motion/archive-clean/archive-result-passed-canvas.webp";
-const completionKey = "h5-motion-archive-result-color-complete-v2";
+const normalAsset = "/design/final-v1/motion/archive-clean/archive-result-normal-patch.webp";
+const passedAsset = "/design/final-v1/motion/archive-clean/archive-result-passed-patch.webp";
+const completionKey = "h5-motion-archive-result-color-complete-v3";
 
 export function ArchiveResultColorMotion({ preview = false }: { preview?: boolean }) {
   const trigger = useRef<HTMLDivElement>(null);
@@ -43,7 +43,10 @@ export function ArchiveResultColorMotion({ preview = false }: { preview?: boolea
       if (!armed.current || !inView.current) return;
       setStarted(true);
       observer.disconnect();
-    }, { threshold: [h5MotionTiming.archiveResultColor.threshold] });
+    }, {
+      threshold: [h5MotionTiming.archiveResultColor.threshold],
+      rootMargin: "-12% 0px -12% 0px",
+    });
     observer.observe(node);
     return () => {
       cancelAnimationFrame(firstFrame);
@@ -74,7 +77,7 @@ export function ArchiveResultColorMotion({ preview = false }: { preview?: boolea
   return <div className={`archive-result-color ${ready ? "is-ready" : ""} ${started ? "is-started" : ""} ${complete ? "is-complete" : ""}`} style={style} data-motion-module="archiveResultColor" data-motion-started={started} data-motion-complete={complete} aria-hidden="true">
     <div ref={trigger} className="archive-result-color-trigger" />
     <MotionBoundary fallback={<Image className="archive-result-color-layer archive-result-color-passed" src={passedAsset} alt="" fill unoptimized />}>
-      <MotionStage masterWidth={1000} masterHeight={5557} assets={[normalAsset, passedAsset]} enabled={enabled} crossfadeMs={0} fallback={<Image className="archive-result-color-layer archive-result-color-passed is-static" src={passedAsset} alt="" fill unoptimized />} loadingFallback={<Image className="archive-result-color-layer archive-result-color-normal is-static" src={normalAsset} alt="" fill unoptimized />} onStateChange={onStateChange}>
+      <MotionStage masterWidth={628} masterHeight={113} assets={[normalAsset, passedAsset]} enabled={enabled} crossfadeMs={0} fallback={<Image className="archive-result-color-layer archive-result-color-passed is-static" src={passedAsset} alt="" fill unoptimized />} loadingFallback={<Image className="archive-result-color-layer archive-result-color-normal is-static" src={normalAsset} alt="" fill unoptimized />} onStateChange={onStateChange}>
         <Image className="archive-result-color-layer archive-result-color-normal" src={normalAsset} alt="" fill unoptimized />
         <Image className="archive-result-color-layer archive-result-color-passed" src={passedAsset} alt="" fill unoptimized />
       </MotionStage>

@@ -435,18 +435,16 @@ button, a { font: inherit; }
 .archive-unlock-tab-motion.is-fallback .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: none; transform: none; }
 .archive-unlock-tab-motion:not(.is-fallback) .motion-stage.is-loading .motion-stage-fallback .is-moving { opacity: 0; }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
-.archive-result-color > .motion-stage { position: absolute; inset: 0; }
-.archive-result-color-trigger { position: absolute; top: 29.6%; left: 9%; width: 72%; height: 4%; pointer-events: none; }
+.archive-result-color > .motion-stage { position: absolute; inset: auto; top: 32.751485%; left: 6.3%; width: 62.8%; height: 2.033471%; overflow: visible; contain: layout paint style; isolation: isolate; }
+.archive-result-color-trigger { position: absolute; top: 24.8%; left: 10.2%; width: 46.5%; height: 1.8%; pointer-events: none; }
 .archive-result-color-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .archive-result-color-normal { opacity: 1; }
 .archive-result-color-passed { opacity: 0; }
 .archive-result-color-passed.is-static, .motion-stage-fallback .archive-result-color-passed { opacity: 1; }
 .archive-result-color .motion-stage.is-loading .motion-stage-fallback .archive-result-color-normal { opacity: 1; }
-.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-normal { animation: archive-result-normal-out var(--archive-result-duration) var(--archive-result-easing) var(--archive-result-delay) both; }
-.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-passed { animation: archive-result-passed-in var(--archive-result-duration) var(--archive-result-easing) var(--archive-result-delay) both; }
+.archive-result-color.is-ready.is-started:not(.is-complete) .archive-result-color-passed { animation: archive-result-passed-in var(--archive-result-duration) var(--archive-result-easing) var(--archive-result-delay) both; backface-visibility: hidden; transform: translateZ(0); will-change: opacity; }
 .archive-result-color.is-complete .archive-result-color-normal { opacity: 0; }
 .archive-result-color.is-complete .archive-result-color-passed { opacity: 1; }
-@keyframes archive-result-normal-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes archive-result-passed-in { from { opacity: 0; } to { opacity: 1; } }
 .reports-archive-clean-base { position: relative; z-index: 10; }
 .reports-archive-final-overlay { position: absolute; z-index: 29; inset: 0; pointer-events: none; }

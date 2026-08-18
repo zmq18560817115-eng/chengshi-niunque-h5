@@ -11,6 +11,17 @@ async function main() {
     displayName: config.displayName,
     passwordHash,
   });
+  const revokedAt = new Date();
+  await prisma.$transaction([
+    prisma.adminUser.updateMany({
+      where: { id: { not: admin.id }, status: "ACTIVE" },
+      data: { status: "DISABLED" },
+    }),
+    prisma.adminSession.updateMany({
+      where: { revokedAt: null },
+      data: { revokedAt },
+    }),
+  ]);
   console.log(JSON.stringify({ status: "ready", email: admin.email, updated: true }));
 }
 

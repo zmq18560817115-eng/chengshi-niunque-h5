@@ -27,6 +27,11 @@ MODULE_ONE_REPLACE_END = 2160
 MODULE_THREE_Y = 4164
 MODULE_THREE_SIZE = (1000, 1393)
 UNLOCK_RUNTIME_BOUNDS = (840, 1872, 918, 2144)
+# Only this tight rectangle changes during the result-colour transition. The
+# browser animates these patches instead of two transparent 1000 x 5557
+# canvases, keeping the mobile compositor surface small while preserving the
+# exact original pixels and registration.
+RESULT_COLOR_BOUNDS = (63, 1820, 691, 1933)
 
 
 def transform_module_one(name: str) -> Image.Image:
@@ -178,6 +183,9 @@ def main() -> None:
         canvas = Image.new("RGBA", MASTER)
         canvas.alpha_composite(transform_module_one(source_name))
         canvas.save(OUTPUT / name, "WEBP", lossless=True, method=6)
+        if name.startswith("archive-result-"):
+            patch_name = name.replace("-canvas.webp", "-patch.webp")
+            canvas.crop(RESULT_COLOR_BOUNDS).save(OUTPUT / patch_name, "WEBP", lossless=True, method=6)
     unlock.save(OUTPUT / "archive-unlock-tab-canvas.webp", "WEBP", lossless=True, method=6)
     for index, canvas in enumerate(fish_canvases, start=1):
         canvas.save(OUTPUT / f"archive-fish-{index:02d}-canvas.webp", "WEBP", lossless=True, method=6)
@@ -198,6 +206,7 @@ def main() -> None:
             "initialVisibleRatio": 0.2,
             "initialVisibleHeight": head_height,
         },
+        "resultColor": {"runtimeBounds": list(RESULT_COLOR_BOUNDS)},
         "fish": [
             {"index": index, "detectedBox": [int(value) for value in box[:4]], "canvasAlphaBounds": fish_canvases[index - 1].getchannel("A").getbbox()}
             for index, box in enumerate(fish_boxes, start=1)

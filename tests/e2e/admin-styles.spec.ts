@@ -31,6 +31,7 @@ test("production pages apply the shared H5 and admin styles", async ({ page }) =
   const password = page.locator("input[name='password']");
   await expect(email).toBeVisible();
   await expect(password).toBeVisible();
+  await expect(email).toHaveAttribute("type", "text");
   const emailBox = await email.boundingBox();
   const passwordBox = await password.boundingBox();
   expect(emailBox && passwordBox && passwordBox.y > emailBox.y + emailBox.height).toBeTruthy();
