@@ -314,12 +314,14 @@ button, a { font: inherit; }
 .archive-story-copy .motion-stage-content { position: absolute; inset: 0; }
 .archive-story-copy-base { position: absolute; inset: 0; }
 .archive-story-copy-trigger { position: absolute; z-index: 2; top: 85.5%; left: 20%; width: 60%; height: 8%; pointer-events: none; }
-.archive-story-copy-line { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; object-fit: fill; opacity: 0; transform: translate3d(0, 6px, 0); pointer-events: none; will-change: opacity, transform; }
+@property --archive-story-reveal { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+/* 逐字渐显：用一条从左到右移动、带柔边的遮罩，使每行文字逐字淡入 */
+.archive-story-copy-line { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; object-fit: fill; opacity: 0; --archive-story-reveal: -8%; -webkit-mask-image: linear-gradient(90deg, #000 var(--archive-story-reveal), rgba(0,0,0,0) calc(var(--archive-story-reveal) + 8%)); mask-image: linear-gradient(90deg, #000 var(--archive-story-reveal), rgba(0,0,0,0) calc(var(--archive-story-reveal) + 8%)); pointer-events: none; will-change: --archive-story-reveal; }
 .archive-story-copy.is-ready.is-started:not(.is-complete) .archive-story-copy-line { animation: archive-story-line var(--archive-story-duration) var(--archive-story-easing) calc(var(--archive-story-delay) + var(--archive-story-index) * var(--archive-story-step)) both; }
-.archive-story-copy.is-complete .archive-story-copy-line { opacity: 1; transform: none; }
-.archive-story-copy-line.is-static { opacity: 1; transform: none; }
+.archive-story-copy.is-complete .archive-story-copy-line { opacity: 1; -webkit-mask-image: none; mask-image: none; }
+.archive-story-copy-line.is-static { opacity: 1; -webkit-mask-image: none; mask-image: none; }
 .archive-story-copy .motion-stage.is-loading .motion-stage-fallback .archive-story-copy-line.is-static { opacity: 0; }
-@keyframes archive-story-line { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+@keyframes archive-story-line { 0% { opacity: 1; --archive-story-reveal: -8%; } 100% { opacity: 1; --archive-story-reveal: 108%; } }
 .reports-archive-module-base { position: absolute; z-index: 0; top: 0; left: 0; display: block; width: 100%; height: auto; pointer-events: none; }
 .motion-stage { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; contain: layout paint; }
 .motion-stage-content, .motion-stage-fallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity var(--motion-crossfade-ms, 180ms) ease; }
@@ -513,17 +515,19 @@ button, a { font: inherit; }
    检测项目：对照正式原图最终视觉校准
    ========================================================= */
 
-/* 1. 标题：稍向右，并增加中文字距 */
+/* 1. 标题：稍向右，字距贴合原图；相对上移贴合原图基线（不影响正文位置） */
 .category-page-final[data-category="inspection-projects"] .category-card-copy strong {
+  position: relative;
+  top: -0.8cqw;
   margin-left: 1.3cqw;
-  letter-spacing: .17em;
+  letter-spacing: .09em;
   transform: none;
 }
 
 
 /* 2. 正文：扩大可用宽度，使换行位置接近原稿 */
 .category-page-final[data-category="inspection-projects"] .category-card-copy small {
-  max-width: 72cqw;
+  max-width: 74cqw;
 
   margin-top: 1.05cqw;
   margin-left: .9cqw;
@@ -559,9 +563,9 @@ button, a { font: inherit; }
 }
 
 
-/* 5. 状态文字：上移到鱼形徽标主体上居中（此前偏低、掉出徽标） */
+/* 5. 状态文字：对齐原图鱼形徽标上的“已通过/符合标准”位置 */
 .category-page-final[data-category="inspection-projects"] .category-card-status {
-  top: -1.9cqw !important;
+  top: 0.2cqw !important;
 
   font-size: 4cqw;
   font-weight: 700;
@@ -596,9 +600,24 @@ button, a { font: inherit; }
    （此前缺少专属规则，沿用了默认值导致标签/箭头错位）
    ========================================================= */
 
-/* 1. “查看X份报告”：与其它页统一的药丸文字比例 */
+/* 1. 标题：字距贴合原图；相对上移贴合原图基线（不影响正文位置） */
+.category-page-final[data-category="production-traceability"] .category-card-copy strong {
+  position: relative;
+  top: -0.8cqw;
+  letter-spacing: .04em;
+}
+
+/* 2. 正文：扩大可用宽度，使换行位置贴合原图（此前偏窄、提前换行） */
+.category-page-final[data-category="production-traceability"] .category-card-copy small {
+  max-width: 74cqw;
+  margin-top: 1.05cqw;
+  font-size: 3cqw;
+  line-height: 1.36;
+}
+
+/* 3. “查看X份报告”：与其它页统一的药丸文字比例（正文整体上移后按钮下移补偿保持贴合药丸） */
 .category-page-final[data-category="production-traceability"] .category-card-copy b {
-  top: 19.1cqw;
+  top: 19.5cqw;
 
   height: 11cqw;
 
@@ -680,6 +699,7 @@ button, a { font: inherit; }
 .report-placeholder-page { display: grid; min-height: min(56svh, 36rem); place-items: center; align-content: center; gap: var(--space-3); padding: var(--space-8); border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); text-align: center; background: rgb(255 250 240 / .78); box-shadow: var(--shadow-paper); }
 .report-placeholder-page strong { font-size: clamp(1.5rem, 7vw, 2.4rem); }
 .report-placeholder-page p { max-width: 24rem; margin: 0; color: var(--color-muted); line-height: 1.7; }
+.report-placeholder-note { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); color: var(--color-muted); font-size: .82rem; line-height: 1.6; text-align: center; background: rgb(255 250 240 / .78); }
 .report-page-footer { padding: var(--space-6) var(--space-6) max(var(--space-8), env(safe-area-inset-bottom)); color: rgb(64 41 31 / .72); text-align: center; font-size: .82rem; line-height: 1.6; }
 .preview-journey-tabs { flex-wrap: wrap; }.preview-journey-tabs button { flex: 1 0 40%; }.module-preview-card .brand-guide { min-height: 34rem; }.module-preview-card .reports-hero { min-height: 24rem; }
 

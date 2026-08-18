@@ -52,11 +52,11 @@ export const h5MotionTiming = {
   },
   archiveStoryCopy: {
     delayMs: 240,
-    // 统一的渐显：每行淡入时长一致，整行（含换行）同时显现，不再逐列擦除
-    lineDurationMs: 620,
-    // 行与行之间保持一致、可辨识的节拍，避免"逐行太快"的观感
-    lineStepMs: 700,
-    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    // 逐字渐显：每行由左到右带柔边扫入，单行扫完的时长
+    lineDurationMs: 850,
+    // 行与行之间的起始间隔（略大于单行时长 → 逐行依次、清晰可辨）
+    lineStepMs: 900,
+    easing: "linear",
     threshold: 0.3,
   },
   revealThreshold: 0.3,

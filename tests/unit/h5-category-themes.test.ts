@@ -23,8 +23,8 @@ describe("H5 category report themes", () => {
 
   it("uses the reference-aligned copy origin for each card artwork", () => {
     expect(categoryCardLayouts["inspection-projects"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 76], [58, 76], [58, 76]]);
-    expect(categoryCardLayouts["review-assurance"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 66], [58, 66], [68, 66]]);
-    expect(categoryCardLayouts["production-traceability"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 66], [58, 66]]);
+    expect(categoryCardLayouts["review-assurance"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 52], [58, 52], [68, 52]]);
+    expect(categoryCardLayouts["production-traceability"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 51], [58, 51]]);
   });
 
   it("keeps the artwork status labels aligned with each official category", () => {

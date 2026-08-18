@@ -38,8 +38,8 @@ export const categoryCardLayouts = {
   { x: 55, y: 1495, width: 876, height: 404, contentX: 68, contentY: 52, contentWidth: 742 },
 ],
   "production-traceability": [
-    { x: 61, y: 557, width: 874, height: 402, contentX: 58, contentY: 66, contentWidth: 742 },
-    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 66, contentWidth: 742 },
+    { x: 61, y: 557, width: 874, height: 402, contentX: 58, contentY: 51, contentWidth: 742 },
+    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 51, contentWidth: 742 },
   ],
 } satisfies Record<string, CategoryCardLayout[]>;
 
