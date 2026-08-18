@@ -559,9 +559,9 @@ button, a { font: inherit; }
 }
 
 
-/* 5. 状态文字统一向下调整 */
+/* 5. 状态文字：上移到鱼形徽标主体上居中（此前偏低、掉出徽标） */
 .category-page-final[data-category="inspection-projects"] .category-card-status {
-  top: 3.8cqw !important;
+  top: -1.9cqw !important;
 
   font-size: 4cqw;
   font-weight: 700;
@@ -572,7 +572,7 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="0"]
 .category-card-status {
-  left: 55cqw !important;
+  left: 58.5cqw !important;
 }
 
 
@@ -588,7 +588,7 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="2"]
 .category-card-status {
-  left: 55.1cqw !important;
+  left: 58.5cqw !important;
 }
 
 /* =========================================================
@@ -616,10 +616,10 @@ button, a { font: inherit; }
   height: 22cqw;
 }
 
-/* 3. 状态文字：上移压准画面里已烤进鱼形徽标上的文字 */
+/* 3. 状态文字：上移并左移，压准画面里已烤进鱼形徽标上的文字 */
 .category-page-final[data-category="production-traceability"] .category-card-status {
-  top: -4.3cqw !important;
-  left: 58.2cqw !important;
+  top: -5.1cqw !important;
+  left: 57.2cqw !important;
 
   font-size: 4cqw;
   font-weight: 700;
@@ -629,7 +629,8 @@ button, a { font: inherit; }
 .category-page-final[data-category="production-traceability"]
 .category-card-hotspot[data-index="1"]
 .category-card-status {
-  top: -5.1cqw !important;
+  top: -5.3cqw !important;
+  left: 56.6cqw !important;
 }
 
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
