@@ -799,8 +799,8 @@ button, a { font: inherit; }
 .report-page-title > p { margin: 0 0 var(--space-2); color: var(--report-accent); font-weight: 800; letter-spacing: .08em; }
 .report-page-title h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 9vw, 3.5rem); line-height: 1.15; }
 .report-page-title > div { max-width: 32rem; margin-top: var(--space-4); line-height: 1.7; }
-.report-page-content { display: grid; gap: var(--space-6); padding: 0 var(--space-4) var(--space-8); }
-.image-report, .report-file-card { overflow: hidden; border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); background: var(--color-paper); box-shadow: var(--shadow-paper); }
+.report-page-content { display: grid; min-width: 0; gap: var(--space-6); padding: 0 var(--space-4) var(--space-8); }
+.image-report, .report-file-card { min-width: 0; max-width: 100%; overflow: hidden; border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); background: var(--color-paper); box-shadow: var(--shadow-paper); }
 .image-report > header, .report-file-card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); }
 .image-report h2, .report-file-card h2 { margin: 0; font-size: 1rem; }
 .image-report header p, .report-file-card p { margin: var(--space-1) 0 0; color: var(--color-muted); font-size: .82rem; line-height: 1.5; }
@@ -808,8 +808,9 @@ button, a { font: inherit; }
 .report-zoom-controls button, .report-error button { min-width: 44px; min-height: 44px; border: 1px solid var(--color-border); border-radius: .65rem; color: var(--color-ink); background: white; }
 .report-zoom-controls button:disabled { opacity: .4; }
 .report-zoom-controls output { min-width: 3rem; text-align: center; font-size: .75rem; }
-.report-image-stage { position: relative; min-height: 18rem; overflow: hidden; background: #eee8de; touch-action: pan-y; }
-.report-image-scroll { overflow-x: auto; overflow-y: visible; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
+.report-image-stage { position: relative; width: 100%; height: clamp(22rem, 68svh, 46rem); overflow: auto; contain: layout paint; overscroll-behavior: contain; background: #eee8de; cursor: grab; touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
+.report-image-stage.is-dragging { cursor: grabbing; user-select: none; }
+.report-image-scroll { width: 100%; min-width: 100%; }
 .report-image-stage img { display: block; max-width: none; height: auto; transition: width .15s ease; }
 .report-image-stage.is-loading img { visibility: hidden; }
 .report-image-skeleton { position: absolute; inset: 0; min-height: 22rem; background: linear-gradient(100deg, #eee7dc 20%, #fffaf0 42%, #eee7dc 65%); background-size: 220% 100%; animation: report-skeleton 1.3s ease-in-out infinite; }
