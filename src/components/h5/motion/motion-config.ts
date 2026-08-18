@@ -51,11 +51,11 @@ export const h5MotionTiming = {
     threshold: 0.3,
   },
   archiveStoryCopy: {
-    delayMs: 240,
-    // 逐字渐显：每行由左到右带柔边扫入，单行扫完的时长
-    lineDurationMs: 850,
-    // 行与行之间的起始间隔（略大于单行时长 → 逐行依次、清晰可辨）
-    lineStepMs: 900,
+    delayMs: 150,
+    // 逐字渐显：每行由左到右带柔边扫入，单行扫完的时长（与首行认可的观感一致）
+    lineDurationMs: 3200,
+    // 行与行之间的起始间隔（CSS 逐行动画与 JS 完成计时以此为唯一来源，避免后几行提前弹出）
+    lineStepMs: 2150,
     easing: "linear",
     threshold: 0.3,
   },
