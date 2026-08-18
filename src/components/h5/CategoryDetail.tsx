@@ -42,14 +42,6 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
 
   return <SwipeBackPage className={`h5-shell category-page category-page-final h5-page-transition ${theme.backgroundClass} ${leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme}>
     <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={1000} height={2166} priority sizes="(max-width: 750px) 100vw, 750px"/>
-    {module.slug === "inspection-projects" && <>
-      <svg className="category-speech-bubble" viewBox="0 0 200 100" aria-hidden="true">
-        <path d="M 18 42 C 14 20 40 12 72 10 C 110 8 150 10 172 16 C 192 22 194 44 184 58 C 176 70 152 74 138 72 L 142 74 C 154 88 144 96 132 92 C 122 88 120 78 124 72 C 100 76 60 74 38 68 C 18 62 14 50 18 42 Z" fill="#faf6ee" stroke="#2b2b2b" strokeWidth="2.2" strokeLinejoin="round"/>
-        <text x="100" y="50" textAnchor="middle" dominantBaseline="middle" className="category-speech-bubble-text">批次核验</text>
-      </svg>
-      <span className="category-blush category-blush--left" aria-hidden="true"/>
-      <span className="category-blush category-blush--right" aria-hidden="true"/>
-    </>}
     <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
