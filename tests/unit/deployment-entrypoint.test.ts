@@ -11,7 +11,6 @@ describe("production deployment entrypoint", () => {
     const example = readFileSync(".env.example", "utf8");
     const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
     const contentVerify = readFileSync("scripts/verify-default-h5-content.ts", "utf8");
-    const standaloneStaging = readFileSync("scripts/stage-standalone-assets.mjs", "utf8");
 
     expect(entrypoint).toContain("set -eu");
     expect(entrypoint).toContain("pnpm prisma migrate deploy");
@@ -23,12 +22,6 @@ describe("production deployment entrypoint", () => {
     expect(entrypoint.indexOf("pnpm content:bootstrap")).toBeLessThan(entrypoint.indexOf("pnpm content:verify"));
     expect(entrypoint.indexOf("pnpm content:verify")).toBeLessThan(entrypoint.indexOf("pnpm admin:seed"));
     expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("if [ -f server.js ]"));
-    expect(entrypoint).toContain("mkdir -p .next/standalone/public .next/standalone/.next/static");
-    expect(entrypoint).toContain("cp -R public/. .next/standalone/public/");
-    expect(entrypoint).toContain("cp -R .next/static/. .next/standalone/.next/static/");
-    expect(entrypoint).toContain("test -f .next/standalone/public/design/guide/guide-first-frame.webp");
-    expect(entrypoint).toContain("test -f .next/standalone/public/design/final-v1/archive-reference.webp");
-    expect(entrypoint.indexOf("cp -R public/.")).toBeLessThan(entrypoint.indexOf("exec node .next/standalone/server.js"));
     expect(entrypoint).toContain("exec node .next/standalone/server.js");
     expect(entrypoint).toContain("Run pnpm build before starting the service.");
     expect(dockerfile).toContain('CMD ["sh", "./deploy/start-production.sh"]');
@@ -44,10 +37,5 @@ describe("production deployment entrypoint", () => {
     expect(pm2).toContain('script: "./deploy/start-production.sh"');
     expect(pm2).toContain('interpreter: "/bin/sh"');
     expect(packageJson).toContain('"start:production": "sh deploy/start-production.sh"');
-    expect(packageJson).toContain('"build": "next build && node scripts/stage-standalone-assets.mjs"');
-    expect(standaloneStaging).toContain('path.join(projectRoot, "public")');
-    expect(standaloneStaging).toContain('path.join(projectRoot, ".next", "static")');
-    expect(standaloneStaging).toContain('"guide-first-frame.webp"');
-    expect(standaloneStaging).toContain('"archive-reference.webp"');
   });
 });

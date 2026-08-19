@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/stage-standalone-assets.mjs",
+    "build": "next build",
     "start": "next start",
     "start:production": "sh deploy/start-production.sh",
     "lint": "eslint . --max-warnings=0",

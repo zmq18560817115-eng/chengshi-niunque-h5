@@ -72,12 +72,11 @@ pm2 startOrReload deploy/ecosystem.config.cjs --only honest-nutri-report-h5 --up
 pm2 save
 ```
 
-`pnpm build` 会先把 `public` 与 `.next/static` 写入 Next standalone 构建包，因此即使部署平台直接启动 `.next/standalone/server.js`，页面图片和前端静态资源也不会丢失。该 PM2 配置仍应执行 `deploy/start-production.sh`：先迁移、确认 MinIO、补齐三个固定分类和八张固定卡片、校验前台可访问性及管理员登录，全部成功后才启动服务；启动脚本还会再次复制静态资源，兼容服务器上遗留的旧构建。不得绕过该入口，否则会跳过数据初始化。启动后必须验证：
+该配置会执行 `deploy/start-production.sh`：先迁移、确认 MinIO、补齐三个固定分类和八张固定卡片、校验前台可访问性及管理员登录，全部成功后才启动 Next standalone 服务。启动后必须验证：
 
 ```sh
 curl -fsS http://127.0.0.1:3000/api/health
 curl -fsS http://127.0.0.1:3000/api/public/content
-curl -fsS -o /dev/null http://127.0.0.1:3000/design/guide/guide-first-frame.webp
 ```
 
 第一条必须返回 `status: ok`，第二条必须包含 `inspection-projects`、`review-assurance`、`production-traceability` 三个分类；任何一条不满足都不能对外宣称部署完成。

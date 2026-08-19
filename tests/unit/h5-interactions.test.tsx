@@ -185,8 +185,7 @@ describe("multi-page H5 interactions", () => {
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
-    expect(container.querySelectorAll(".brand-guide-foreground")).toHaveLength(2);
-    expect(container.querySelector(".brand-guide-window-mask")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
     const stage = container.querySelector(".brand-guide-stage");
     expect(stage).toHaveAttribute("data-blink-start-ms", "350");
     expect(stage).toHaveAttribute("data-blink-hold-ms", "200");

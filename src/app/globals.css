@@ -253,14 +253,22 @@ button, a { font: inherit; }
 .standalone-preview-scroll .h5-shell { max-width: none; min-width: 0; box-shadow: none; }
 .brand-guide { display: flex; width: 100%; max-width: var(--h5-content-width); height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; background-repeat: no-repeat; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: pan-y; }
 .brand-guide.is-leaving { opacity: .95; transform: translate3d(-100%,0,0); pointer-events: none; }
-.brand-guide-stage { position: relative; isolation: isolate; width: 100%; max-height: 100%; flex: 0 0 auto; aspect-ratio: 750 / 1625; overflow: hidden; }
+.brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 1 1 auto; overflow: hidden; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 0; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-foreground, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-window-mask, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 15; visibility: visible; opacity: 1; }
-.brand-guide-foreground { z-index: 20; backface-visibility: hidden; }
-.brand-guide-foreground-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
+.brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-paper-top { --paper-offset: 0ms; animation-name: guide-paper-from-top, guide-paper-fade; }
+.brand-guide-paper-left { --paper-offset: 80ms; animation-name: guide-paper-from-left, guide-paper-fade; }
+.brand-guide-paper-right { --paper-offset: 150ms; animation-name: guide-paper-from-right, guide-paper-fade; }
+.brand-guide-paper-bottom { --paper-offset: 220ms; animation-name: guide-paper-from-bottom, guide-paper-fade; }
+.brand-guide-character { z-index: 20; backface-visibility: hidden; }
+.brand-guide-character-open { will-change: opacity; }
+.brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
+.brand-guide-window-mask { z-index: 25; pointer-events: none; }
+.brand-guide-foreground-top { z-index: 35; }
 .brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
 .brand-guide-swipe-arrow { animation: guide-hint-float 1.4s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
 .brand-guide-first-frame { z-index: 45; visibility: visible; opacity: 1; }
@@ -271,11 +279,12 @@ button, a { font: inherit; }
 .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
 .brand-guide.has-no-fallback .brand-guide-fallback-message { display: block; }
-.brand-guide:not(.is-animating) .brand-guide-foreground-closed, .brand-guide:not(.is-animating) .brand-guide-swipe-hint, .brand-guide:not(.is-animating) .brand-guide-swipe-arrow { animation-play-state: paused; }
+.brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed, .brand-guide:not(.is-animating) .brand-guide-swipe-hint, .brand-guide:not(.is-animating) .brand-guide-swipe-arrow { animation-play-state: paused; }
 .brand-guide.is-motion-disabled .brand-guide-dynamic-stage,
 .brand-guide.is-motion-disabled .brand-guide-first-frame { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-fallback { visibility: visible; opacity: 1; }
-.brand-guide.is-motion-disabled .brand-guide-foreground-closed,
+.brand-guide.is-motion-disabled .brand-guide-paper,
+.brand-guide.is-motion-disabled .brand-guide-character-closed,
 .brand-guide.is-motion-disabled .brand-guide-swipe-hint,
 .brand-guide.is-motion-disabled .brand-guide-swipe-arrow { animation-play-state: paused !important; }
 .brand-guide-accessible-copy { position: absolute; z-index: 50; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; white-space: nowrap; }
@@ -290,9 +299,6 @@ button, a { font: inherit; }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-hint-in { 0% { transform: translate3d(0, 2.2%, 0); opacity: 0; } 38% { transform: translate3d(0, 1.2%, 0); opacity: .38; } 72% { transform: translate3d(0, .35%, 0); opacity: .82; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
 @keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.35rem, 0, 0); } }
-@media (min-aspect-ratio: 750 / 1625) {
-  .brand-guide-stage { width: auto; height: 100%; }
-}
 .reports-archive { animation: reports-enter .32s ease both; }
 .reports-archive.reports-entry-transition { animation: reports-slide-in 460ms cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition { animation: h5-page-enter .28s cubic-bezier(.22,1,.36,1) both; }

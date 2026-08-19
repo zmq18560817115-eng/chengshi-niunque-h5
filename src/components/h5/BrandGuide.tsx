@@ -9,8 +9,9 @@ import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/mot
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 
 const guideAssetNames = [
-  "guide-background.webp", "guide-arch.webp",
-  "guide-foreground-open.webp", "guide-foreground-closed.webp",
+  "guide-background.webp", "guide-arch.webp", "guide-window-mask.webp",
+  "guide-character-open.webp", "guide-character-closed.webp", "guide-foreground-top.webp",
+  "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
   "swipe-hint-text.webp", "swipe-hint-arrow.webp",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
@@ -32,8 +33,14 @@ function GuideLayers({ onError }: { onError: (name: string) => void }) {
   return <div className="brand-guide-dynamic-stage">
     {image("guide-background.webp", "brand-guide-base", true)}
     {image("guide-arch.webp", "brand-guide-arch")}
-    {image("guide-foreground-open.webp", "brand-guide-foreground brand-guide-foreground-open", true)}
-    {image("guide-foreground-closed.webp", "brand-guide-foreground brand-guide-foreground-closed")}
+    {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
+    {image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
+    {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
+    {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top")}
+    {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left")}
+    {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right")}
+    {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
+    {image("guide-foreground-top.webp", "brand-guide-foreground-top")}
     <div className="brand-guide-swipe-hint" aria-hidden="true">
       {image("swipe-hint-text.webp", "brand-guide-swipe-text")}
       {image("swipe-hint-arrow.webp", "brand-guide-swipe-arrow")}

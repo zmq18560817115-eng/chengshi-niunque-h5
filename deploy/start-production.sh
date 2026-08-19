@@ -17,14 +17,6 @@ if [ -f server.js ]; then
 fi
 
 if [ -f .next/standalone/server.js ]; then
-  # pnpm build already stages these directories. Repeat the copy here as a
-  # safeguard for older build artifacts retained by a source deployment.
-  mkdir -p .next/standalone/public .next/standalone/.next/static
-  cp -R public/. .next/standalone/public/
-  cp -R .next/static/. .next/standalone/.next/static/
-
-  test -f .next/standalone/public/design/guide/guide-first-frame.webp
-  test -f .next/standalone/public/design/final-v1/archive-reference.webp
   exec node .next/standalone/server.js
 fi
 
