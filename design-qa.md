@@ -78,14 +78,14 @@ final result: blocked
 
 - Current capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-50699630-d19b-401d-be4f-44f35336be04.png` (750 x 1448).
 - Formal reference capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-a0cafdba-4fe6-47a0-86ec-cbac1c4bdf71.jpg` (2000 x 4333).
-- Official blank fish badge already staged in the runtime asset library: `public/design/final-v1/category-status-review.png`.
+- Runtime category artwork: `public/design/final-v1/category-traceability-clean.webp`.
 
 **Findings and fixes**
 
-- [Fixed P1] The production card status words were baked into `category-traceability-clean.webp`, so the upper-right fish decoration could not be maintained as an independent foreground layer.
-- The original blank fish asset now covers the baked status region at the existing 1000 x 2166 master coordinates; `已核验 / 已核对` is rendered above it inside each corresponding card hotspot.
+- [Fixed P1] The production artwork already contains the approved `已核验 / 已核对` fish badges. A second generic HTML badge had been layered above them, creating an enlarged duplicate during responsive scaling.
+- The duplicate foreground badge is now suppressed only for production traceability; the original artwork badge remains the single visible source.
 - Card title, description, report-button content, card routes and database-backed published-card ordering are unchanged.
-- The decoration remains pointer-transparent and the entire card remains the click target.
+- The entire card remains the click target.
 
 **Remaining blocker**
 

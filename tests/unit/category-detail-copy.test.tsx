@@ -66,12 +66,13 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 
-  it("keeps the production card fish badges as independent foreground decorations", () => {
+  it("keeps production status metadata without adding another visual badge layer", () => {
     const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
     const statusLabels = [...container.querySelectorAll<HTMLElement>(".category-card-status")];
 
     expect(statusLabels).toHaveLength(2);
     expect(statusLabels.map((label) => label.textContent)).toEqual(["已核验", "已核对"]);
+    expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
   });
 });

@@ -754,43 +754,11 @@ button, a { font: inherit; }
   height: 22cqw;
 }
 
-/* =========================================================
-   生产溯源：黄色状态徽章独立前景层
-   复用仓库已有状态徽章组件，避免被白色卡片遮挡
-   ========================================================= */
-
-.category-page-final[data-category="production-traceability"]
-.category-card-hotspot {
-  overflow: visible;
-}
-
-/* 生产溯源：用正式素材库里的空白鱼形徽标覆盖底图中的烘焙文字，
-   再将当前卡片对应的状态文字放在前景。这样右上角装饰的尺寸、位置和
-   遮挡关系与原图一致，也不会因底图上的固定文字产生重影。 */
+/* 生产溯源底图已经包含与原稿一致的“已核验 / 已核对”鱼形徽标。
+   隐藏通用 HTML 状态层，避免同一部件再次覆盖并随卡片容器放大。 */
 .category-page-final[data-category="production-traceability"]
 .category-card-status {
-  z-index: 8 !important;
-  top: -2.8cqw !important;
-  left: 58.6cqw !important;
-
-  display: flex !important;
-  width: 20.6cqw !important;
-  height: 9.4cqw !important;
-
-  padding: .15cqw 2.1cqw 0 0;
-  box-sizing: border-box;
-
-  overflow: visible !important;
-  clip-path: none !important;
-
-  color: #e9863f;
-  font-size: 4cqw;
-  letter-spacing: .02em;
-
-  background:
-    center / 100% 100%
-    no-repeat
-    url("/design/final-v1/category-status-review.png");
+  display: none !important;
 }
 
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
