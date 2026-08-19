@@ -22,6 +22,12 @@ describe("production deployment entrypoint", () => {
     expect(entrypoint.indexOf("pnpm content:bootstrap")).toBeLessThan(entrypoint.indexOf("pnpm content:verify"));
     expect(entrypoint.indexOf("pnpm content:verify")).toBeLessThan(entrypoint.indexOf("pnpm admin:seed"));
     expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("if [ -f server.js ]"));
+    expect(entrypoint).toContain("mkdir -p .next/standalone/public .next/standalone/.next/static");
+    expect(entrypoint).toContain("cp -R public/. .next/standalone/public/");
+    expect(entrypoint).toContain("cp -R .next/static/. .next/standalone/.next/static/");
+    expect(entrypoint).toContain("test -f .next/standalone/public/design/guide/guide-first-frame.webp");
+    expect(entrypoint).toContain("test -f .next/standalone/public/design/final-v1/archive-reference.webp");
+    expect(entrypoint.indexOf("cp -R public/.")).toBeLessThan(entrypoint.indexOf("exec node .next/standalone/server.js"));
     expect(entrypoint).toContain("exec node .next/standalone/server.js");
     expect(entrypoint).toContain("Run pnpm build before starting the service.");
     expect(dockerfile).toContain('CMD ["sh", "./deploy/start-production.sh"]');

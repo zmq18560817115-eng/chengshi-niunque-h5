@@ -72,11 +72,12 @@ pm2 startOrReload deploy/ecosystem.config.cjs --only honest-nutri-report-h5 --up
 pm2 save
 ```
 
-该配置会执行 `deploy/start-production.sh`：先迁移、确认 MinIO、补齐三个固定分类和八张固定卡片、校验前台可访问性及管理员登录，全部成功后才启动 Next standalone 服务。启动后必须验证：
+该配置会执行 `deploy/start-production.sh`：先迁移、确认 MinIO、补齐三个固定分类和八张固定卡片、校验前台可访问性及管理员登录，再把 `public` 与 `.next/static` 自动复制到 Next standalone 的运行目录，全部成功后才启动服务。不得直接运行 `.next/standalone/server.js`，否则会跳过初始化并造成图片、CSS 或脚本 404。启动后必须验证：
 
 ```sh
 curl -fsS http://127.0.0.1:3000/api/health
 curl -fsS http://127.0.0.1:3000/api/public/content
+curl -fsS -o /dev/null http://127.0.0.1:3000/design/guide/guide-first-frame.webp
 ```
 
 第一条必须返回 `status: ok`，第二条必须包含 `inspection-projects`、`review-assurance`、`production-traceability` 三个分类；任何一条不满足都不能对外宣称部署完成。
