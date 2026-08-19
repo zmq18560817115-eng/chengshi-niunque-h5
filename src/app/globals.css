@@ -255,8 +255,8 @@ button, a { font: inherit; }
 .brand-guide.is-leaving { opacity: .95; transform: translate3d(-100%,0,0); pointer-events: none; }
 .brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 1 1 auto; overflow: hidden; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 0; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-window-mask, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 15; visibility: visible; opacity: 1; }
 .brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
@@ -271,17 +271,14 @@ button, a { font: inherit; }
 .brand-guide-foreground-top { z-index: 35; }
 .brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
 .brand-guide-swipe-arrow { animation: guide-hint-float 1.4s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
-.brand-guide-first-frame { z-index: 45; visibility: visible; opacity: 1; }
 .brand-guide-fallback { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
-.brand-guide.is-ready .brand-guide-dynamic-stage { opacity: 1; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
 .brand-guide.has-no-fallback .brand-guide-fallback-message { display: block; }
 .brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed, .brand-guide:not(.is-animating) .brand-guide-swipe-hint, .brand-guide:not(.is-animating) .brand-guide-swipe-arrow { animation-play-state: paused; }
-.brand-guide.is-motion-disabled .brand-guide-dynamic-stage,
-.brand-guide.is-motion-disabled .brand-guide-first-frame { visibility: hidden; opacity: 0; }
+.brand-guide.is-motion-disabled .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.is-motion-disabled .brand-guide-paper,
 .brand-guide.is-motion-disabled .brand-guide-character-closed,
@@ -767,11 +764,33 @@ button, a { font: inherit; }
   overflow: visible;
 }
 
-/* 生产溯源：鱼形徽标上的“已核验/已核对”已按原图烤进底图（category-traceability-clean.webp），
-   不再叠加 HTML 状态文字，避免与底图重影错位。 */
+/* 生产溯源：用正式素材库里的空白鱼形徽标覆盖底图中的烘焙文字，
+   再将当前卡片对应的状态文字放在前景。这样右上角装饰的尺寸、位置和
+   遮挡关系与原图一致，也不会因底图上的固定文字产生重影。 */
 .category-page-final[data-category="production-traceability"]
 .category-card-status {
-  display: none !important;
+  z-index: 8 !important;
+  top: -2.8cqw !important;
+  left: 58.6cqw !important;
+
+  display: flex !important;
+  width: 20.6cqw !important;
+  height: 9.4cqw !important;
+
+  padding: .15cqw 2.1cqw 0 0;
+  box-sizing: border-box;
+
+  overflow: visible !important;
+  clip-path: none !important;
+
+  color: #e9863f;
+  font-size: 4cqw;
+  letter-spacing: .02em;
+
+  background:
+    center / 100% 100%
+    no-repeat
+    url("/design/final-v1/category-status-review.png");
 }
 
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }

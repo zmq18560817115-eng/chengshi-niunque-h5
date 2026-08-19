@@ -9,42 +9,42 @@ import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/mot
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 
 const guideAssetNames = [
-  "guide-background.webp", "guide-arch.webp", "guide-window-mask.webp",
-  "guide-character-open.webp", "guide-character-closed.webp", "guide-foreground-top.webp",
+  "guide-background.webp", "guide-arch.webp",
+  "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-foreground-top.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
   "swipe-hint-text.webp", "swipe-hint-arrow.webp",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
-const guideAssets = [...guideAssetNames.map(assetUrl), assetUrl("guide-first-frame.webp"), assetUrl("guide-final-fallback.webp")];
-
-function GuideFirstFrame({ onError }: { onError: () => void }) {
-  return <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>;
-}
+const guideAssets = guideAssetNames.map(assetUrl);
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
-    {!unavailable && <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>}
+    {!unavailable && (
+      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+    )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>向左滑动进入</span>
   </>;
 }
 
-function GuideLayers({ onError }: { onError: (name: string) => void }) {
+function GuideLayers({ animated, onError }: { animated: boolean; onError: (name: string) => void }) {
   const image = (name: (typeof guideAssetNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onError={() => onError(name)}/>;
-  return <div className="brand-guide-dynamic-stage">
+  return <div className={`brand-guide-dynamic-stage ${animated ? "is-animated-canvas" : "is-initial-canvas"}`}>
     {image("guide-background.webp", "brand-guide-base", true)}
     {image("guide-arch.webp", "brand-guide-arch")}
     {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
-    {image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
+    {animated && image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
     {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
-    {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top")}
-    {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left")}
-    {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right")}
-    {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
-    {image("guide-foreground-top.webp", "brand-guide-foreground-top")}
-    <div className="brand-guide-swipe-hint" aria-hidden="true">
-      {image("swipe-hint-text.webp", "brand-guide-swipe-text")}
-      {image("swipe-hint-arrow.webp", "brand-guide-swipe-arrow")}
-    </div>
+    {animated && <>
+      {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top")}
+      {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left")}
+      {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right")}
+      {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
+      <div className="brand-guide-swipe-hint" aria-hidden="true">
+        {image("swipe-hint-text.webp", "brand-guide-swipe-text")}
+        {image("swipe-hint-arrow.webp", "brand-guide-swipe-arrow")}
+      </div>
+    </>}
+    {image("guide-foreground-top.webp", "brand-guide-foreground-top", true)}
   </div>;
 }
 
@@ -89,7 +89,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, []);
   const startAnimation = useCallback(() => setAnimationStarted(true), []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const firstFrame = <GuideFirstFrame onError={() => handleLayerError("guide-first-frame.webp")}/>;
+  const initialCanvas = <GuideLayers animated={false} onError={handleLayerError}/>;
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -115,8 +115,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     }}>
     <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-hint-start-ms={h5MotionTiming.guide.hintStartMs} data-hint-duration-ms={h5MotionTiming.guide.hintDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       <MotionBoundary fallback={fallback}>
-        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled={motionEnabled} crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
-          <GuideLayers onError={handleLayerError}/>
+        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled={motionEnabled} crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={initialCanvas} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
+          <GuideLayers animated onError={handleLayerError}/>
         </MotionStage>
       </MotionBoundary>
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>

@@ -47,3 +47,48 @@
 - First and second category status identifiers: **passed** against the supplied original artwork.
 - Mobile-width acceptance: **passed** at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932.
 - Full deployment readiness: **conditional** on database/object-storage connectivity, migration status, and application service wiring.
+
+## Guide layered-canvas verification — 2026-08-19
+
+**Source visual truth**
+
+- Initial state: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-aa9910f4-ec52-497c-933b-e1fbc42ef925.jpg` (2000 x 4333).
+- Completed state: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-5a09925a-b296-446b-ba94-f0a9f0794e75.jpg` (2000 x 4333).
+- CSS master canvas: 750 x 1625, device scale factor 1 for normalized offline comparison.
+- Full-view comparison: `test-results/guide-mask-qa/reference-vs-unified-canvas-states.jpg`.
+- Focused mask comparisons: `test-results/guide-mask-qa/reference-vs-mask-above-723x1024.jpg` and `reference-vs-mask-behind-723x1024.jpg`.
+
+**Findings and fixes**
+
+- [Fixed P1] The rollback version stretched every full-canvas raster independently with `object-fit: fill`. Background, character, mask and foreground now share one proportional `cover` mapping and a common center.
+- [Fixed P1] Loading used a baked first-frame image while running used decomposed layers, causing a visible canvas swap. Loading and running now use the same background, arch, character, real window mask and foreground layers.
+- [Fixed P1] The supplied window mask must sit above the character and below the reports. Runtime order is background 10, arch 15, character 20, window mask 25, papers 30, foreground 35 and hint 40.
+- Animation behavior is preserved: the existing 180ms handoff and all values in `motion-config.ts` remain unchanged.
+- Fonts, colors, image copy and supplied raster artwork are unchanged. No CSS-drawn replacement was introduced.
+
+**Remaining blocker**
+
+- Browser-runtime setup is blocked by a trusted-code-path dependency error, so a refreshed browser-rendered screenshot, six viewport captures, console check and live swipe verification could not be collected in this run. The local URL remains available for manual inspection.
+
+final result: blocked
+
+## Production traceability fish-badge verification — 2026-08-19
+
+**Source visual truth**
+
+- Current capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-50699630-d19b-401d-be4f-44f35336be04.png` (750 x 1448).
+- Formal reference capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-a0cafdba-4fe6-47a0-86ec-cbac1c4bdf71.jpg` (2000 x 4333).
+- Official blank fish badge already staged in the runtime asset library: `public/design/final-v1/category-status-review.png`.
+
+**Findings and fixes**
+
+- [Fixed P1] The production card status words were baked into `category-traceability-clean.webp`, so the upper-right fish decoration could not be maintained as an independent foreground layer.
+- The original blank fish asset now covers the baked status region at the existing 1000 x 2166 master coordinates; `已核验 / 已核对` is rendered above it inside each corresponding card hotspot.
+- Card title, description, report-button content, card routes and database-backed published-card ordering are unchanged.
+- The decoration remains pointer-transparent and the entire card remains the click target.
+
+**Remaining blocker**
+
+- The same trusted-code-path browser-runtime error prevents a fresh browser screenshot and combined reference/prototype overlay in this run. Automated structure and build gates are used below, but final visual sign-off remains pending manual inspection.
+
+final result: blocked

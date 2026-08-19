@@ -3,6 +3,7 @@ import { BrandGuide } from "@/components/h5/BrandGuide";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
+import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 
 type PendingImage = { src: string; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
@@ -186,6 +187,9 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     expect(container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
+    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(2);
+    expect(container.querySelector(".brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
+    expect(container.querySelector(".brand-guide-character-closed")?.getAttribute("src")).toContain("guide-character-closed.webp");
     const stage = container.querySelector(".brand-guide-stage");
     expect(stage).toHaveAttribute("data-blink-start-ms", "350");
     expect(stage).toHaveAttribute("data-blink-hold-ms", "200");
@@ -194,12 +198,19 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-paper-duration-ms", "1500");
     expect(stage).toHaveAttribute("data-hint-start-ms", "420");
     expect(stage).toHaveAttribute("data-hint-duration-ms", "260");
+    expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage.is-loading .brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    expect(container.querySelector(".motion-stage.is-loading .is-initial-canvas")).toBeInTheDocument();
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-window-mask")?.getAttribute("src")).toContain("guide-window-mask.webp");
+    expect(container.querySelector(".is-animated-canvas .brand-guide-final-frame")).not.toBeInTheDocument();
+    expect(container.querySelector(".is-animated-canvas .brand-guide-base")?.getAttribute("src")).toBe(
+      container.querySelector(".is-initial-canvas .brand-guide-base")?.getAttribute("src"),
+    );
     expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).not.toBeInTheDocument();
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready"));
-    expect(container.querySelector(".brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 460)); });
     expect(onEnter).toHaveBeenCalledOnce();
@@ -209,10 +220,10 @@ describe("multi-page H5 interactions", () => {
   it("switches from the complete first frame to the final fallback when a critical guide asset fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container } = render(<BrandGuide/>);
-    expect(container.querySelector(".brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    expect(container.querySelector(".is-initial-canvas")).toBeInTheDocument();
     await act(async () => pendingImages[0]?.reject());
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
-    expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
+    expect(container.querySelector(".is-initial-canvas")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
     consoleError.mockRestore();
   });

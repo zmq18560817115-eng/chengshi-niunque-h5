@@ -17,6 +17,17 @@ const moduleFixture: PublicModule = {
   }],
 };
 
+const traceabilityModuleFixture: PublicModule = {
+  id: "traceability",
+  slug: "production-traceability",
+  title: "生产溯源",
+  description: null,
+  cards: [
+    { id: "qualification", title: "生产资质", description: null, buttonText: "查看2份报告", footerNote: null, assets: [] },
+    { id: "quality", title: "质量管理", description: null, buttonText: "查看3份报告", footerNote: null, assets: [] },
+  ],
+};
+
 describe("CategoryDetail dynamic card copy", () => {
   it("renders card copy as HTML sourced from public content", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} preview />);
@@ -53,5 +64,14 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
     expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
+  });
+
+  it("keeps the production card fish badges as independent foreground decorations", () => {
+    const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
+    const statusLabels = [...container.querySelectorAll<HTMLElement>(".category-card-status")];
+
+    expect(statusLabels).toHaveLength(2);
+    expect(statusLabels.map((label) => label.textContent)).toEqual(["已核验", "已核对"]);
+    expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
   });
 });

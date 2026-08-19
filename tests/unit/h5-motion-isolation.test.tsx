@@ -43,6 +43,22 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".motion-stage-fallback .brand-guide-fallback");
   });
 
+  it("maps every guide layer through the same proportional cover transform", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain("object-fit: cover; object-position: center;");
+    expect(css).not.toContain("object-fit: contain; object-position: center;");
+    expect(css).not.toContain(".brand-guide-stage { width: auto; height: 100%; }");
+  });
+
+  it("keeps the supplied window mask above the character and below the papers", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain(".brand-guide-arch { z-index: 15;");
+    expect(css).toContain(".brand-guide-character { z-index: 20;");
+    expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
+    expect(css).toContain(".brand-guide-paper { z-index: 30;");
+    expect(css).toContain(".brand-guide-foreground-top { z-index: 35;");
+  });
+
   it("keeps archive motion visible long enough to be perceived", () => {
     expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeGreaterThanOrEqual(200);
     expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeLessThanOrEqual(300);
