@@ -11,6 +11,7 @@ describe("production deployment entrypoint", () => {
     const example = readFileSync(".env.example", "utf8");
     const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
     const contentVerify = readFileSync("scripts/verify-default-h5-content.ts", "utf8");
+    const standaloneStaging = readFileSync("scripts/stage-standalone-assets.mjs", "utf8");
 
     expect(entrypoint).toContain("set -eu");
     expect(entrypoint).toContain("pnpm prisma migrate deploy");
@@ -43,5 +44,10 @@ describe("production deployment entrypoint", () => {
     expect(pm2).toContain('script: "./deploy/start-production.sh"');
     expect(pm2).toContain('interpreter: "/bin/sh"');
     expect(packageJson).toContain('"start:production": "sh deploy/start-production.sh"');
+    expect(packageJson).toContain('"build": "next build && node scripts/stage-standalone-assets.mjs"');
+    expect(standaloneStaging).toContain('path.join(projectRoot, "public")');
+    expect(standaloneStaging).toContain('path.join(projectRoot, ".next", "static")');
+    expect(standaloneStaging).toContain('"guide-first-frame.webp"');
+    expect(standaloneStaging).toContain('"archive-reference.webp"');
   });
 });
