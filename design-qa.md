@@ -41,9 +41,21 @@
 - `compose.yaml` currently defines PostgreSQL and MinIO only, while `deploy/nginx/default.conf` expects an `app:3000` service. A company-server deployment therefore still needs explicit application/nginx service wiring or an external application process.
 - This workstation could not reach PostgreSQL at `localhost:5432`, so live publish/filter integration and `prisma migrate status` must be repeated in the deployment environment.
 
+## Guide responsive composition update — 2026-08-19
+
+- Source reference: user-supplied full guide artwork and faulty-device capture.
+- Earlier P1: all 750 x 1625 layers were stretched independently to arbitrary viewport dimensions, widening the IP subject and shifting the window mask.
+- Fix: the guide foreground now keeps a single 750:1625 coordinate system; only the outer background crops to cover the viewport. The standalone window mask and split paper overlays were replaced by the supplied consolidated open/closed foreground artwork.
+- Fonts, copy, colours and raster artwork remain supplied assets; no replacement visuals were generated.
+- Automated component tests, lint, type-checking, Prisma validation and production build pass.
+- Browser-rendered comparison at 375x667, 375x812, 390x844, 393x852, 414x896 and 430x932 remains to be captured after deployment.
+
 ## Final QA result
 
 - Category visual implementation: **passed**.
 - First and second category status identifiers: **passed** against the supplied original artwork.
 - Mobile-width acceptance: **passed** at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932.
 - Full deployment readiness: **conditional** on database/object-storage connectivity, migration status, and application service wiring.
+- Guide responsive implementation: automated checks **passed**; final multi-device visual capture remains pending.
+
+final result: blocked
