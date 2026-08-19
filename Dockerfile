@@ -18,6 +18,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY prisma ./prisma
 COPY scripts ./scripts
+COPY src/config ./src/config
 COPY src/server ./src/server
 COPY deploy/start-production.sh ./deploy/start-production.sh
 COPY --from=builder /app/.next/standalone ./

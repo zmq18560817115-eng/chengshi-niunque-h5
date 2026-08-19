@@ -2,21 +2,33 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("production deployment entrypoint", () => {
-  it("blocks web startup until migrations, storage, administrator seed and login verification succeed", () => {
+  it("blocks web startup until migrations, storage, public content, administrator seed and login verification succeed", () => {
     const entrypoint = readFileSync("deploy/start-production.sh", "utf8");
     const dockerfile = readFileSync("Dockerfile", "utf8");
     const compose = readFileSync("compose.production.yaml", "utf8");
     const example = readFileSync(".env.example", "utf8");
+    const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
+    const contentVerify = readFileSync("scripts/verify-default-h5-content.ts", "utf8");
 
     expect(entrypoint).toContain("set -eu");
     expect(entrypoint).toContain("pnpm prisma migrate deploy");
     expect(entrypoint).toContain("pnpm storage:ensure");
+    expect(entrypoint).toContain("pnpm content:bootstrap");
+    expect(entrypoint).toContain("pnpm content:verify");
     expect(entrypoint).toContain("pnpm admin:seed");
     expect(entrypoint).toContain("pnpm admin:verify");
+    expect(entrypoint.indexOf("pnpm content:bootstrap")).toBeLessThan(entrypoint.indexOf("pnpm content:verify"));
+    expect(entrypoint.indexOf("pnpm content:verify")).toBeLessThan(entrypoint.indexOf("pnpm admin:seed"));
     expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("exec node server.js"));
     expect(dockerfile).toContain('CMD ["sh", "./deploy/start-production.sh"]');
+    expect(dockerfile).toContain("COPY src/config ./src/config");
     expect(compose).toContain("condition: service_healthy");
     expect(example).toContain("ADMIN_SEED_USERNAME");
     expect(example).toContain("replace_with_admin_username");
+    expect(contentSeed).toContain('process.argv.includes("--publish-shell")');
+    expect(contentSeed).toContain('process.argv.includes("--repair-published-shell")');
+    expect(contentSeed).toContain('contentStatus: "PUBLISHED"');
+    expect(contentVerify).toContain("前台不可访问分类");
+    expect(contentVerify).toContain("前台不可访问卡片");
   });
 });

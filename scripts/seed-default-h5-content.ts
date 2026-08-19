@@ -7,6 +7,8 @@ import {
 
 const prisma = new PrismaClient();
 const seedOperatorId = "seed-admin-content-owner";
+const publishShell = process.argv.includes("--publish-shell");
+const repairPublishedShell = process.argv.includes("--repair-published-shell");
 
 type Tx = Prisma.TransactionClient;
 
@@ -30,7 +32,10 @@ async function ensureSeedOperator() {
 
 async function seedDefaults() {
   await ensureSeedOperator();
-  const summary = { modulesCreated: 0, modulesAligned: 0, cardsCreated: 0, cardsAligned: 0, legacyCardsOfflined: 0, placeholdersOfflined: 0, incompleteCardsDrafted: 0 };
+  const summary = { publishShell, repairPublishedShell, modulesCreated: 0, modulesAligned: 0, modulesPublished: 0, cardsCreated: 0, cardsAligned: 0, cardsPublished: 0, legacyCardsOfflined: 0, placeholdersOfflined: 0, incompleteCardsDrafted: 0 };
+  const initialLifecycle = publishShell
+    ? { contentStatus: "PUBLISHED" as const, isOnline: true }
+    : { contentStatus: "DRAFT" as const, isOnline: false };
 
   await prisma.$transaction(async (tx) => {
     for (const category of DEFAULT_H5_CONTENT) {
@@ -38,15 +43,20 @@ async function seedDefaults() {
       if (!existing) {
         await tx.informationModule.create({ data: {
           id: category.id, slug: category.slug, title: category.title, description: category.description,
-          sortOrder: category.sortOrder, contentStatus: "DRAFT", isOnline: false,
+          sortOrder: category.sortOrder, ...initialLifecycle,
           createdById: seedOperatorId, updatedById: seedOperatorId,
         } });
         await audit(tx, "CONTENT_DEFAULT_MODULE_CREATE", "InformationModule", category.id, { seedKey: category.slug });
         summary.modulesCreated += 1;
-      } else if (existing.id === category.id && existing.sortOrder !== category.sortOrder) {
-        await tx.informationModule.update({ where: { id: existing.id }, data: { sortOrder: category.sortOrder, updatedById: seedOperatorId } });
-        await audit(tx, "CONTENT_DEFAULT_MODULE_ORDER", "InformationModule", existing.id, { before: existing.sortOrder, after: category.sortOrder });
-        summary.modulesAligned += 1;
+      } else if (existing.id === category.id) {
+        const safeOrderUpdate = existing.sortOrder !== category.sortOrder;
+        const safeLifecycleUpdate = publishShell && existing.contentStatus === "DRAFT" && !existing.isOnline && (repairPublishedShell || (existing.createdById === seedOperatorId && existing.updatedById === seedOperatorId));
+        if (safeOrderUpdate || safeLifecycleUpdate) {
+          await tx.informationModule.update({ where: { id: existing.id }, data: { ...(safeOrderUpdate ? { sortOrder: category.sortOrder } : {}), ...(safeLifecycleUpdate ? initialLifecycle : {}), updatedById: seedOperatorId } });
+          await audit(tx, safeLifecycleUpdate ? "CONTENT_DEFAULT_MODULE_PUBLISH" : "CONTENT_DEFAULT_MODULE_ORDER", "InformationModule", existing.id, { before: existing.sortOrder, after: category.sortOrder, lifecyclePublished: safeLifecycleUpdate });
+          if (safeOrderUpdate) summary.modulesAligned += 1;
+          if (safeLifecycleUpdate) summary.modulesPublished += 1;
+        }
       }
 
       const moduleId = existing?.id ?? category.id;
@@ -55,7 +65,7 @@ async function seedDefaults() {
         if (!current) {
           await tx.reportCard.create({ data: {
             id: card.id, moduleId, title: card.title, description: card.description,
-            buttonText: "查看报告", sortOrder: card.sortOrder, contentStatus: "DRAFT", isOnline: false,
+            buttonText: "查看报告", sortOrder: card.sortOrder, ...initialLifecycle,
             createdById: seedOperatorId, updatedById: seedOperatorId,
           } });
           await audit(tx, "CONTENT_DEFAULT_CARD_CREATE", "ReportCard", card.id, { category: category.slug, seedTitle: card.title });
@@ -66,16 +76,19 @@ async function seedDefaults() {
         const legacyTitle = "legacyTitle" in card ? card.legacyTitle : undefined;
         const safeTitleUpdate = legacyTitle && current.title === legacyTitle;
         const safeOrderUpdate = current.moduleId === moduleId && current.sortOrder !== card.sortOrder;
-        if (safeTitleUpdate || safeOrderUpdate) {
+        const safeLifecycleUpdate = publishShell && current.contentStatus === "DRAFT" && !current.isOnline && (repairPublishedShell || (current.createdById === seedOperatorId && current.updatedById === seedOperatorId));
+        if (safeTitleUpdate || safeOrderUpdate || safeLifecycleUpdate) {
           await tx.reportCard.update({ where: { id: current.id }, data: {
             ...(safeTitleUpdate ? { title: card.title, description: card.description } : {}),
             ...(safeOrderUpdate ? { sortOrder: card.sortOrder } : {}),
+            ...(safeLifecycleUpdate ? initialLifecycle : {}),
             updatedById: seedOperatorId,
           } });
-          await audit(tx, "CONTENT_DEFAULT_CARD_ALIGN", "ReportCard", current.id, {
-            category: category.slug, titleChanged: Boolean(safeTitleUpdate), orderChanged: safeOrderUpdate,
+          await audit(tx, safeLifecycleUpdate ? "CONTENT_DEFAULT_CARD_PUBLISH" : "CONTENT_DEFAULT_CARD_ALIGN", "ReportCard", current.id, {
+            category: category.slug, titleChanged: Boolean(safeTitleUpdate), orderChanged: safeOrderUpdate, lifecyclePublished: safeLifecycleUpdate,
           });
-          summary.cardsAligned += 1;
+          if (safeTitleUpdate || safeOrderUpdate) summary.cardsAligned += 1;
+          if (safeLifecycleUpdate) summary.cardsPublished += 1;
         }
       }
     }
@@ -98,6 +111,7 @@ async function seedDefaults() {
     }
 
     for (const category of DEFAULT_H5_CONTENT) {
+      if (publishShell) continue;
       for (const definition of category.cards) {
         const card = await tx.reportCard.findUnique({ where: { id: definition.id }, include: { assets: { where: { deletedAt: null, contentStatus: "PUBLISHED", isOnline: true } } } });
         if (!card || card.contentStatus !== "PUBLISHED" || card.assets.length > 0) continue;
