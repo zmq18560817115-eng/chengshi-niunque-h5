@@ -6,6 +6,8 @@ describe("production deployment entrypoint", () => {
     const entrypoint = readFileSync("deploy/start-production.sh", "utf8");
     const dockerfile = readFileSync("Dockerfile", "utf8");
     const compose = readFileSync("compose.production.yaml", "utf8");
+    const pm2 = readFileSync("deploy/ecosystem.config.cjs", "utf8");
+    const packageJson = readFileSync("package.json", "utf8");
     const example = readFileSync(".env.example", "utf8");
     const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
     const contentVerify = readFileSync("scripts/verify-default-h5-content.ts", "utf8");
@@ -19,7 +21,9 @@ describe("production deployment entrypoint", () => {
     expect(entrypoint).toContain("pnpm admin:verify");
     expect(entrypoint.indexOf("pnpm content:bootstrap")).toBeLessThan(entrypoint.indexOf("pnpm content:verify"));
     expect(entrypoint.indexOf("pnpm content:verify")).toBeLessThan(entrypoint.indexOf("pnpm admin:seed"));
-    expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("exec node server.js"));
+    expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("if [ -f server.js ]"));
+    expect(entrypoint).toContain("exec node .next/standalone/server.js");
+    expect(entrypoint).toContain("Run pnpm build before starting the service.");
     expect(dockerfile).toContain('CMD ["sh", "./deploy/start-production.sh"]');
     expect(dockerfile).toContain("COPY src/config ./src/config");
     expect(compose).toContain("condition: service_healthy");
@@ -30,5 +34,8 @@ describe("production deployment entrypoint", () => {
     expect(contentSeed).toContain('contentStatus: "PUBLISHED"');
     expect(contentVerify).toContain("前台不可访问分类");
     expect(contentVerify).toContain("前台不可访问卡片");
+    expect(pm2).toContain('script: "./deploy/start-production.sh"');
+    expect(pm2).toContain('interpreter: "/bin/sh"');
+    expect(packageJson).toContain('"start:production": "sh deploy/start-production.sh"');
   });
 });

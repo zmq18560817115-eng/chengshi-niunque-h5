@@ -59,6 +59,28 @@
 
 若升级旧环境时，入口在“默认前后台内容校验”处停止，说明已存在的固定卡片仍处于草稿、前台不可见。确认这些卡片确实应恢复为当前 H5 的固定结构后，在备份数据库后人工运行一次 `pnpm content:repair`，再重新创建 `app` 容器。该修复命令只提升默认固定卡片的草稿状态；自动部署不会运行它，因此后续运营人员主动下线的内容不会被版本发布改回上线。
 
+## 使用 PM2 的服务器
+
+PM2 **不得**直接运行 `server.js` 或 `.next/standalone/server.js`。直接运行会绕过内容初始化，造成“后台可登录但分类、卡片均为 0，三级页 404”的假成功部署。
+
+在服务器应用目录中完成依赖安装和构建后，使用仓库提供的配置启动：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pm2 startOrReload deploy/ecosystem.config.cjs --only honest-nutri-report-h5 --update-env
+pm2 save
+```
+
+该配置会执行 `deploy/start-production.sh`：先迁移、确认 MinIO、补齐三个固定分类和八张固定卡片、校验前台可访问性及管理员登录，全部成功后才启动 Next standalone 服务。启动后必须验证：
+
+```sh
+curl -fsS http://127.0.0.1:3000/api/health
+curl -fsS http://127.0.0.1:3000/api/public/content
+```
+
+第一条必须返回 `status: ok`，第二条必须包含 `inspection-projects`、`review-assurance`、`production-traceability` 三个分类；任何一条不满足都不能对外宣称部署完成。
+
 ## 当前生产编排边界
 
 `compose.production.yaml` 启动 `app` 与 `nginx`，并等待应用健康检查通过后才开放 Nginx。它假定 PostgreSQL 和 S3 兼容对象存储已经由外部平台提供，并通过 `.env` 注入连接信息。若目标服务器需要把数据库和 MinIO 一起部署，必须另建生产基础设施编排并设置持久卷、备份、监控和访问控制，不能直接把本地 `compose.yaml` 当作生产方案。

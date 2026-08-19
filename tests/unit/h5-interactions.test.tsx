@@ -3,7 +3,6 @@ import { BrandGuide } from "@/components/h5/BrandGuide";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
-import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 
 type PendingImage = { src: string; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
@@ -63,10 +62,10 @@ describe("multi-page H5 interactions", () => {
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
-  it("keeps the approved archive artwork as the sole visual and preserves navigation hotspots", () => {
+  it("keeps the approved archive artwork as one stable visual and preserves navigation hotspots", () => {
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
-    expect([...container.querySelectorAll(".reports-archive-art")].some((image) => image.getAttribute("src")?.includes("archive-base-clean.webp"))).toBe(true);
+    expect([...container.querySelectorAll(".reports-archive-art")].some((image) => image.getAttribute("src")?.includes("archive-reference.webp"))).toBe(true);
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -84,83 +83,19 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-motion-layers")).not.toBeInTheDocument();
   });
 
-  it("mounts validated archive motions in their initial state", () => {
+  it("does not compose additional full-page animation canvases over the archive artwork", () => {
     const { container } = render(<ReportsArchive modules={[]}/>);
-    const motion = container.querySelector(".archive-latest-circle");
-    expect(motion).toHaveAttribute("data-motion-visible", "false");
-    expect(motion).toHaveAttribute("data-motion-complete", "false");
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
+    expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveFishFloat']")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-unlock-tab-motion")).not.toBeInTheDocument();
   });
 
-  it("keeps the final circle immediately for reduced motion", async () => {
+  it("keeps the approved archive artwork stable for reduced motion", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const { container } = render(<ReportsArchive modules={[]}/>);
-    await waitFor(() => expect(container.querySelector(".archive-latest-circle")).toHaveAttribute("data-motion-complete", "true"));
     expect(pendingImages).toHaveLength(0);
-    expect(container.querySelector(".archive-latest-circle .motion-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");
-  });
-
-  it("shows the final unlock tab without registering scroll listeners when its module is disabled", () => {
-    const add = vi.spyOn(window, "addEventListener");
-    const { container } = render(<ArchiveUnlockTabMotion enabled={false}/>);
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");
-    expect(container.querySelector(".archive-unlock-tab-image")).toBeInTheDocument();
-    expect(add.mock.calls.some(([type]) => type === "scroll")).toBe(false);
-  });
-
-  it("maps archive motion overlays to the full approved 1000 by 5557 master", () => {
-    const { container } = render(<ReportsArchive modules={[]}/>);
-    expect(container.querySelector(".archive-latest-circle")).toHaveClass("archive-latest-circle");
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveClass("archive-unlock-tab-motion");
-    expect(container.querySelector(".archive-unlock-tab-image")).toBeInTheDocument();
-  });
-
-  it("does not unlock the report tab without 24px of trusted downward scrolling", async () => {
-    let scrollY = 100;
-    Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
-    const { container } = render(<ArchiveUnlockTabMotion enabled/>);
-    const unlock = container.querySelector(".archive-unlock-tab-motion");
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-ready", "true"));
-    expect(unlock).toHaveAttribute("data-unlock-state", "idle");
-    vi.useFakeTimers();
-    act(() => vi.advanceTimersByTime(5000));
-    expect(unlock).toHaveAttribute("data-unlock-state", "idle");
-    vi.useRealTimers();
-
-    scrollY = 80;
-    fireEvent.scroll(window);
-    expect(unlock).toHaveAttribute("data-unlock-state", "idle");
-    fireEvent.wheel(window);
-    scrollY = 102;
-    fireEvent.scroll(window);
-    expect(unlock).toHaveAttribute("data-unlock-state", "idle");
-    scrollY = 124;
-    fireEvent.scroll(window);
-    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealing"));
-    await waitFor(() => expect(unlock).toHaveAttribute("data-unlock-state", "revealed"), { timeout: 1500 });
-    expect(sessionStorage.getItem("archive-unlock-tab-complete-v3")).toBe("true");
-    scrollY = 60;
-    fireEvent.scroll(window);
-    scrollY = 200;
-    fireEvent.scroll(window);
-    expect(unlock).toHaveAttribute("data-unlock-state", "revealed");
-  });
-
-  it("ignores restored programmatic scroll and cleans its passive listeners on unmount", () => {
-    const add = vi.spyOn(window, "addEventListener");
-    const remove = vi.spyOn(window, "removeEventListener");
-    let scrollY = 0;
-    Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
-    const view = render(<ArchiveUnlockTabMotion enabled/>);
-    const unlock = view.container.querySelector(".archive-unlock-tab-motion");
-    scrollY = 300;
-    fireEvent.scroll(window);
-    expect(unlock).toHaveAttribute("data-unlock-state", "idle");
-    expect(add).toHaveBeenCalledWith("scroll", expect.any(Function), { passive: true });
-    view.unmount();
-    expect(remove).toHaveBeenCalledWith("scroll", expect.any(Function));
+    expect(container.querySelector(".archive-fish-float")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
   });
 
   it("stays on the guide after five seconds and only enters once from the hint action", () => {

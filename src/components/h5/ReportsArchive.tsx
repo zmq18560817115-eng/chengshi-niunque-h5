@@ -6,11 +6,6 @@ import type { CSSProperties } from "react";
 import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
-import { ArchiveLatestCircle } from "./motion/modules/ArchiveLatestCircle";
-import { ArchiveUnlockTabMotion } from "./motion/modules/ArchiveUnlockTabMotion";
-import { ArchiveStoryCopyMotion } from "./motion/modules/ArchiveStoryCopyMotion";
-import { ArchiveResultColorMotion } from "./motion/modules/ArchiveResultColorMotion";
-import { ArchiveFishFloatMotion } from "./motion/modules/ArchiveFishFloatMotion";
 import Image from "next/image";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
@@ -41,13 +36,10 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   };
 
   return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle}>
-    <Image className="reports-archive-art reports-archive-clean-base" src="/design/final-v1/motion/archive-clean/archive-base-clean.webp" alt="诚实透明档案" width={1000} height={5557} priority sizes="(max-width: 750px) 100vw, 750px" unoptimized />
-    <ArchiveStoryCopyMotion preview={preview}/>
-    <ArchiveLatestCircle preview={preview}/>
-    <ArchiveUnlockTabMotion preview={preview}/>
-    <ArchiveResultColorMotion preview={preview}/>
-    <ArchiveFishFloatMotion preview={preview}/>
-    {preview && <Image className="reports-archive-art reports-archive-final-overlay" src="/design/final-v1/archive-reference.webp" alt="" width={1000} height={5557} sizes="(max-width: 750px) 100vw, 750px" unoptimized aria-hidden="true" />}
+    {/* The approved artwork is a complete 1000 x 5557 composition. Keeping it
+        as one layer after the guide avoids mobile WebView alpha-compositing
+        glitches caused by independently animated full-page canvases. */}
+    <Image className="reports-archive-art reports-archive-clean-base" src="/design/final-v1/archive-reference.webp" alt="诚实透明档案" width={1000} height={5557} priority sizes="(max-width: 750px) 100vw, 750px" unoptimized />
     <nav className="reports-archive-hotspots" aria-label="档案分类">
       {visibleModules.map((module) => {
         const layout = getArchiveModuleLayout(module.slug)!;
