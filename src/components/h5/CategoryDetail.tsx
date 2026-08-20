@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
+import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -35,13 +36,15 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
   const theme = getCategoryTheme(module.slug);
+  const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
   useEffect(() => { if (!preview) slots.forEach((card, index) => router.prefetch(`/reports/${module.slug}/items/${card?.id ?? placeholderCardId(index)}/reports`)); }, [module.slug, preview, router, slots]);
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final h5-page-transition ${theme.backgroundClass} ${leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme}>
     <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={1000} height={2166} priority sizes="(max-width: 750px) 100vw, 750px"/>
+    {module.slug === "inspection-projects" ? <Image className="category-inspection-batch-bubble" src="/design/final-v1/category-inspection-batch-bubble.png" alt="" aria-hidden="true" width={437} height={203} priority /> : null}
     <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
@@ -49,7 +52,7 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true">{fallback.statusText}</span><span className="sr-only">{label}</span></>;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText}><Image className="category-card-status-art" src="/design/final-v1/category-status-review.png" alt="" width={413} height={189} /><Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,
@@ -60,7 +63,13 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
           "--category-copy-width": layout.contentWidth,
         } as CSSProperties;
         return preview ? <article key={cardId} className="category-card-hotspot" data-index={index} style={style}>{copy}</article> :
-          <button key={cardId} type="button" className="category-card-hotspot" data-index={index} style={style} data-card-id={cardId} data-placeholder={!card || undefined} aria-label={label} disabled={leaving} onClick={() => { if (leaving) return; setLeaving(true); window.setTimeout(() => router.push(`/reports/${module.slug}/items/${cardId}/reports`), 220); }}>{copy}</button>;
+          <button key={cardId} type="button" className="category-card-hotspot" data-index={index} style={style} data-card-id={cardId} data-placeholder={!card || undefined} aria-label={label} disabled={leaving} onClick={() => {
+            if (leaving) return;
+            setLeaving(true);
+            const destination = `/reports/${module.slug}/items/${cardId}/reports`;
+            if (!motionEnabled) { router.push(destination); return; }
+            window.setTimeout(() => router.push(destination), 220);
+          }}>{copy}</button>;
       })}
     </section>
   </SwipeBackPage>;

@@ -6,7 +6,10 @@ import type { CSSProperties } from "react";
 import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
-import Image from "next/image";
+import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
+import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
+import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
+import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -36,10 +39,13 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   };
 
   return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle}>
-    {/* The approved artwork is a complete 1000 x 5557 composition. Keeping it
-        as one layer after the guide avoids mobile WebView alpha-compositing
-        glitches caused by independently animated full-page canvases. */}
-    <Image className="reports-archive-art reports-archive-clean-base" src="/design/final-v1/archive-reference.webp" alt="诚实透明档案" width={1000} height={5557} priority sizes="(max-width: 750px) 100vw, 750px" unoptimized />
+    {/* Runtime artwork is assembled from the untouched approved source parts.
+        Module-two resources 11–19 are deliberately omitted because those are
+        the retired static section-title layers. */}
+    <ArchiveArtwork />
+    <ArchiveFishFloatMotion preview={preview} />
+    <ArchiveStoryCopyMotion preview={preview} />
+    <ArchiveSectionTitleMotion preview={preview} />
     <nav className="reports-archive-hotspots" aria-label="档案分类">
       {visibleModules.map((module) => {
         const layout = getArchiveModuleLayout(module.slug)!;

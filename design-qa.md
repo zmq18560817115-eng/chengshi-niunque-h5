@@ -5,7 +5,7 @@
 - Category masters: `public/design/final-v1/category-inspection-clean.webp`, `category-review-clean.webp`, `category-traceability-clean.webp` (1000 x 2166).
 - Formal category references: `docs/input/design/final-v1/references-最终效果/报告点击页-01.jpg`, `报告点击页-02.jpg`, `报告点击页-03.jpg` (2000 x 4333).
 - Guide master/fallback: `public/design/guide/guide-first-frame.webp`, `guide-final-fallback.webp` (750 x 1625).
-- Archive master: `public/design/final-v1/archive-reference.webp` and the full-canvas motion layers under `public/design/final-v1/motion/archive-clean/` (1000 x 5557).
+- Archive visual reference: `public/design/final-v1/archive-reference.webp` (1000 x 5557). Runtime static artwork uses untouched module-one/two parts plus the untouched complete module-three output slice; the flattened full-page reference is not rendered.
 - User device captures supplied on 2026-08-13 and 2026-08-17 were used to identify the category copy drift and ribbon seam.
 
 ## Implementation evidence
@@ -60,17 +60,45 @@
 
 **Findings and fixes**
 
-- [Fixed P1] The rollback version stretched every full-canvas raster independently with `object-fit: fill`. Background, character, mask and foreground now share one proportional `cover` mapping and a common center.
-- [Fixed P1] Loading used a baked first-frame image while running used decomposed layers, causing a visible canvas swap. Loading and running now use the same background, arch, character, real window mask and foreground layers.
+- [Fixed P1] The rollback version stretched every full-canvas raster independently with `object-fit: fill`. Background, character, mask and foreground now share one centered 750 x 1625 stage; each same-ratio image uses `contain`, while the stage itself cover-fits the viewport.
+- [Fixed P1] SSR previously exposed the final fallback before returning to the animation start. SSR, hydration, and loading now hold the supplied `guide-first-frame.webp`; the decomposed animation starts from the same visual frame only after its assets are decoded.
 - [Fixed P1] The supplied window mask must sit above the character and below the reports. Runtime order is background 10, arch 15, character 20, window mask 25, papers 30, foreground 35 and hint 40.
 - Animation behavior is preserved: the existing 180ms handoff and all values in `motion-config.ts` remain unchanged.
 - Fonts, colors, image copy and supplied raster artwork are unchanged. No CSS-drawn replacement was introduced.
 
-**Remaining blocker**
+**Browser evidence**
 
-- Browser-runtime setup is blocked by a trusted-code-path dependency error, so a refreshed browser-rendered screenshot, six viewport captures, console check and live swipe verification could not be collected in this run. The local URL remains available for manual inspection.
+- System Chrome mobile emulation verified the guide at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932. The stage covers each viewport, its visual layers retain one transform, reduced motion shows only the final fallback, swipe navigation reaches `/reports`, and no console/page/request error was observed.
 
-final result: blocked
+final result: passed
+
+## Runtime and motion verification — 2026-08-20
+
+**Source visual truth**
+
+- The supplied final artwork remains the sole composition reference. `docs/input/` was kept read-only.
+- The flattened full-page archive reference is no longer rendered. `ArchiveArtwork` positions byte-identical public runtime copies of the untouched module-one/two source parts on one 1000 x 5557 master; `docs/input/` remains read-only and excluded from production Docker builds. It uses the complete 2000 x 2365 repository output `完整长图-共三个模块_04.jpg` as the module-three part at 0.5 scale from `(0, 4374.5)`. The image is not cropped or modified. Module-two resources 11–19 (the retired static circle, number, and title layers) are omitted, and no runtime title-clean patch or hand-drawn replacement is used.
+- The only visible archive title assets are the three supplied full-title GIF files: `检测项目_逐字跳动.gif`, `复核保障_逐字跳动.gif`, and `生产溯源_逐字跳动.gif`.
+- Category cards use eight configured status mappings backed by seven unique supplied design-text images plus the shared supplied fish artwork.
+
+**Implementation evidence**
+
+- Archive title GIFs retain their original 2x canvases and map to the 1000 x 5557 master at `(486, 2788)`, `(87.5, 3165)`, and `(472, 3522.5)`. They preload only near the title region, mount only while visible, and fully unload offscreen.
+- Reduced-motion, preview, disabled, timeout, and image-failure states never restore the retired static titles. In those states the title areas remain empty because the only title renderers are the supplied GIFs.
+- Fish animation uses cropped source assets, starts only in its viewport region, and stops offscreen. Once the story assets are ready, its clean animation base is stable before the reveal trigger; the four-line reveal pauses offscreen and only records completion after 7.6 seconds of accumulated visible playback.
+- Motion preload timeout is terminal, so a late resource resolution cannot revive a failed animation. Dynamic reduced-motion changes reset the Guide timeline and do not leave Fish or Story running offscreen.
+- The Guide uses one 750 x 1625 stage across background, masks, character, papers, hints, and hit behavior. Category status art, card copy offsets, batch bubble, navigation targets, and archive hotspots remain mapped on their supplied master canvases.
+
+**Browser and automated evidence**
+
+- System Chrome checked `/go`, `/reports`, and all three category routes at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932: the 30 normal-motion route/viewport checks reported zero broken images, console/page/request errors, horizontal overflow, and archive-hotspot overlap.
+- The layered-archive probe reported 26 repository source parts, zero `archive-reference.webp` instances, zero retired title parts, zero broken images, and a 375px document width in a 375px viewport. Combined reference/runtime captures show the complete module-three bottom texture and envelope without a seam; visible-state captures show exactly three GIFs with no title-clean patches or double image.
+- Reduced-motion cold-start checks requested no Guide dynamic assets, archive GIFs, Fish patches, or Story patches. The Guide fallback remained visible and the archive title regions remained free of retired static text.
+- Playwright mobile acceptance and category-alignment suites passed 16/16 scenarios, including Guide-to-archive navigation, all six phone sizes, category/report opening, and swipe-back behavior.
+- Unit coverage passed 95/95 tests. `pnpm lint`, `pnpm typecheck`, `pnpm prisma:validate`, and `pnpm build` passed.
+- Physical WeChat testing was not available in this environment; the evidence above uses system Chrome mobile emulation with touch input.
+
+final result: passed
 
 ## Production traceability fish-badge verification — 2026-08-19
 
@@ -87,8 +115,8 @@ final result: blocked
 - Card title, description, report-button content, card routes and database-backed published-card ordering are unchanged.
 - The entire card remains the click target.
 
-**Remaining blocker**
+**Browser evidence**
 
-- The same trusted-code-path browser-runtime error prevents a fresh browser screenshot and combined reference/prototype overlay in this run. Automated structure and build gates are used below, but final visual sign-off remains pending manual inspection.
+- System Chrome screenshots and all six responsive route checks show the approved fish-status artwork without the former duplicate foreground badge; the card route and full-card hit target remain intact.
 
-final result: blocked
+final result: passed

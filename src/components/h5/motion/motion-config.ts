@@ -19,6 +19,7 @@ export const h5MotionModules = {
   archiveResultColor: moduleEnabled("archiveResultColor", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_RESULT_COLOR),
   archiveStoryCopy: moduleEnabled("archiveStoryCopy", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_STORY_COPY),
   archiveFishFloat: moduleEnabled("archiveFishFloat", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_FISH_FLOAT),
+  archiveSectionTitle: moduleEnabled("archiveSectionTitle", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_SECTION_TITLE),
   categoryEnter: moduleEnabled("categoryEnter", process.env.NEXT_PUBLIC_H5_MOTION_CATEGORY_ENTER),
   reportImageLoad: moduleEnabled("reportImageLoad", process.env.NEXT_PUBLIC_H5_MOTION_REPORT_IMAGE_LOAD),
 } as const;
@@ -33,7 +34,7 @@ export const h5MotionTiming = {
     paperStartMs: 420,
     paperDurationMs: 1500,
     hintStartMs: 420,
-    hintDurationMs: 260,
+    hintDurationMs: 560,
     swipeReadyMs: 420,
   },
   archiveLatestCircle: {
@@ -52,10 +53,11 @@ export const h5MotionTiming = {
   },
   archiveStoryCopy: {
     delayMs: 150,
-    // 逐字渐显：每行由左到右带柔边扫入，单行扫完的时长（与首行认可的观感一致）
-    lineDurationMs: 3200,
-    // 行与行之间的起始间隔（CSS 逐行动画与 JS 完成计时以此为唯一来源，避免后几行提前弹出）
-    lineStepMs: 2150,
+    // 逐字渐显：保持柔边扫入，整体较上一版略微加快。
+    lineDurationMs: 2850,
+    // 基础行间隔；同一语句的换行通过偏移提前衔接，避免换行处出现停顿。
+    lineStepMs: 1850,
+    lineOffsetsMs: [0, -350, 0, -950] as const,
     easing: "linear",
     threshold: 0.3,
   },

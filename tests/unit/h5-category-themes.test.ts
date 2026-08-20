@@ -22,8 +22,8 @@ describe("H5 category report themes", () => {
   });
 
   it("uses the reference-aligned copy origin for each card artwork", () => {
-    expect(categoryCardLayouts["inspection-projects"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 76], [58, 76], [58, 76]]);
-    expect(categoryCardLayouts["review-assurance"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 52], [58, 52], [68, 52]]);
+    expect(categoryCardLayouts["inspection-projects"].map((card) => [card.contentX, card.contentY])).toEqual([[62, 78], [60, 82], [64, 82]]);
+    expect(categoryCardLayouts["review-assurance"].map((card) => [card.contentX, card.contentY])).toEqual([[63, 52], [59, 52], [69, 52]]);
     expect(categoryCardLayouts["production-traceability"].map((card) => [card.contentX, card.contentY])).toEqual([[58, 46], [58, 46]]);
   });
 
@@ -31,5 +31,12 @@ describe("H5 category report themes", () => {
     expect(categoryCardFallbacks["inspection-projects"].map((card) => card.statusText)).toEqual(["已通过", "符合标准", "已通过"]);
     expect(categoryCardFallbacks["review-assurance"].map((card) => card.statusText)).toEqual(["已核对", "已留档", "持续关注"]);
     expect(categoryCardFallbacks["production-traceability"].map((card) => card.statusText)).toEqual(["已核验", "已核对"]);
+  });
+
+  it("maps every visible status to an original design-text image", () => {
+    const cards = Object.values(categoryCardFallbacks).flat();
+    expect(cards).toHaveLength(8);
+    expect(cards.every((card) => card.statusArtwork.src.startsWith("/design/final-v1/category-status-"))).toBe(true);
+    expect(cards.every((card) => card.statusArtwork.width > 0 && card.statusArtwork.height === 102)).toBe(true);
   });
 });

@@ -35,8 +35,19 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
     expect(screen.getByText("DHA、ARA与安全检测说明。")).toBeInTheDocument();
     expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
-    expect(screen.getAllByText("已通过")).toHaveLength(2);
+    const passedStatuses = container.querySelectorAll(
+      '.category-card-status[data-status="已通过"]',
+    );
+    expect(passedStatuses).toHaveLength(2);
+    expect(
+      [...passedStatuses].every((status) =>
+        status.querySelector(".category-card-status-text-art"),
+      ),
+    ).toBe(true);
     expect(container.querySelector(".category-page-art")).toHaveAttribute("src", expect.stringContaining("category-inspection-clean.webp"));
+    expect(container.querySelector(".category-inspection-batch-bubble")).toHaveAttribute("src", expect.stringContaining("category-inspection-batch-bubble.png"));
+    expect(container.querySelector(".category-inspection-batch-bubble")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".category-page-final")).not.toHaveClass("h5-page-transition", "is-leaving");
   });
 
   it("uses artwork-matched fallback copy for empty slots", () => {
@@ -50,8 +61,8 @@ describe("CategoryDetail dynamic card copy", () => {
 
     expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("63");
     expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("529");
-    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("58");
-    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("76");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("62");
+    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("78");
     expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("742");
   });
 
@@ -66,12 +77,14 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 
-  it("keeps production status metadata without adding another visual badge layer", () => {
+  it("renders production status with original fish and design-text artwork instead of system text", () => {
     const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
     const statusLabels = [...container.querySelectorAll<HTMLElement>(".category-card-status")];
 
     expect(statusLabels).toHaveLength(2);
-    expect(statusLabels.map((label) => label.textContent)).toEqual(["已核验", "已核对"]);
+    expect(statusLabels.map((label) => label.textContent)).toEqual(["", ""]);
+    expect(statusLabels.map((label) => label.dataset.status)).toEqual(["已核验", "已核对"]);
+    expect(statusLabels.map((label) => label.querySelectorAll("img").length)).toEqual([2, 2]);
     expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
   });

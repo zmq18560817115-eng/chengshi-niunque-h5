@@ -58,17 +58,30 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ReportsArchive modules={modules}/>);
     const links = [...container.querySelectorAll<HTMLButtonElement>(".archive-category-hotspot")];
     expect(links.map((link) => link.dataset.slug)).toEqual(["inspection-projects", "review-assurance", "production-traceability"]);
-    expect(links.map((link) => link.style.top)).toEqual(["48.4%", "54.2%", "62%"]);
-    expect(links.map((link) => link.style.left)).toEqual(["43%", "3%", "43%"]);
+    expect(links.map((link) => link.style.top)).toEqual(["48.4%", "58.2%", "62%"]);
+    expect(links.map((link) => link.style.left)).toEqual(["43%", "4%", "43%"]);
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
-  it("keeps the approved archive artwork as one stable visual and preserves navigation hotspots", () => {
+  it("assembles the archive from original layers and preserves navigation hotspots", () => {
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
-    expect([...container.querySelectorAll(".reports-archive-art")].some((image) => image.getAttribute("src")?.includes("archive-reference.webp"))).toBe(true);
+    const artwork = container.querySelector("[data-artwork-source='layered-originals']");
+    expect(artwork).toHaveClass("reports-archive-art", "reports-archive-source-art");
+    expect(container.querySelector('[src*="archive-reference.webp"]')).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".reports-archive-source-layer").length).toBeGreaterThan(0);
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
+  });
+
+  it("does not render the retired module-two static title resources", () => {
+    const { container } = render(<ReportsArchive modules={[]}/>);
+    const sourceParts = [...container.querySelectorAll<HTMLElement>("[data-source-part]")]
+      .map((layer) => layer.dataset.sourcePart);
+    expect(sourceParts).toEqual(expect.arrayContaining(["module-2-resource-10", "module-2-resource-20"]));
+    for (let resource = 11; resource <= 19; resource += 1) {
+      expect(sourceParts).not.toContain(`module-2-resource-${resource}`);
+    }
   });
 
   it("does not render independently scaled archive animation canvases", () => {
@@ -84,10 +97,18 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-motion-layers")).not.toBeInTheDocument();
   });
 
-  it("does not compose additional full-page animation canvases over the archive artwork", () => {
+  it("wires the cropped fish, story reveal, and three GIF title groups over the archive artwork", () => {
     const { container } = render(<ReportsArchive modules={[]}/>);
-    expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).not.toBeInTheDocument();
-    expect(container.querySelector("[data-motion-module='archiveFishFloat']")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).toBeInTheDocument();
+    expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(4);
+    expect(container.querySelector("[data-motion-module='archiveFishFloat']")).toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveSectionTitle']")).toBeInTheDocument();
+    expect([...container.querySelectorAll<HTMLElement>(".archive-section-title-group")].map((group) => group.dataset.titleGroup)).toEqual([
+      "inspection-projects",
+      "review-assurance",
+      "production-traceability",
+    ]);
+    expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).not.toBeInTheDocument();
   });
 
@@ -95,7 +116,12 @@ describe("multi-page H5 interactions", () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const { container } = render(<ReportsArchive modules={[]}/>);
     expect(pendingImages).toHaveLength(0);
-    expect(container.querySelector(".archive-fish-float")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-fish-float")).toBeInTheDocument();
+    expect(container.querySelector(".archive-fish-clean-patch")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".archive-section-title-group")).toHaveLength(3);
+    expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
   });
 
@@ -187,7 +213,7 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     expect(container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
-    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(2);
+    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(1);
     expect(container.querySelector(".brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
     expect(container.querySelector(".brand-guide-character-closed")?.getAttribute("src")).toContain("guide-character-closed.webp");
     const stage = container.querySelector(".brand-guide-stage");
@@ -197,20 +223,18 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-paper-start-ms", "420");
     expect(stage).toHaveAttribute("data-paper-duration-ms", "1500");
     expect(stage).toHaveAttribute("data-hint-start-ms", "420");
-    expect(stage).toHaveAttribute("data-hint-duration-ms", "260");
+    expect(stage).toHaveAttribute("data-hint-duration-ms", "560");
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage.is-loading .is-initial-canvas")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage.is-loading .brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
-    expect(container.querySelector(".motion-stage.is-loading .brand-guide-window-mask")?.getAttribute("src")).toContain("guide-window-mask.webp");
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-first-frame")?.getAttribute("src")).toContain("guide-first-frame.webp");
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-character-open")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-window-mask")).not.toBeInTheDocument();
     expect(container.querySelector(".is-animated-canvas .brand-guide-final-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".is-animated-canvas .brand-guide-base")?.getAttribute("src")).toBe(
-      container.querySelector(".is-initial-canvas .brand-guide-base")?.getAttribute("src"),
-    );
+    expect(container.querySelector(".is-animated-canvas .brand-guide-base")?.getAttribute("src")).toContain("guide-background.webp");
     expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).not.toBeInTheDocument();
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready"));
-    expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).toBeInTheDocument();
+    expect(container.querySelector(".motion-stage.is-ready .brand-guide-first-frame")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 460)); });
     expect(onEnter).toHaveBeenCalledOnce();
@@ -220,22 +244,25 @@ describe("multi-page H5 interactions", () => {
   it("switches from the complete first frame to the final fallback when a critical guide asset fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container } = render(<BrandGuide/>);
-    expect(container.querySelector(".is-initial-canvas")).toBeInTheDocument();
+    expect(container.querySelector(".brand-guide-first-frame")).toBeInTheDocument();
+    fireEvent.error(container.querySelector(".brand-guide-first-frame") as Element);
     await act(async () => pendingImages[0]?.reject());
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
-    expect(container.querySelector(".is-initial-canvas")).not.toBeInTheDocument();
+    expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
+    expect(container.querySelector(".brand-guide")).not.toHaveClass("has-no-fallback");
     consoleError.mockRestore();
   });
 
   it("keeps the final static fallback when reduced motion is requested", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
-    const { container } = render(<BrandGuide preview />);
+    const { container } = render(<BrandGuide />);
     const page = screen.getByRole("main");
-    await waitFor(() => expect(page).toHaveClass("is-disabled"));
+    await waitFor(() => expect(page).toHaveClass("is-reduced"));
     expect(pendingImages).toHaveLength(0);
-    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "disabled");
-    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "disabled");
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
+    expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-fallback")).toBeInTheDocument();
   });
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type SyntheticEvent } from "react";
 import Image from "next/image";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
 
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
+type GuideMotionPreference = "unknown" | "allowed" | "reduced";
 
 const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp",
@@ -24,6 +25,18 @@ function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError
     )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>向左滑动进入</span>
   </>;
+}
+
+function GuideBootstrapFrame({ onFirstFrameError, onFinalFallbackError }: { onFirstFrameError: () => void; onFinalFallbackError: () => void }) {
+  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const failedSource = event.currentTarget.currentSrc || event.currentTarget.src;
+    if (failedSource.includes("guide-final-fallback.webp")) onFinalFallbackError();
+    else onFirstFrameError();
+  };
+  return <picture className="brand-guide-bootstrap-frame">
+    <source media="(prefers-reduced-motion: reduce)" srcSet={assetUrl("guide-final-fallback.webp")}/>
+    <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" fetchPriority="high" unoptimized decoding="async" onError={handleError}/>
+  </picture>;
 }
 
 function GuideLayers({ animated, onError }: { animated: boolean; onError: (name: string) => void }) {
@@ -52,11 +65,32 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
   const [assetStatus, setAssetStatus] = useState<AssetStatus>(motionEnabled ? "loading" : "disabled");
+  const [motionPreference, setMotionPreference] = useState<GuideMotionPreference>("unknown");
   const [fallbackUnavailable, setFallbackUnavailable] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const entering = useRef(false);
+
+  useEffect(() => {
+    if (!motionEnabled) return;
+    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const sync = () => {
+      const nextPreference = media?.matches ? "reduced" : "allowed";
+      setMotionPreference(nextPreference);
+      setAssetStatus(nextPreference === "reduced" ? "reduced" : "loading");
+      setAnimationStarted(false);
+      setSwipeReady(nextPreference === "reduced");
+    };
+    sync();
+    if (!media) return;
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => media.removeEventListener("change", sync);
+    }
+    media.addListener?.(sync);
+    return () => media.removeListener?.(sync);
+  }, [motionEnabled]);
 
   useEffect(() => {
     if (!animationStarted) return;
@@ -83,13 +117,24 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setFallbackUnavailable(true);
     setSwipeReady(true);
   }, []);
+  const handleFirstFrameError = useCallback(() => {
+    console.error("[BrandGuide] asset failed: guide-first-frame.webp");
+  }, []);
+  const handleMotionBoundaryError = useCallback(() => {
+    setAssetStatus("failed");
+    setAnimationStarted(false);
+    setSwipeReady(true);
+  }, []);
   const handleMotionState = useCallback((state: AssetStatus) => {
     setAssetStatus(state);
+    if (state === "loading" || state === "failed" || state === "reduced" || state === "disabled") setAnimationStarted(false);
     if (state === "failed" || state === "reduced" || state === "disabled") setSwipeReady(true);
   }, []);
   const startAnimation = useCallback(() => setAnimationStarted(true), []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const initialCanvas = <GuideLayers animated={false} onError={handleLayerError}/>;
+  const bootstrapFrame = <GuideBootstrapFrame onFirstFrameError={handleFirstFrameError} onFinalFallbackError={handleFallbackError}/>;
+  const firstFrame = <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={handleFirstFrameError}/>;
+  const mountMotionStage = motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -114,11 +159,11 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       if (deltaX <= -50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) enter();
     }}>
     <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-hint-start-ms={h5MotionTiming.guide.hintStartMs} data-hint-duration-ms={h5MotionTiming.guide.hintDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
-      <MotionBoundary fallback={fallback}>
-        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled={motionEnabled} crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={initialCanvas} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
+      {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
+        <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
           <GuideLayers animated onError={handleLayerError}/>
         </MotionStage>
-      </MotionBoundary>
+      </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
       <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向左滑动，或点击滑动提示进入档案"}</small>
       <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview}>进入档案</button>

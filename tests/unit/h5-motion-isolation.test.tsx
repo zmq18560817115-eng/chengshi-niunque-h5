@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { MotionBoundary } from "@/components/h5/motion/MotionBoundary";
 import { MotionStage } from "@/components/h5/motion/MotionStage";
@@ -7,6 +7,11 @@ import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "@/components
 function BrokenMotion(): never { throw new Error("motion failed"); }
 
 describe("H5 motion isolation", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
   it("enables validated motion modules by default while preserving runtime switches", () => {
     expect(H5_MOTION_ENABLED).toBe(true);
     expect(h5MotionModules).toEqual({
@@ -16,6 +21,7 @@ describe("H5 motion isolation", () => {
       archiveResultColor: true,
       archiveStoryCopy: true,
       archiveFishFloat: true,
+      archiveSectionTitle: true,
       categoryEnter: true,
       reportImageLoad: true,
     });
@@ -26,8 +32,10 @@ describe("H5 motion isolation", () => {
 
   it("contains an animation exception without removing the page fallback", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    render(<MotionBoundary fallback={<p>稳定页面</p>}><BrokenMotion/></MotionBoundary>);
+    const onError = vi.fn();
+    render(<MotionBoundary fallback={<p>稳定页面</p>} onError={onError}><BrokenMotion/></MotionBoundary>);
     await waitFor(() => expect(screen.getByText("稳定页面")).toBeInTheDocument());
+    expect(onError).toHaveBeenCalledOnce();
     error.mockRestore();
   });
 
@@ -37,17 +45,64 @@ describe("H5 motion isolation", () => {
     expect(screen.getByTestId("fallback")).toBeInTheDocument();
   });
 
+  it("keeps an asset timeout terminal when a late image eventually loads", async () => {
+    vi.useFakeTimers();
+    let finishImage: (() => void) | undefined;
+    class SlowImage {
+      decoding = "auto";
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      src = "";
+      decode() {
+        return new Promise<void>((resolve) => {
+          finishImage = () => { this.onload?.(); resolve(); };
+        });
+      }
+    }
+    const onStateChange = vi.fn();
+    vi.stubGlobal("Image", SlowImage);
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    const { container } = render(<MotionStage assets={["/slow.png"]} masterWidth={100} masterHeight={100} fallback={<p>静态回退</p>} onStateChange={onStateChange}><p>动画内容</p></MotionStage>);
+    await act(async () => undefined);
+    expect(container.querySelector(".motion-stage")).toHaveAttribute("data-motion-state", "loading");
+    act(() => vi.advanceTimersByTime(5000));
+    expect(screen.getByText("静态回退")).toBeInTheDocument();
+    await act(async () => { finishImage?.(); await Promise.resolve(); });
+    expect(screen.getByText("静态回退")).toBeInTheDocument();
+    expect(onStateChange).not.toHaveBeenCalledWith("ready");
+  });
+
   it("does not force the guide fallback visible after the dynamic stage is ready", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(css).not.toContain(".motion-stage .brand-guide-fallback");
     expect(css).toContain(".motion-stage-fallback .brand-guide-fallback");
   });
 
-  it("maps every guide layer through the same proportional cover transform", () => {
+  it("maps every guide layer through one covering 750 by 1625 stage", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain("object-fit: cover; object-position: center;");
-    expect(css).not.toContain("object-fit: contain; object-position: center;");
-    expect(css).not.toContain(".brand-guide-stage { width: auto; height: 100%; }");
+    expect(css).toContain("aspect-ratio: 750 / 1625;");
+    expect(css).toContain("width: max(100%, 46.153846vh);");
+    expect(css).toContain("width: max(100cqw, 46.153846cqh);");
+    expect(css).toContain("object-fit: contain; object-position: center;");
+    expect(css).not.toContain('background-image: url("/design/guide/guide-background.webp")');
+  });
+
+  it.each([
+    [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
+    [393, 852], [414, 896], [430, 932],
+  ])("covers a %ix%i phone viewport without a narrow inner canvas", (width, height) => {
+    const masterRatio = 750 / 1625;
+    const stageWidth = Math.max(width, height * masterRatio);
+    const stageHeight = stageWidth / masterRatio;
+    expect(stageWidth).toBeGreaterThanOrEqual(width);
+    expect(stageHeight).toBeGreaterThanOrEqual(height - Number.EPSILON);
+    expect(stageWidth / stageHeight).toBeCloseTo(masterRatio, 8);
+  });
+
+  it("reveals the swipe hint after the papers with a perceptible entrance", () => {
+    expect(h5MotionTiming.guide.hintStartMs).toBe(h5MotionTiming.guide.paperStartMs);
+    expect(h5MotionTiming.guide.hintDurationMs).toBeGreaterThanOrEqual(500);
+    expect(h5MotionTiming.guide.swipeReadyMs).toBe(h5MotionTiming.guide.hintStartMs);
   });
 
   it("keeps the supplied window mask above the character and below the papers", () => {
@@ -69,8 +124,78 @@ describe("H5 motion isolation", () => {
     expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeLessThanOrEqual(250);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeLessThanOrEqual(800);
-    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBeGreaterThanOrEqual(450);
-    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBeGreaterThanOrEqual(450);
+    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBe(2850);
+    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBe(1850);
+    expect(h5MotionTiming.archiveStoryCopy.lineOffsetsMs).toEqual([0, -350, 0, -950]);
+    expect(h5MotionTiming.archiveStoryCopy.lineStepMs + h5MotionTiming.archiveStoryCopy.lineOffsetsMs[3]).toBeLessThan(h5MotionTiming.archiveStoryCopy.lineStepMs);
+    const lineStarts = h5MotionTiming.archiveStoryCopy.lineOffsetsMs.map(
+      (offset, index) => index * h5MotionTiming.archiveStoryCopy.lineStepMs + offset,
+    );
+    expect(
+      h5MotionTiming.archiveStoryCopy.delayMs
+      + Math.max(...lineStarts)
+      + h5MotionTiming.archiveStoryCopy.lineDurationMs,
+    ).toBe(7600);
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveStoryCopyMotion.tsx", "utf8");
+    expect(component).toContain("if (!ready || !started || !visible || complete) return;");
+    expect(component).toContain("remainingMs.current = Math.max(0, remainingMs.current - (performance.now() - startedAt));");
+  });
+
+  it("wires ReportsArchive to layered originals instead of the retired reference composite", () => {
+    const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
+    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
+    expect(reports).toContain('import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";');
+    expect(reports).toContain("<ArchiveArtwork />");
+    expect(reports).not.toContain("archive-reference.webp");
+    expect(artwork).toContain('data-artwork-source="layered-originals"');
+    expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');
+    expect(artwork).toContain('moduleTwoAsset("资源 10.png")');
+    expect(artwork).toContain('moduleTwoAsset("资源 20.png")');
+    expect(artwork).not.toContain("docs/input");
+    expect(artwork).toContain("/design/final-v1/长图输出/完整长图-共三个模块_04.jpg");
+    expect(artwork).toContain('top: 4374.5, width: 1000, height: 1182.5, unoptimized: true');
+    for (let resource = 11; resource <= 19; resource += 1) {
+      expect(artwork).not.toContain(`moduleTwoAsset("资源 ${resource}.png")`);
+    }
+  });
+
+  it("animates the four archive fish independently around their fixed centers", () => {
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveFishFloatMotion.tsx", "utf8");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(component).toContain("data-fish-index={index + 1}");
+    expect(component).toContain("delay: -120, duration: 2100");
+    expect(component).toContain("delay: -1040, duration: 2520");
+    expect(component).toContain("/motion/archive-runtime/fish-clean-patch.png");
+    expect(component).not.toContain("archive-base-clean.webp");
+    expect(css).toContain("transform-origin: 50% 50%");
+    expect(css).toContain("@keyframes archive-fish-float");
+    expect(css).not.toContain("translate3d(var(--archive-fish");
+  });
+
+  it("replaces the three baked folder titles with the supplied viewport-scoped GIFs", () => {
+    const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveSectionTitleMotion.tsx", "utf8");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(reports).toContain('import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";');
+    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} />");
+    expect(component).toContain("/design/final-v1/检测项目_逐字跳动.gif");
+    expect(component).toContain("/design/final-v1/复核保障_逐字跳动.gif");
+    expect(component).toContain("/design/final-v1/生产溯源_逐字跳动.gif");
+    expect(component).not.toContain("title-clean-");
+    expect(component).not.toContain("cleanPatch");
+    expect(component).toContain("left: 486");
+    expect(component).toContain("left: 87.5");
+    expect(component).toContain("left: 472");
+    expect(component).toContain("top: 2788");
+    expect(component).toContain("top: 3165");
+    expect(component).toContain("top: 3522.5");
+    expect(component).toContain('rootMargin: "45% 0px"');
+    expect(component).toContain("h5MotionModules.archiveSectionTitle");
+    expect(component).toContain("IntersectionObserver");
+    expect(component).toContain("ready && visible");
+    expect(css).not.toContain("archive-section-title-clean-patch");
+    expect(css).toContain(".archive-section-title-gif { z-index: 0; }");
+    expect(css).not.toContain("archive-section-title-hop");
   });
 
   it("draws the archive circle along an SVG stroke instead of a rectangular reveal", () => {
@@ -92,5 +217,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("top: 32.751485%");
     expect(css).not.toContain("@keyframes archive-result-normal-out");
     expect(css).toContain("@keyframes archive-result-passed-in");
+    });
+    const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
+    expect(category).toContain("H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview");
+    expect(category).toContain("if (!motionEnabled) { router.push(destination); return; }");
   });
-});

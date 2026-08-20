@@ -251,12 +251,17 @@ button, a { font: inherit; }
 .standalone-preview-scroll { display: grid; justify-content: center; height: calc(100vh - 4.25rem); padding: var(--space-4); overflow: auto; }
 .standalone-preview-scroll > div { border: 1px solid #cfc7bd; background: var(--color-canvas); }
 .standalone-preview-scroll .h5-shell { max-width: none; min-width: 0; box-shadow: none; }
-.brand-guide { display: flex; width: 100%; max-width: var(--h5-content-width); height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; background-repeat: no-repeat; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: pan-y; }
+.brand-guide { container-type: size; display: flex; width: 100%; max-width: var(--h5-content-width); height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background: #f8e89d; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: pan-y; }
 .brand-guide.is-leaving { opacity: .95; transform: translate3d(-100%,0,0); pointer-events: none; }
-.brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 1 1 auto; overflow: hidden; }
+.brand-guide-stage { position: relative; isolation: isolate; width: max(100%, 46.153846vh); width: max(100%, 46.153846dvh); aspect-ratio: 750 / 1625; flex: 0 0 auto; overflow: hidden; background: #f8e89d; }
+@supports (width: 1cqw) {
+  .brand-guide-stage { width: max(100cqw, 46.153846cqh); }
+}
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback, .brand-guide-first-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.brand-guide-bootstrap-frame { position: absolute; z-index: 45; inset: 0; display: block; width: 100%; height: 100%; }
+.brand-guide-first-frame { z-index: 45; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 15; visibility: visible; opacity: 1; }
 .brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
@@ -269,8 +274,8 @@ button, a { font: inherit; }
 .brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
 .brand-guide-window-mask { z-index: 25; pointer-events: none; }
 .brand-guide-foreground-top { z-index: 35; }
-.brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
-.brand-guide-swipe-arrow { animation: guide-hint-float 1.4s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
+.brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; transform-origin: 78% 95%; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.2,.78,.24,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-swipe-arrow { animation: guide-hint-float 1.15s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; will-change: transform; }
 .brand-guide-fallback { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
@@ -294,8 +299,8 @@ button, a { font: inherit; }
 @keyframes guide-paper-from-right { from { transform: translate3d(39%,-1.2%,0) rotate(3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-from-bottom { from { transform: translate3d(1.2%,21%,0) rotate(3deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes guide-hint-in { 0% { transform: translate3d(0, 2.2%, 0); opacity: 0; } 38% { transform: translate3d(0, 1.2%, 0); opacity: .38; } 72% { transform: translate3d(0, .35%, 0); opacity: .82; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
-@keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.35rem, 0, 0); } }
+@keyframes guide-hint-in { 0% { transform: translate3d(0, 3.8%, 0) scale(.94); opacity: 0; } 58% { transform: translate3d(0, -.35%, 0) scale(1.025); opacity: 1; } 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } }
+@keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.65rem, 0, 0); } }
 .reports-archive { animation: reports-enter .32s ease both; }
 .reports-archive.reports-entry-transition { animation: reports-slide-in 460ms cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition { animation: h5-page-enter .28s cubic-bezier(.22,1,.36,1) both; }
@@ -308,22 +313,38 @@ button, a { font: inherit; }
 .reports-archive-final, .category-page-final { position: relative; overflow: hidden; background: #f5f0e7; box-shadow: none; }
 .category-page-final { container-type: inline-size; }
 .reports-archive-art, .category-page-art { display: block; width: 100%; height: auto; }
+.reports-archive-source-art { position: relative; z-index: 10; aspect-ratio: 1000 / 5557; overflow: hidden; }
+.reports-archive-source-layer { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.category-inspection-batch-bubble {
+  position: absolute;
+  z-index: 1;
+  top: 15.3cqw;
+  left: 48.6cqw;
+  display: block;
+  width: 21.85cqw;
+  height: auto;
+  pointer-events: none;
+}
 .archive-story-copy { position: absolute; z-index: 24; inset: 0; width: 100%; height: 100%; }
 .archive-story-copy > .motion-stage { position: absolute; inset: 0; }
 .archive-story-copy .motion-stage-content { position: absolute; inset: 0; }
-.archive-story-copy-base { position: absolute; inset: 0; }
 .archive-story-copy-trigger { position: absolute; z-index: 2; top: 85.5%; left: 20%; width: 60%; height: 8%; pointer-events: none; }
 /* 首页下方文字：每行从左到右逐字柔和渐显 */
+.archive-story-copy-clean-patch {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  object-fit: fill;
+  opacity: 0;
+  pointer-events: none;
+}
 
 .archive-story-copy-line {
   position: absolute;
-  inset: 0;
   z-index: 2;
   display: block;
-  width: 100%;
-  height: 100%;
   object-fit: fill;
-  opacity: 1;
+  opacity: 0;
   pointer-events: none;
 
   /* 初始遮住文字，柔边扫过时形成逐字渐显 */
@@ -354,35 +375,25 @@ button, a { font: inherit; }
   will-change: -webkit-mask-position, mask-position;
 }
 
+.archive-story-copy.is-ready:not(.is-complete)
+.archive-story-copy-clean-patch { opacity: 1; }
 .archive-story-copy.is-ready.is-started:not(.is-complete)
 .archive-story-copy-line {
+  opacity: 1;
   animation:
     archive-story-line
     var(--archive-story-duration)
     var(--archive-story-easing)
     calc(
       var(--archive-story-delay) +
-      var(--archive-story-index) * var(--archive-story-step)
+      var(--archive-story-index) * var(--archive-story-step) +
+      var(--archive-story-line-offset)
     )
     both;
+  animation-play-state: paused;
 }
-/* 完成后所有行保持完全显示（避免逐行时长与整体完成计时不一致时出现弹出） */
-.archive-story-copy.is-complete .archive-story-copy-line {
-  -webkit-mask-image: none;
-  mask-image: none;
-  opacity: 1;
-}
-.archive-story-copy-line.is-static {
-  opacity: 1;
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.archive-story-copy .motion-stage.is-loading
-.motion-stage-fallback
-.archive-story-copy-line.is-static {
-  opacity: 0;
-}
+.archive-story-copy.is-ready.is-started.is-visible:not(.is-complete)
+.archive-story-copy-line { animation-play-state: running; }
 
 @keyframes archive-story-line {
   from {
@@ -403,6 +414,7 @@ button, a { font: inherit; }
 .motion-stage.is-ready .motion-stage-content { opacity: 1; }
 .motion-stage.is-ready .motion-stage-fallback { opacity: 0; }
 .motion-stage-fallback .brand-guide-fallback,
+.brand-guide.is-loading > .brand-guide-stage > .brand-guide-fallback,
 .brand-guide.is-disabled > .brand-guide-stage .brand-guide-fallback,
 .brand-guide.is-reduced > .brand-guide-stage .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.is-failed .motion-stage-content { visibility: hidden; opacity: 0; }
@@ -443,16 +455,30 @@ button, a { font: inherit; }
 .archive-result-color.is-complete .archive-result-color-normal { opacity: 0; }
 .archive-result-color.is-complete .archive-result-color-passed { opacity: 1; }
 @keyframes archive-result-passed-in { from { opacity: 0; } to { opacity: 1; } }
-.reports-archive-clean-base { position: relative; z-index: 10; }
 .reports-archive-final-overlay { position: absolute; z-index: 29; inset: 0; pointer-events: none; }
 .archive-fish-float { position: absolute; z-index: 23; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-fish-float > .motion-stage { position: absolute; inset: 0; }
 .archive-fish-float-trigger { position: absolute; top: 79.38%; left: 3%; width: 94%; height: 1.4%; pointer-events: none; }
-.archive-fish-float-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; transform: translate3d(0, var(--archive-fish-amp, 9px), 0); will-change: transform; }
-.archive-fish-float.is-ready.is-visible .archive-fish-float-layer { opacity: 1; animation: archive-fish-float var(--archive-fish-duration) ease-in-out var(--archive-fish-delay) infinite alternate; transition: opacity .4s cubic-bezier(.22,1,.36,1), transform .4s cubic-bezier(.22,1,.36,1); }
+.archive-fish-clean-patch { position: absolute; z-index: 0; display: block; object-fit: fill; opacity: 0; }
+.archive-fish-float-layer { position: absolute; z-index: 1; display: block; object-fit: fill; opacity: 0; transform: translate3d(0, 0, 0); transform-origin: 50% 50%; backface-visibility: hidden; will-change: transform; }
+.archive-fish-float.is-ready.is-visible .archive-fish-clean-patch { opacity: 1; }
+.archive-fish-float.is-ready.is-visible .archive-fish-float-layer { opacity: 1; animation: archive-fish-float var(--archive-fish-duration) cubic-bezier(.45,0,.55,1) var(--archive-fish-delay) infinite; transition: opacity .25s cubic-bezier(.22,1,.36,1); }
 .archive-fish-float.is-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
 .archive-fish-float-layer.is-static, .motion-stage-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
-@keyframes archive-fish-float { from { transform: translate3d(0, var(--archive-fish-amp, 9px), 0); } to { transform: translate3d(0, calc(-1 * var(--archive-fish-amp, 9px)), 0); } }
+@keyframes archive-fish-float {
+  0%, 100% { transform: translate3d(0, calc(-1 * var(--archive-fish-amp, 7px)), 0); }
+  45% { transform: translate3d(0, var(--archive-fish-amp, 7px), 0); }
+  52% { transform: translate3d(0, calc(var(--archive-fish-amp, 7px) - var(--archive-fish-jitter, 1px)), 0); }
+  59% { transform: translate3d(0, var(--archive-fish-amp, 7px), 0); }
+}
+.archive-section-title-motion { position: absolute; z-index: 25; inset: 0; overflow: hidden; pointer-events: none; }
+.archive-section-title-group { position: absolute; pointer-events: none; }
+.archive-section-title-group > .motion-stage,
+.archive-section-title-trigger,
+.archive-section-title-layer { position: absolute; inset: 0; width: 100%; height: 100%; }
+.archive-section-title-trigger { pointer-events: none; }
+.archive-section-title-layer { display: block; object-fit: fill; pointer-events: none; }
+.archive-section-title-gif { z-index: 0; }
 .archive-module-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .archive-module-circle { clip-path: inset(0 100% 0 0); opacity: 0; }
 .archive-module-one.is-started .archive-module-circle { animation: archive-module-circle-reveal .65s ease-out .15s both; }
@@ -487,6 +513,8 @@ button, a { font: inherit; }
 .category-card-copy b::before { position: absolute; top: 50%; left: 2.2cqw; width: 6.3cqw; height: 6.3cqw; content: ""; transform: translateY(-50%); background: center / contain no-repeat url("/design/final-v1/category-search-inspection.png"); }
 .category-card-hotspot::after { position: absolute; top: 22.5cqw; left: 55.5cqw; width: 12.5cqw; height: 14cqw; content: ""; background: center / contain no-repeat url("/design/final-v1/category-arrow-inspection.png"); pointer-events: none; }
 .category-card-status { position: absolute !important; top: -2.8cqw !important; left: 58.6cqw !important; display: flex !important; width: 20.6cqw !important; height: 9.4cqw !important; overflow: visible !important; clip-path: none !important; align-items: center; justify-content: center; color: #e9863f; font-family: var(--font-display); font-size: 4cqw; font-weight: 700; line-height: 1; white-space: nowrap !important; pointer-events: none; }
+.category-card-status-art { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.category-card-status-text-art { position: absolute; z-index: 1; top: 50%; left: 42.5%; display: block; width: var(--category-status-text-width); height: auto; transform: translate(-50%, -48%); object-fit: contain; pointer-events: none; }
 .category-page-final[data-category="review-assurance"] .category-card-status,
 .category-page-final[data-category="review-assurance"] .category-card-hotspot {
   overflow: visible;
@@ -501,8 +529,8 @@ button, a { font: inherit; }
 
 /* 标题 */
 .category-page-final[data-category="review-assurance"] .category-card-copy strong {
-  margin-left: .65cqw;
-  letter-spacing: .08em;
+  margin-left: 0;
+  letter-spacing: .04em;
   transform: none;
 }
 
@@ -510,7 +538,7 @@ button, a { font: inherit; }
 .category-page-final[data-category="review-assurance"] .category-card-copy small {
   max-width: 67cqw;
   margin-top: 1.05cqw;
-  margin-left: .45cqw;
+  margin-left: 0;
 
   color: rgb(95 61 36 / .42);
 
@@ -522,19 +550,20 @@ button, a { font: inherit; }
 
 /* 查看报告按钮 */
 .category-page-final[data-category="review-assurance"] .category-card-copy b {
-  height: 11cqw;
+  top: 19.7cqw;
+  height: 10.2cqw;
 
-  font-size: 6.1cqw;
-  font-weight: 600;
+  font-size: 5.4cqw;
+  font-weight: 700;
   letter-spacing: .02em;
 }
 
-/* 蓝色手绘箭头——已经对齐，不再修改 */
+/* 蓝色手绘箭头：按正式原稿的部件比例放回卡片右侧。 */
 .category-page-final[data-category="review-assurance"] .category-card-hotspot::after {
-  top: 14cqw;
-  left: 52.4cqw;
-  width: 20cqw;
-  height: 22cqw;
+  top: 19.8cqw;
+  left: 55.5cqw;
+  width: 12.5cqw;
+  height: 14cqw;
 }
 
 /* 黄色状态标签 */
@@ -542,8 +571,8 @@ button, a { font: inherit; }
   position: absolute !important;
   z-index: 8 !important;
 
-  top: -2.8cqw !important;
-  left: 57.8cqw !important;
+  top: -2.7cqw !important;
+  left: 59cqw !important;
 
   display: flex !important;
   width: 20.6cqw !important;
@@ -567,65 +596,58 @@ button, a { font: inherit; }
   line-height: 1;
   white-space: nowrap !important;
 
-  background:
-    center / 100% 100%
-    no-repeat
-    url("/design/final-v1/category-status-review.png");
+  background: none;
 
-  pointer-events: none;
-}
-
-/* 状态字直接复用正式原稿的透明图层，避免网页字体造成字形和对位漂移。 */
-.category-page-final:is([data-category="inspection-projects"], [data-category="review-assurance"])
-.category-card-status::before {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--category-status-text-width);
-  height: 4.08cqw;
-  content: "";
-  transform: translate(-50%, -48%);
-  background: center / contain no-repeat var(--category-status-text-image);
   pointer-events: none;
 }
 
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot:is([data-index="0"], [data-index="2"])
 .category-card-status {
-  --category-status-text-width: 9.79cqw;
+  --category-status-text-width: 11.3cqw;
   --category-status-text-image: url("/design/final-v1/category-status-inspection-passed.png");
 }
 
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="1"]
 .category-card-status {
-  --category-status-text-width: 12.99cqw;
+  --category-status-text-width: 15cqw;
   --category-status-text-image: url("/design/final-v1/category-status-inspection-standard.png");
 }
 
 .category-page-final[data-category="review-assurance"]
 .category-card-hotspot[data-index="0"]
 .category-card-status {
-  --category-status-text-width: 9.75cqw;
+  --category-status-text-width: 11.25cqw;
   --category-status-text-image: url("/design/final-v1/category-status-review-checked.png");
 }
 
 .category-page-final[data-category="review-assurance"]
 .category-card-hotspot[data-index="1"]
 .category-card-status {
-  --category-status-text-width: 9.75cqw;
+  --category-status-text-width: 11.25cqw;
   --category-status-text-image: url("/design/final-v1/category-status-review-archived.png");
 }
 
 .category-page-final[data-category="review-assurance"]
 .category-card-hotspot[data-index="2"]
 .category-card-status {
-  --category-status-text-width: 13.03cqw;
+  --category-status-text-width: 15cqw;
   --category-status-text-image: url("/design/final-v1/category-status-review-watch.png");
 }
 
-.category-page-final[data-category="review-assurance"] .category-card-status::after {
-  content: none;
+.category-page-final[data-category="production-traceability"]
+.category-card-hotspot[data-index="0"]
+.category-card-status {
+  --category-status-text-width: 9.95cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-traceability-verified.png");
+}
+
+.category-page-final[data-category="production-traceability"]
+.category-card-hotspot[data-index="1"]
+.category-card-status {
+  --category-status-text-width: 9.95cqw;
+  --category-status-text-image: url("/design/final-v1/category-status-traceability-checked.png");
 }
 
 .category-page-final[data-category="review-assurance"] .category-card-hotspot {
@@ -637,10 +659,9 @@ button, a { font: inherit; }
 
 /* 1. 标题：稍向右，字距贴合原图；相对上移贴合原图基线（不影响正文位置） */
 .category-page-final[data-category="inspection-projects"] .category-card-copy strong {
-  position: relative;
-  top: -0.8cqw;
-  margin-left: 1.3cqw;
-  letter-spacing: .09em;
+  position: static;
+  margin-left: 0;
+  letter-spacing: .03em;
   transform: none;
 }
 
@@ -650,7 +671,7 @@ button, a { font: inherit; }
   max-width: 74cqw;
 
   margin-top: 1.05cqw;
-  margin-left: .9cqw;
+  margin-left: 0;
 
   color: rgb(95 61 36 / .52);
 
@@ -663,29 +684,29 @@ button, a { font: inherit; }
 
 /* 3. “查看X份报告”：文字收进药丸背景，避免溢出 */
 .category-page-final[data-category="inspection-projects"] .category-card-copy b {
-  top: 19.1cqw;
+  top: 19.7cqw;
 
-  height: 11cqw;
+  height: 10.2cqw;
 
-  font-size: 6.1cqw;
-  font-weight: 600;
+  font-size: 5.4cqw;
+  font-weight: 700;
   letter-spacing: .02em;
 }
 
 
 /* 4. 浅绿色手绘箭头：收敛到与其它页一致的小尺寸手绘涂鸦 */
 .category-page-final[data-category="inspection-projects"] .category-card-hotspot::after {
-  top: 14cqw;
-  left: 52.4cqw;
+  top: 19.8cqw;
+  left: 55.5cqw;
 
-  width: 20cqw;
-  height: 22cqw;
+  width: 12.5cqw;
+  height: 14cqw;
 }
 
 
 /* 5. 状态文字：对齐原图鱼形徽标上的“已通过/符合标准”位置 */
 .category-page-final[data-category="inspection-projects"] .category-card-status {
-  top: 0.2cqw !important;
+  top: -.3cqw !important;
 
   color: transparent;
 }
@@ -695,7 +716,7 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="0"]
 .category-card-status {
-  left: 58.5cqw !important;
+  left: 58.8cqw !important;
 }
 
 
@@ -703,7 +724,8 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="1"]
 .category-card-status {
-  left: 57.5cqw !important;
+  top: -.1cqw !important;
+  left: 58.6cqw !important;
 }
 
 
@@ -711,7 +733,20 @@ button, a { font: inherit; }
 .category-page-final[data-category="inspection-projects"]
 .category-card-hotspot[data-index="2"]
 .category-card-status {
-  left: 58.5cqw !important;
+  top: -.2cqw !important;
+  left: 59.1cqw !important;
+}
+
+.category-page-final[data-category="review-assurance"]
+.category-card-hotspot[data-index="1"]
+.category-card-status {
+  left: 58.6cqw !important;
+}
+
+.category-page-final[data-category="review-assurance"]
+.category-card-hotspot[data-index="2"]
+.category-card-status {
+  left: 59.5cqw !important;
 }
 
 /* =========================================================
@@ -754,11 +789,34 @@ button, a { font: inherit; }
   height: 22cqw;
 }
 
-/* 生产溯源底图已经包含与原稿一致的“已核验 / 已核对”鱼形徽标。
-   隐藏通用 HTML 状态层，避免同一部件再次覆盖并随卡片容器放大。 */
+/* 生产溯源的状态徽标保持为独立前景部件：空白鱼形素材完整遮住底图中
+   烘焙的状态字，再由正式文字素材覆盖。这样页面进场动画仍带上完整部件，
+   同时不会出现网页文字与底图文字叠加。 */
+.category-page-final[data-category="production-traceability"]
+.category-card-hotspot {
+  overflow: visible;
+}
+
 .category-page-final[data-category="production-traceability"]
 .category-card-status {
-  display: none !important;
+  z-index: 8 !important;
+  top: -2.8cqw !important;
+  left: 58.6cqw !important;
+  display: flex !important;
+  width: 20.6cqw !important;
+  height: 9.4cqw !important;
+  box-sizing: border-box;
+  overflow: visible !important;
+  clip-path: none !important;
+  color: transparent;
+  background: none;
+  pointer-events: none;
+}
+
+/* 所有页面的状态标记均由原图鱼形部件与原设计文字图片组成，不绘制系统文字。 */
+.category-page-final .category-card-status {
+  color: transparent;
+  font-size: 0;
 }
 
 .reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
@@ -814,7 +872,7 @@ button, a { font: inherit; }
 .preview-journey-tabs { flex-wrap: wrap; }.preview-journey-tabs button { flex: 1 0 40%; }.module-preview-card .brand-guide { min-height: 34rem; }.module-preview-card .reports-hero { min-height: 24rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-guide, .reports-archive, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
+  .brand-guide, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
   .brand-guide { transition: opacity 150ms ease; }
   .brand-guide.is-leaving { opacity: 0; transform: none; }
   .reports-archive.reports-entry-transition { animation: reports-fade-in 150ms ease both; }
