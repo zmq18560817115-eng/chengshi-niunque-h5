@@ -52,7 +52,8 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText}><Image className="category-card-status-art" src="/design/final-v1/category-status-review.png" alt="" width={413} height={189} /><Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
+        const statusStyle = { "--category-status-text-width": `${fallback.statusArtwork.width / fallback.statusBaseArtwork.width * 100}%` } as CSSProperties;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText} style={statusStyle}><Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} /><Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,

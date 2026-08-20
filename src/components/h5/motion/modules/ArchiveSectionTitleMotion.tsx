@@ -53,7 +53,7 @@ const position = (group: TitleGroup) => ({
   left: `${group.left / masterWidth * 100}%`,
   top: `${group.top / masterHeight * 100}%`,
   width: `${group.width / masterWidth * 100}%`,
-  aspectRatio: `${group.width} / ${group.height}`,
+  height: `${group.height / masterHeight * 100}%`,
 }) as CSSProperties;
 
 function ArchiveSectionTitleGroup({ group, enabled }: { group: TitleGroup; enabled: boolean }) {

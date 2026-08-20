@@ -434,13 +434,11 @@ button, a { font: inherit; }
 .archive-latest-circle.is-ready.is-visible:not(.is-complete) .archive-latest-circle-stroke { animation: archive-latest-circle-stroke-draw var(--archive-circle-duration) cubic-bezier(.22,1,.36,1) var(--archive-circle-delay) both; }
 .archive-latest-circle.is-complete .archive-latest-circle-stroke { stroke-dashoffset: 0; }
 @keyframes archive-latest-circle-stroke-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-.archive-unlock-tab-motion { position: absolute; z-index: 11; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.archive-unlock-tab-motion { position: absolute; z-index: 20; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-unlock-tab-motion > .motion-stage { overflow: hidden; }
 .archive-unlock-tab-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
-.archive-unlock-tab-image.is-moving { opacity: .85; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-start-bottom) var(--archive-unlock-left)); transform: none; will-change: clip-path, opacity; }
-.archive-unlock-tab-motion.is-ready.is-revealing .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transition: clip-path var(--archive-unlock-duration) cubic-bezier(.22,1,.36,1), opacity var(--archive-unlock-duration) cubic-bezier(.22,1,.36,1); }
-.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving,
-.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); transform: none; }
+.archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-current-bottom) var(--archive-unlock-left)); transform: none; transition: clip-path var(--archive-unlock-follow) linear; will-change: clip-path; }
+.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving { clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); }
 .archive-unlock-tab-motion.is-fallback .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: none; transform: none; }
 .archive-unlock-tab-motion:not(.is-fallback) .motion-stage.is-loading .motion-stage-fallback .is-moving { opacity: 0; }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
@@ -466,10 +464,10 @@ button, a { font: inherit; }
 .archive-fish-float.is-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
 .archive-fish-float-layer.is-static, .motion-stage-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
 @keyframes archive-fish-float {
-  0%, 100% { transform: translate3d(0, calc(-1 * var(--archive-fish-amp, 7px)), 0); }
-  45% { transform: translate3d(0, var(--archive-fish-amp, 7px), 0); }
-  52% { transform: translate3d(0, calc(var(--archive-fish-amp, 7px) - var(--archive-fish-jitter, 1px)), 0); }
-  59% { transform: translate3d(0, var(--archive-fish-amp, 7px), 0); }
+  0%, 100% { transform: rotateZ(calc(-1 * var(--archive-fish-tilt, .8deg))) scale3d(1, .985, 1); }
+  45% { transform: rotateZ(var(--archive-fish-tilt, .8deg)) scale3d(.995, 1.015, 1); }
+  52% { transform: rotateZ(calc(var(--archive-fish-tilt, .8deg) - var(--archive-fish-jitter, .15deg))) scale3d(1.004, .994, 1); }
+  59% { transform: rotateZ(var(--archive-fish-tilt, .8deg)) scale3d(.997, 1.01, 1); }
 }
 .archive-section-title-motion { position: absolute; z-index: 25; inset: 0; overflow: hidden; pointer-events: none; }
 .archive-section-title-group { position: absolute; pointer-events: none; }

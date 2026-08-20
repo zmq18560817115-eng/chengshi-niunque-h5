@@ -79,6 +79,7 @@ describe("multi-page H5 interactions", () => {
     const sourceParts = [...container.querySelectorAll<HTMLElement>("[data-source-part]")]
       .map((layer) => layer.dataset.sourcePart);
     expect(sourceParts).toEqual(expect.arrayContaining(["module-2-resource-10", "module-2-resource-20"]));
+    expect(sourceParts).not.toContain("module-1-swipe");
     for (let resource = 11; resource <= 19; resource += 1) {
       expect(sourceParts).not.toContain(`module-2-resource-${resource}`);
     }
@@ -109,7 +110,8 @@ describe("multi-page H5 interactions", () => {
       "production-traceability",
     ]);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
   });
 
   it("keeps the approved archive artwork stable for reduced motion", async () => {
@@ -123,6 +125,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");
   });
 
   it("stays on the guide after five seconds and only enters once from the hint action", () => {

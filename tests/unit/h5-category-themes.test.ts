@@ -38,5 +38,7 @@ describe("H5 category report themes", () => {
     expect(cards).toHaveLength(8);
     expect(cards.every((card) => card.statusArtwork.src.startsWith("/design/final-v1/category-status-"))).toBe(true);
     expect(cards.every((card) => card.statusArtwork.width > 0 && card.statusArtwork.height === 102)).toBe(true);
+    expect(cards.every((card) => card.statusBaseArtwork.src.startsWith("/design/final-v1/"))).toBe(true);
+    expect(cards.every((card) => card.statusBaseArtwork.width >= 412 && card.statusBaseArtwork.height === 189)).toBe(true);
   });
 });

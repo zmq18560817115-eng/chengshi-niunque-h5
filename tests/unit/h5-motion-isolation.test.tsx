@@ -119,7 +119,8 @@ describe("H5 motion isolation", () => {
     expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeLessThanOrEqual(300);
     expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeGreaterThanOrEqual(700);
     expect(h5MotionTiming.archiveLatestCircle.durationMs).toBeLessThanOrEqual(900);
-    expect(h5MotionTiming.archiveUnlockTab.durationMs).toBe(650);
+    expect(h5MotionTiming.archiveUnlockTab.revealDistancePx).toBe(180);
+    expect(h5MotionTiming.archiveUnlockTab.followMs).toBe(90);
     expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeGreaterThanOrEqual(150);
     expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeLessThanOrEqual(250);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
@@ -145,7 +146,7 @@ describe("H5 motion isolation", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     expect(reports).toContain('import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";');
-    expect(reports).toContain("<ArchiveArtwork />");
+    expect(reports).toContain("<ArchiveArtwork preview={preview} />");
     expect(reports).not.toContain("archive-reference.webp");
     expect(artwork).toContain('data-artwork-source="layered-originals"');
     expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');
@@ -169,7 +170,23 @@ describe("H5 motion isolation", () => {
     expect(component).not.toContain("archive-base-clean.webp");
     expect(css).toContain("transform-origin: 50% 50%");
     expect(css).toContain("@keyframes archive-fish-float");
-    expect(css).not.toContain("translate3d(var(--archive-fish");
+    expect(css).toContain("rotateZ(calc(-1 * var(--archive-fish-tilt");
+    expect(css).not.toContain("translate3d(0, calc(-1 * var(--archive-fish");
+  });
+
+  it("places the archive unlock ribbon below the yellow page and reveals it from real scroll progress", () => {
+    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
+    const component = readFileSync("src/components/h5/motion/modules/ArchiveUnlockTabMotion.tsx", "utf8");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(artwork).not.toContain('moduleOneLayer("module-1-swipe"');
+    expect(artwork).toContain("<ArchiveUnlockTabMotion preview={preview} />");
+    expect(artwork).toContain('id === "module-1-folder-back"');
+    expect(artwork).toContain('id === "module-1-folder-front"');
+    expect(component).toContain("accumulated.current / h5MotionTiming.archiveUnlockTab.revealDistancePx");
+    expect(component).toContain("data-unlock-progress");
+    expect(component).not.toContain("sessionStorage");
+    expect(css).toContain("z-index: 20");
+    expect(css).toContain("var(--archive-unlock-current-bottom)");
   });
 
   it("replaces the three baked folder titles with the supplied viewport-scoped GIFs", () => {
@@ -189,6 +206,8 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("top: 2788");
     expect(component).toContain("top: 3165");
     expect(component).toContain("top: 3522.5");
+    expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
+    expect(component).not.toContain("aspectRatio:");
     expect(component).toContain('rootMargin: "45% 0px"');
     expect(component).toContain("h5MotionModules.archiveSectionTitle");
     expect(component).toContain("IntersectionObserver");

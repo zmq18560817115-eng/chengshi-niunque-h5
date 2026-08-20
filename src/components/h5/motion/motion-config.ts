@@ -43,8 +43,8 @@ export const h5MotionTiming = {
     threshold: 0.3,
   },
   archiveUnlockTab: {
-    triggerDistancePx: 24,
-    durationMs: 650,
+    revealDistancePx: 180,
+    followMs: 90,
   },
   archiveResultColor: {
     delayAfterCircleMs: 200,

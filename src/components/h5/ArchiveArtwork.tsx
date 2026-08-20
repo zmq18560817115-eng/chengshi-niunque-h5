@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 
 const masterWidth = 1000;
 const masterHeight = 5557;
@@ -47,8 +48,6 @@ const artworkLayers: readonly ArtworkLayer[] = [
   moduleOneLayer("module-1-batch", "h5长图-最新公开批次信息.png"),
   moduleOneLayer("module-1-passed-panel", "h5长图-已通过模块.png"),
   moduleOneLayer("module-1-passed-copy", "h5长图-已通过模块文案.png"),
-  moduleOneLayer("module-1-swipe", "h5长图-下滑条.png"),
-
   atHalfSize("module-2-resource-02", moduleTwoAsset("资源 2.png"), 1244, 715, 190.5, 2247.5),
   atHalfSize("module-2-resource-03", moduleTwoAsset("资源 3.png"), 215, 251, 696, 2199),
   atHalfSize("module-2-resource-04", moduleTwoAsset("资源 4.png"), 92, 92, 918.5, 2496.5),
@@ -74,7 +73,14 @@ const layerStyle = ({ left, top, width, height }: ArtworkLayer): CSSProperties =
   height: `${height / masterHeight * 100}%`,
 });
 
-export function ArchiveArtwork() {
+const layerStack = (id: string) => {
+  if (id === "paper-texture") return 0;
+  if (id === "module-1-folder-back") return 10;
+  if (id === "module-1-folder-front") return 30;
+  return 40;
+};
+
+export function ArchiveArtwork({ preview = false }: { preview?: boolean }) {
   return (
     <div className="reports-archive-art reports-archive-source-art" role="img" aria-label="诚实透明档案" data-artwork-source="layered-originals">
       {artworkLayers.map((layer) => (
@@ -85,13 +91,14 @@ export function ArchiveArtwork() {
           alt=""
           width={layer.width}
           height={layer.height}
-          style={layerStyle(layer)}
+          style={{ ...layerStyle(layer), zIndex: layerStack(layer.id) }}
           sizes="(max-width: 750px) 150vw, 1125px"
           loading={layer.eager ? "eager" : "lazy"}
           unoptimized={layer.unoptimized}
           data-source-part={layer.id}
         />
       ))}
+      <ArchiveUnlockTabMotion preview={preview} />
     </div>
   );
 }

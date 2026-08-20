@@ -42,7 +42,7 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
     {/* Runtime artwork is assembled from the untouched approved source parts.
         Module-two resources 11–19 are deliberately omitted because those are
         the retired static section-title layers. */}
-    <ArchiveArtwork />
+    <ArchiveArtwork preview={preview} />
     <ArchiveFishFloatMotion preview={preview} />
     <ArchiveStoryCopyMotion preview={preview} />
     <ArchiveSectionTitleMotion preview={preview} />

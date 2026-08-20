@@ -20,6 +20,7 @@ export type CategoryCardFallback = {
   description: string;
   buttonText: string;
   statusText: string;
+  statusBaseArtwork: { src: string; width: number; height: number };
   statusArtwork: { src: string; width: number; height: number };
 };
 
@@ -46,18 +47,18 @@ export const categoryCardLayouts = {
 
 export const categoryCardFallbacks = {
   "inspection-projects": [
-    { title: "核心营养含量", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
-    { title: "油脂新鲜度", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "符合标准", statusArtwork: { src: "/design/final-v1/category-status-inspection-standard.png", width: 325, height: 102 } },
-    { title: "安全底线", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
+    { title: "核心营养含量", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
+    { title: "油脂新鲜度", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "符合标准", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-standard.png", width: 325, height: 102 } },
+    { title: "安全底线", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
   ],
   "review-assurance": [
-    { title: "配方与标签", description: sharedCardDescription, buttonText: "查看4份报告", statusText: "已核对", statusArtwork: { src: "/design/final-v1/category-status-review-checked.png", width: 244, height: 102 } },
-    { title: "原料与工艺", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已留档", statusArtwork: { src: "/design/final-v1/category-status-review-archived.png", width: 244, height: 102 } },
-    { title: "稳定性与感官", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "持续关注", statusArtwork: { src: "/design/final-v1/category-status-review-watch.png", width: 326, height: 102 } },
+    { title: "配方与标签", description: sharedCardDescription, buttonText: "查看4份报告", statusText: "已核对", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/配方与标签/资源 35.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-checked.png", width: 244, height: 102 } },
+    { title: "原料与工艺", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已留档", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/原料与工艺/资源 43.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-archived.png", width: 244, height: 102 } },
+    { title: "稳定性与感官", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "持续关注", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/稳定性与感官/资源 52.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-watch.png", width: 326, height: 102 } },
   ],
   "production-traceability": [
-    { title: "生产资质", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已核验", statusArtwork: { src: "/design/final-v1/category-status-traceability-verified.png", width: 245, height: 102 } },
-    { title: "质量管理", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已核对", statusArtwork: { src: "/design/final-v1/category-status-traceability-checked.png", width: 245, height: 102 } },
+    { title: "生产资质", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已核验", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块3/生产资质/资源 65.png", width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-verified.png", width: 245, height: 102 } },
+    { title: "质量管理", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已核对", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块3/质量管理/资源 75.png", width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-checked.png", width: 245, height: 102 } },
   ],
 } satisfies Record<string, CategoryCardFallback[]>;
 
