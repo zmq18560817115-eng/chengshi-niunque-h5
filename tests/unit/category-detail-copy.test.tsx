@@ -85,6 +85,7 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(statusLabels.map((label) => label.textContent)).toEqual(["", ""]);
     expect(statusLabels.map((label) => label.dataset.status)).toEqual(["已核验", "已核对"]);
     expect(statusLabels.map((label) => label.querySelectorAll("img").length)).toEqual([2, 2]);
+    expect(statusLabels.every((label) => label.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/"))).toBe(true);
     expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
   });
