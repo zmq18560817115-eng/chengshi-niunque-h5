@@ -8,10 +8,26 @@ import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "../motion-co
 
 type UnlockState = "idle" | "revealing" | "revealed" | "fallback";
 
-const tabAsset = "/design/final-v1/motion/archive-clean/archive-unlock-tab-canvas.webp";
+const tabAsset = "/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png";
 const assets = [tabAsset] as const;
-const startBottom = (5557 - 1926) / 5557 * 100;
-const endBottom = (5557 - 2144) / 5557 * 100;
+const startBottom = (5557 - 1860) / 5557 * 100;
+const endBottom = (5557 - 2154) / 5557 * 100;
+
+function UnlockTabLayer() {
+  return (
+    <div className="archive-unlock-tab-clip is-moving">
+      <Image
+        className="archive-unlock-tab-image"
+        src={tabAsset}
+        alt=""
+        width={3034}
+        height={4334}
+        sizes="(max-width: 750px) 151.7vw, 1137.75px"
+        unoptimized
+      />
+    </div>
+  );
+}
 
 export function ArchiveUnlockTabMotion({ preview = false, enabled: enabledOverride }: { preview?: boolean; enabled?: boolean }) {
   const [state, setState] = useState<UnlockState>("idle");
@@ -74,22 +90,21 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled: enabledOverri
       setState("fallback");
     }
   }, []);
-  const fallback = <Image className="archive-unlock-tab-image is-moving" src={tabAsset} alt="" fill unoptimized />;
+  const fallback = <UnlockTabLayer />;
   const style = {
     "--archive-unlock-follow": `${h5MotionTiming.archiveUnlockTab.followMs}ms`,
-    // Pixel-derived from the 1000 x 5557 canvases. The moving layer starts
-    // immediately below the 68px head so the two pieces share one seam.
-    "--archive-unlock-left": `${840 / 1000 * 100}%`,
-    "--archive-unlock-right": `${(1000 - 918) / 1000 * 100}%`,
-    "--archive-unlock-reveal-top": `${1872 / 5557 * 100}%`,
+    // The untouched 3034 x 4334 source shares module one's half-scale
+    // transform. Its tab begins at master y=1817 and remains below the
+    // yellow folder-front layer (z=30), so that layer forms the real seam.
+    "--archive-unlock-reveal-top": `${1817 / 5557 * 100}%`,
     "--archive-unlock-current-bottom": `${startBottom - (startBottom - endBottom) * progress}%`,
-    "--archive-unlock-end-bottom": `${(5557 - 2144) / 5557 * 100}%`,
+    "--archive-unlock-end-bottom": `${(5557 - 2154) / 5557 * 100}%`,
   } as CSSProperties;
 
   return <div data-motion-module="archiveUnlockTab" className={`archive-unlock-tab-motion is-${state} ${ready ? "is-ready" : ""}`} style={style} data-unlock-state={state} data-unlock-progress={progress.toFixed(3)} data-unlock-ready={ready} aria-hidden="true">
     <MotionBoundary fallback={fallback}>
       <MotionStage masterWidth={1000} masterHeight={5557} assets={assets} enabled={enabled} crossfadeMs={0} fallback={fallback} onStateChange={handleMotionState}>
-        <Image className="archive-unlock-tab-image is-moving" src={tabAsset} alt="" fill sizes="(max-width: 750px) 100vw, 750px" unoptimized/>
+        <UnlockTabLayer />
       </MotionStage>
     </MotionBoundary>
   </div>;

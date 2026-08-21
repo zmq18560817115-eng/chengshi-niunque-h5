@@ -25,7 +25,7 @@
 - Backend card title, description, and button text take priority. Reference copy is used only for an empty fixed slot, so category and report maintenance remains data-driven.
 - Each complete card remains the click target; visual copy, arrow, and status layers do not intercept pointer events.
 - Guide papers share one 420ms start and one 1500ms duration. Only transform and opacity vary; final coordinates remain the approved artwork coordinates.
-- Archive ribbon uses the pixel seam at y=1678 and reveals continuously to y=1951. The short head and moving body do not overlap.
+- Archive ribbon renders the untouched 3034 x 4334 repository `h5长图-下滑条.png` on the same half-scale transform as module one. Its runtime stack remains between the folder back and yellow folder front, so the yellow page itself masks the top edge; user scroll reveals the remaining source from master y=1860 through y=2154.
 - Archive result-colour motion uses the original-pixel crop at master bounds `(63, 1820, 691, 1933)`. Only the 628 x 113 changing region is composited, and it shares the latest-circle trigger/root margin so the two motions remain one continuous sequence during scrolling.
 - Fish canvases use the archive 1000 x 5557 origin. Browser inspection confirmed the module changes from `is-ready` to `is-visible` when its trigger enters the viewport.
 
@@ -72,6 +72,26 @@
 
 final result: passed
 
+## Archive unlock-ribbon source-layer verification — 2026-08-21
+
+**Source visual truth**
+
+- User-supplied final-state reference: 415 x 908 ribbon crop retained in the review conversation.
+- Runtime now uses the repository source `public/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png` directly (3034 x 4334). The former derived 1000 x 5557 ribbon canvas is no longer rendered.
+- The source file is not cropped, redrawn, or re-encoded. It shares module one's exact `(-406, 0, 1517 x 2167)` master placement.
+
+**Layering and motion evidence**
+
+- The stack is folder back z=10, ribbon z=20, yellow folder front z=30. The yellow page therefore forms the real top occlusion instead of a simulated mask or cover patch.
+- Initial progress 0 clips the source at master y=1860. A hidden-ribbon pixel baseline found 0 materially changed pixels at y=1840 and y=1860, confirming the ribbon is fully occluded on entry. At y=1880 the first 59 material pixels appear, so scroll reveal begins directly below the source seam.
+- Final progress 1 exposes the untouched source through master y=2154, including the complete swallow-tail end.
+
+**Browser evidence**
+
+- System Chrome passed 375 x 667, 375 x 812, 390 x 844, and 430 x 932. All runs retained the exact source geometry, zero horizontal overflow, and zero console or response errors. Reduced-motion showed the same final source under the yellow front layer. Local captures and machine reports were intentionally excluded from Git.
+
+final result: passed
+
 ## Review-assurance title alignment verification — 2026-08-21
 
 **Source visual truth**
@@ -110,7 +130,7 @@ final result: passed
 
 - Archive title GIFs retain their original 2x canvases and map to the 1000 x 5557 master at `(486, 2788)`, `(87.5, 3165)`, and `(472, 3522.5)`. They preload only near the title region, mount only while visible, and fully unload offscreen.
 - Reduced-motion, preview, disabled, timeout, and image-failure states never restore the retired static titles. In those states the title areas remain empty because the only title renderers are the supplied GIFs.
-- Fish animation uses cropped source assets, starts only in its viewport region, and stops offscreen. Once the story assets are ready, its clean animation base is stable before the reveal trigger; the four-line reveal pauses offscreen and only records completion after 7.6 seconds of accumulated visible playback.
+- Fish animation uses the four supplied full-canvas GIF assets, starts only in its viewport region, and fully unmounts offscreen. Once the story assets are ready, its clean animation base is stable before the reveal trigger; the four-line reveal pauses offscreen and only records completion after 7.6 seconds of accumulated visible playback.
 - Motion preload timeout is terminal, so a late resource resolution cannot revive a failed animation. Dynamic reduced-motion changes reset the Guide timeline and do not leave Fish or Story running offscreen.
 - The Guide uses one 750 x 1625 stage across background, masks, character, papers, hints, and hit behavior. Category status art, card copy offsets, batch bubble, navigation targets, and archive hotspots remain mapped on their supplied master canvases.
 
@@ -143,5 +163,28 @@ final result: passed
 **Browser evidence**
 
 - System Chrome screenshots and all six responsive route checks show the approved fish-status artwork without the former duplicate foreground badge; the card route and full-card hit target remain intact.
+
+final result: passed
+
+## Archive fish GIF replacement verification — 2026-08-21
+
+**Source visual truth**
+
+- Supplied static placement reference: 782 x 143 crop retained in the review conversation.
+- Four supplied motion sources were copied byte-for-byte to the runtime asset directory. Every GIF is 281 x 176, 24 frames at 150ms per frame, 3.6 seconds per loop, with transparent frames and infinite looping; no frame, crop, palette, or timing was modified.
+
+**Implementation evidence**
+
+- System Chrome captured equal-pixel frames 450ms apart and compared the 782 x 143 source placement against the live 391 x 852 viewport. Local captures and machine reports were intentionally excluded from Git.
+
+**Findings and fixes**
+
+- [Fixed P1] The previous runtime used four static PNG crops plus one generic CSS rotate/scale keyframe. It has been replaced by the four supplied GIF motions; `archive-fish-float` keyframes and per-fish CSS timing variables were removed.
+- Silhouette matching identified the correct left-to-right source order as attachment 3, attachment 1, attachment 4, attachment 2. The normalized silhouette Dice matches against the prior approved fish positions were 0.9845, 0.9892, 0.9832, and 0.9852 respectively.
+- The unchanged 2x GIF canvases map to master rectangles `(54, 4408, 140.5, 88)`, `(300, 4404.5, 140.5, 88)`, `(543.5, 4407, 140.5, 88)`, and `(791, 4403, 140.5, 88)`. Their first-frame alpha bounds align with the existing four fish positions.
+- The four assets mount atomically with the existing clean source patch only after preload completion and viewport visibility. They fully unmount offscreen so native GIF decoding does not continue outside the fish region.
+- Normal-motion browser evidence reported four 281 x 176 GIF instances, one clean patch, 200 responses for all five motion assets, 7.06% changed pixels over 450ms, zero horizontal overflow, zero console errors, and zero failed responses.
+- Reduced-motion browser evidence reported zero GIF elements and zero fish-motion/clean-patch requests; the approved static repository artwork remains visible.
+- Fonts, copy, color tokens, source texture, archive layout, title positions, hotspots, and card interactions were unchanged. The GIF palette and transparent edges are the supplied originals.
 
 final result: passed

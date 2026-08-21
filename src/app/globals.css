@@ -436,10 +436,11 @@ button, a { font: inherit; }
 @keyframes archive-latest-circle-stroke-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .archive-unlock-tab-motion { position: absolute; z-index: 20; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-unlock-tab-motion > .motion-stage { overflow: hidden; }
-.archive-unlock-tab-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
-.archive-unlock-tab-image.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-current-bottom) var(--archive-unlock-left)); transform: none; transition: clip-path var(--archive-unlock-follow) linear; will-change: clip-path; }
-.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-image.is-moving { clip-path: inset(var(--archive-unlock-reveal-top) var(--archive-unlock-right) var(--archive-unlock-end-bottom) var(--archive-unlock-left)); }
-.archive-unlock-tab-motion.is-fallback .archive-unlock-tab-image.is-moving { opacity: 1; clip-path: none; transform: none; }
+.archive-unlock-tab-clip { position: absolute; inset: 0; overflow: hidden; }
+.archive-unlock-tab-image { position: absolute; left: -40.6%; top: 0; display: block; width: 151.7%; height: 38.9959%; max-width: none; object-fit: fill; }
+.archive-unlock-tab-clip.is-moving { opacity: 1; clip-path: inset(var(--archive-unlock-reveal-top) 0 var(--archive-unlock-current-bottom) 0); transform: none; transition: clip-path var(--archive-unlock-follow) linear; will-change: clip-path; }
+.archive-unlock-tab-motion.is-revealed .archive-unlock-tab-clip.is-moving { clip-path: inset(var(--archive-unlock-reveal-top) 0 var(--archive-unlock-end-bottom) 0); }
+.archive-unlock-tab-motion.is-fallback .archive-unlock-tab-clip.is-moving { opacity: 1; clip-path: none; transform: none; }
 .archive-unlock-tab-motion:not(.is-fallback) .motion-stage.is-loading .motion-stage-fallback .is-moving { opacity: 0; }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-result-color > .motion-stage { position: absolute; inset: auto; top: 32.751485%; left: 6.3%; width: 62.8%; height: 2.033471%; overflow: visible; contain: layout paint style; isolation: isolate; }
@@ -458,17 +459,9 @@ button, a { font: inherit; }
 .archive-fish-float > .motion-stage { position: absolute; inset: 0; }
 .archive-fish-float-trigger { position: absolute; top: 79.38%; left: 3%; width: 94%; height: 1.4%; pointer-events: none; }
 .archive-fish-clean-patch { position: absolute; z-index: 0; display: block; object-fit: fill; opacity: 0; }
-.archive-fish-float-layer { position: absolute; z-index: 1; display: block; object-fit: fill; opacity: 0; transform: translate3d(0, 0, 0); transform-origin: 50% 50%; backface-visibility: hidden; will-change: transform; }
+.archive-fish-motion-gif { position: absolute; z-index: 1; display: block; object-fit: fill; opacity: 0; }
 .archive-fish-float.is-ready.is-visible .archive-fish-clean-patch { opacity: 1; }
-.archive-fish-float.is-ready.is-visible .archive-fish-float-layer { opacity: 1; animation: archive-fish-float var(--archive-fish-duration) cubic-bezier(.45,0,.55,1) var(--archive-fish-delay) infinite; transition: opacity .25s cubic-bezier(.22,1,.36,1); }
-.archive-fish-float.is-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
-.archive-fish-float-layer.is-static, .motion-stage-fallback .archive-fish-float-layer { opacity: 1; transform: none; animation: none; }
-@keyframes archive-fish-float {
-  0%, 100% { transform: rotateZ(calc(-1 * var(--archive-fish-tilt, .8deg))) scale3d(1, .985, 1); }
-  45% { transform: rotateZ(var(--archive-fish-tilt, .8deg)) scale3d(.995, 1.015, 1); }
-  52% { transform: rotateZ(calc(var(--archive-fish-tilt, .8deg) - var(--archive-fish-jitter, .15deg))) scale3d(1.004, .994, 1); }
-  59% { transform: rotateZ(var(--archive-fish-tilt, .8deg)) scale3d(.997, 1.01, 1); }
-}
+.archive-fish-float.is-ready.is-visible .archive-fish-motion-gif { opacity: 1; }
 .archive-section-title-motion { position: absolute; z-index: 25; inset: 0; overflow: hidden; pointer-events: none; }
 .archive-section-title-group { position: absolute; pointer-events: none; }
 .archive-section-title-group > .motion-stage,

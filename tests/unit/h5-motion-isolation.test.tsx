@@ -160,18 +160,21 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("animates the four archive fish independently around their fixed centers", () => {
+  it("uses the four supplied GIF motions at the matching archive fish positions", () => {
     const component = readFileSync("src/components/h5/motion/modules/ArchiveFishFloatMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(component).toContain("data-fish-index={index + 1}");
-    expect(component).toContain("delay: -120, duration: 2100");
-    expect(component).toContain("delay: -1040, duration: 2520");
+    expect(component.match(/fish-motion-0[1-4]\.gif/g)).toHaveLength(4);
+    expect(component).toContain('x: 54, y: 4408, width: 140.5, height: 88');
+    expect(component).toContain('x: 791, y: 4403, width: 140.5, height: 88');
+    expect(component).toContain("ready && visible");
+    expect(component).toContain("data-fish-nearby={nearby}");
+    expect(component).toContain("unoptimized onError={handleGifError}");
     expect(component).toContain("/motion/archive-runtime/fish-clean-patch.png");
     expect(component).not.toContain("archive-base-clean.webp");
-    expect(css).toContain("transform-origin: 50% 50%");
-    expect(css).toContain("@keyframes archive-fish-float");
-    expect(css).toContain("rotateZ(calc(-1 * var(--archive-fish-tilt");
-    expect(css).not.toContain("translate3d(0, calc(-1 * var(--archive-fish");
+    expect(css).toContain(".archive-fish-motion-gif");
+    expect(css).not.toContain("@keyframes archive-fish-float");
+    expect(css).not.toContain("--archive-fish-duration");
   });
 
   it("places the archive unlock ribbon below the yellow page and reveals it from real scroll progress", () => {
@@ -185,7 +188,14 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("accumulated.current / h5MotionTiming.archiveUnlockTab.revealDistancePx");
     expect(component).toContain("data-unlock-progress");
     expect(component).not.toContain("sessionStorage");
+    expect(component).toContain("/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png");
+    expect(component).toContain("width={3034}");
+    expect(component).toContain("height={4334}");
+    expect(component).toContain("1817 / 5557");
+    expect(component).toContain("5557 - 1860");
     expect(css).toContain("z-index: 20");
+    expect(css).toContain("left: -40.6%");
+    expect(css).toContain("width: 151.7%");
     expect(css).toContain("var(--archive-unlock-current-bottom)");
   });
 

@@ -98,7 +98,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-motion-layers")).not.toBeInTheDocument();
   });
 
-  it("wires the cropped fish, story reveal, and three GIF title groups over the archive artwork", () => {
+  it("wires the supplied fish GIFs, story reveal, and three GIF title groups over the archive artwork", () => {
     const { container } = render(<ReportsArchive modules={[]}/>);
     expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).toBeInTheDocument();
     expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(4);
@@ -120,6 +120,7 @@ describe("multi-page H5 interactions", () => {
     expect(pendingImages).toHaveLength(0);
     expect(container.querySelector(".archive-fish-float")).toBeInTheDocument();
     expect(container.querySelector(".archive-fish-clean-patch")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-fish-motion-gif")).not.toBeInTheDocument();
     expect(container.querySelectorAll(".archive-section-title-group")).toHaveLength(3);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
