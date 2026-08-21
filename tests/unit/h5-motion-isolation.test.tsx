@@ -201,7 +201,7 @@ describe("H5 motion isolation", () => {
     expect(component).not.toContain("title-clean-");
     expect(component).not.toContain("cleanPatch");
     expect(component).toContain("left: 486");
-    expect(component).toContain("left: 62.5");
+    expect(component).toContain("left: 25");
     expect(component).toContain("left: 472");
     expect(component).toContain("top: 2788");
     expect(component).toContain("top: 3165");

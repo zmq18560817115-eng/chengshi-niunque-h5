@@ -72,6 +72,31 @@
 
 final result: passed
 
+## Review-assurance title alignment verification — 2026-08-21
+
+**Source visual truth**
+
+- User-reported issue crop: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-3671f8e0-c06c-4043-92c1-8dab682a28d5.png` (438 x 160). It shows the right edge of `②复核保障` entering the green fold instead of remaining on the yellow tab.
+- Approved runtime title asset: `public/design/final-v1/复核保障_逐字跳动.gif` (878 x 204). The supplied GIF is kept intact; no crop, redraw, mask, or replacement text is used.
+- The yellow archive folder and adjacent layers remain the untouched repository artwork assembled by `ArchiveArtwork`.
+
+**Implementation evidence**
+
+- Full runtime viewport: `artifacts/qa-review-title-20260821/archive-review-title-375x812@2x.png` (750 x 1624 physical pixels from a 375 x 812 CSS viewport at device scale factor 2).
+- Focused runtime crop: `artifacts/qa-review-title-20260821/review-title-implementation.png` (438 x 160).
+- Same-pixel comparison, reported issue on the left and corrected runtime on the right: `artifacts/qa-review-title-20260821/review-title-source-vs-implementation.png` (876 x 160).
+- Runtime report: `artifacts/qa-review-title-20260821/report.json`.
+
+**State and findings**
+
+- Normal-motion `/reports` state, scrolled to the second archive tab with the supplied GIF decoded and visible.
+- The complete title canvas remains 439 x 102 master pixels at top 3165. Only its master left anchor changed from the previously shipped 62.5 to 25, placing the visible title within the yellow tab before the green fold.
+- Browser geometry resolved to left 9.375 CSS px, width 164.625 CSS px at the 375px reference viewport, with one GIF instance, natural size 878 x 204, zero horizontal overflow, zero console errors, and zero failed responses.
+- Iteration history: 62.5 still crossed the fold; 47.5 reduced but did not remove the overlap; 25 aligns the title's visible right edge with the yellow safe area in the same-size focused comparison.
+- No other archive title, artwork layer, hotspot, animation timing, asset, copy, font, or color changed.
+
+final result: passed
+
 ## Runtime and motion verification — 2026-08-20
 
 **Source visual truth**
