@@ -78,40 +78,54 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".motion-stage-fallback .brand-guide-fallback");
   });
 
-  it("maps every guide layer through one covering 750 by 1625 stage", () => {
+  it("contains the 750 by 1625 guide in one viewport over the repository texture", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain("aspect-ratio: 750 / 1625;");
-    expect(css).toContain("width: max(100%, 46.153846vh);");
-    expect(css).toContain("width: max(100cqw, 46.153846cqh);");
+    expect(css).toContain("overflow: hidden; align-items: center;");
+    expect(css).toContain(".brand-guide-stage { position: relative; isolation: isolate; width: min(100%, 46.153846vh, var(--h5-content-width)); width: min(100%, 46.153846svh, var(--h5-content-width));");
     expect(css).toContain("object-fit: contain; object-position: center;");
-    expect(css).not.toContain('background-image: url("/design/guide/guide-background.webp")');
+    expect(css).toContain(".brand-guide-base { z-index: 10; }");
+    expect(css).toContain('background: #f8e89d url("/design/guide/guide-background.webp") center / cover no-repeat');
+    expect(css).not.toContain("guide-initial-frame-out");
+    expect(css).not.toContain("guide-final-frame-in");
   });
 
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
-    [393, 852], [414, 896], [430, 932],
-  ])("covers a %ix%i phone viewport without a narrow inner canvas", (width, height) => {
+    [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
+  ])("keeps the complete guide artwork inside a %ix%i phone viewport", (width, height) => {
     const masterRatio = 750 / 1625;
-    const stageWidth = Math.max(width, height * masterRatio);
+    const stageWidth = Math.min(width, height * masterRatio, 750);
     const stageHeight = stageWidth / masterRatio;
-    expect(stageWidth).toBeGreaterThanOrEqual(width);
-    expect(stageHeight).toBeGreaterThanOrEqual(height - Number.EPSILON);
+    expect(stageWidth).toBeLessThanOrEqual(width);
+    expect(stageHeight).toBeLessThanOrEqual(height + Number.EPSILON);
     expect(stageWidth / stageHeight).toBeCloseTo(masterRatio, 8);
   });
 
   it("reveals the swipe hint after the papers with a perceptible entrance", () => {
     expect(h5MotionTiming.guide.hintStartMs).toBe(h5MotionTiming.guide.paperStartMs);
     expect(h5MotionTiming.guide.hintDurationMs).toBeGreaterThanOrEqual(500);
-    expect(h5MotionTiming.guide.swipeReadyMs).toBe(h5MotionTiming.guide.hintStartMs);
+    expect(h5MotionTiming.guide.swipeReadyMs).toBe(
+      h5MotionTiming.guide.paperStartMs + 220 + h5MotionTiming.guide.paperDurationMs,
+    );
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain("@keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }");
   });
 
-  it("keeps the supplied window mask above the character and below the papers", () => {
+  it("keeps the supplied window frame above the masked character and incoming papers beneath the envelope foreground", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain(".brand-guide-arch { z-index: 15;");
+    const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     expect(css).toContain(".brand-guide-character { z-index: 20;");
     expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
-    expect(css).toContain(".brand-guide-paper { z-index: 30;");
+    expect(css).toContain(".brand-guide-arch { z-index: 27;");
     expect(css).toContain(".brand-guide-foreground-top { z-index: 35;");
+    expect(css).toContain(".brand-guide-paper { z-index: 34;");
+    expect(guide).toContain("const firstFrame = <GuideLayers animated={false}");
+    expect(guide).toContain("<GuideLayers animated={false} onError={onLayerError}/>");
+    expect(guide).not.toContain("guide-first-frame.webp");
+    expect(css).not.toContain("brand-guide-paper-arm-occlusion");
+    expect(css).not.toContain("brand-guide-paper-right-occlusion");
+    expect(css).not.toContain("guide-right-arm-mask.webp");
+    expect(css).toContain("@keyframes guide-paper-from-right { from { transform: translate3d(49.133333%,-2.246154%,0) rotate(3.4deg); } to { transform: translate3d(10.133333%,-1.046154%,0) rotate(0); } }");
   });
 
   it("keeps archive motion visible long enough to be perceived", () => {

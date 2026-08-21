@@ -4,7 +4,7 @@
 
 - Category masters: `public/design/final-v1/category-inspection-clean.webp`, `category-review-clean.webp`, `category-traceability-clean.webp` (1000 x 2166).
 - Formal category references: `docs/input/design/final-v1/references-最终效果/报告点击页-01.jpg`, `报告点击页-02.jpg`, `报告点击页-03.jpg` (2000 x 4333).
-- Guide master/fallback: `public/design/guide/guide-first-frame.webp`, `guide-final-fallback.webp` (750 x 1625).
+- Guide first paint and normal-motion loading use the same repository layers as the animated 750 x 1625 canvas: background, open-eye character, window mask, arch, and foreground. The legacy `guide-first-frame.webp` is no longer rendered. `guide-final-fallback.webp` is reserved for reduced-motion, disabled, or failed states.
 - Archive visual reference: `public/design/final-v1/archive-reference.webp` (1000 x 5557). Runtime static artwork uses untouched module-one/two parts plus the untouched complete module-three output slice; the flattened full-page reference is not rendered.
 - User device captures supplied on 2026-08-13 and 2026-08-17 were used to identify the category copy drift and ribbon seam.
 
@@ -48,27 +48,31 @@
 - Mobile-width acceptance: **passed** at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932.
 - Full deployment readiness: **conditional** on database/object-storage connectivity, migration status, and application service wiring.
 
-## Guide layered-canvas verification — 2026-08-19
+## Guide layered-canvas verification — 2026-08-21
 
 **Source visual truth**
 
-- Initial state: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-aa9910f4-ec52-497c-933b-e1fbc42ef925.jpg` (2000 x 4333).
-- Completed state: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-5a09925a-b296-446b-ba94-f0a9f0794e75.jpg` (2000 x 4333).
-- CSS master canvas: 750 x 1625, device scale factor 1 for normalized offline comparison.
-- Full-view comparison: `test-results/guide-mask-qa/reference-vs-unified-canvas-states.jpg`.
-- Focused mask comparisons: `test-results/guide-mask-qa/reference-vs-mask-above-723x1024.jpg` and `reference-vs-mask-behind-723x1024.jpg`.
+- User initial-state reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-19ec3a42-dafa-4706-8add-ab8f321437a6.jpg` (2000 x 4333).
+- User completed-state reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-b55d4685-437b-4b97-acde-d617882a30d4.jpg` (2000 x 4333).
+- User-recorded failure video: `C:/Users/bu/Desktop/H5设计开发/测试/首页测试错误.mp4` (766 x 1472, 18.8s). The original was kept unchanged; review frames were generated only under ignored `artifacts/qa-guide-video-20260821/`.
+- CSS master canvas: 750 x 1625. Exact same-state comparisons: `artifacts/qa-guide-exact-20260821/start-reference-runtime-heat.png` and `final-reference-runtime-heat.png`; focused right-paper evidence: `final-right-paper-focus.png`.
 
 **Findings and fixes**
 
-- [Fixed P1] The rollback version stretched every full-canvas raster independently with `object-fit: fill`. Background, character, mask and foreground now share one centered 750 x 1625 stage; each same-ratio image uses `contain`, while the stage itself cover-fits the viewport.
-- [Fixed P1] SSR previously exposed the final fallback before returning to the animation start. SSR, hydration, and loading now hold the supplied `guide-first-frame.webp`; the decomposed animation starts from the same visual frame only after its assets are decoded.
-- [Fixed P1] The supplied window mask must sit above the character and below the reports. Runtime order is background 10, arch 15, character 20, window mask 25, papers 30, foreground 35 and hint 40.
-- Animation behavior is preserved: the existing 180ms handoff and all values in `motion-config.ts` remain unchanged.
+- [Fixed P1] The prior full-width stage exceeded short screens and introduced an internal vertical scroll. The shared 750 x 1625 stage now fits within both viewport dimensions, stays centered, and uses the repository paper texture in any side gutters. No layer is stretched or cropped.
+- [Fixed P1] SSR, hydration, and loading now assemble the exact same repository layers as the animated zero frame. The window mask, arch, character, and foreground are therefore present from the first rendered frame; the 180ms ready handoff no longer introduces a missing frame or changes page geometry.
+- [Fixed P1] The supplied window mask and arch remain above the character. Incoming report papers are below the complete envelope/arm foreground, matching the source-image occlusion. The runtime order is background 10, character 20, window mask 25, arch 27, papers 34, foreground 35, and hint 40.
+- [Fixed P1] The normal animation no longer mounts or swaps a full-canvas initial/final image. The closed-eye layer alone progresses continuously from opacity 0 to 1 between 350 and 620ms; each paper keeps its own transform/opacity animation on the same persistent canvas.
+- [Fixed P2] Exact final-state comparison exposed the right report paper left/down from the supplied reference. Pixel registration corrected its final position by `(+76, -17)` master pixels while preserving the original movement delta. Full-frame mean absolute error improved from 7.904 to 6.563 and the materially changed pixel ratio improved from 12.077% to 10.125%; the remaining differences are raster resampling and edge compression rather than a visible layer-placement error.
+- Entry remains locked until the last staggered paper completes at 2140ms.
 - Fonts, colors, image copy and supplied raster artwork are unchanged. No CSS-drawn replacement was introduced.
 
 **Browser evidence**
 
-- System Chrome mobile emulation verified the guide at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932. The stage covers each viewport, its visual layers retain one transform, reduced motion shows only the final fallback, swipe navigation reaches `/reports`, and no console/page/request error was observed.
+- System Chrome verified 320 x 568, 360 x 640, 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, 430 x 932, 768 x 1024, and the supplied recording size 766 x 1472. Every root had `scrollHeight === clientHeight`, zero document overflow, a complete centered 750 / 1625 stage, and no console or page error. Short screens retain textured side gutters instead of cropping the stage; taller screens scale the same fixed page without stretching any layer.
+- A 900ms delayed-resource probe at 375 x 812 captured `artifacts/guide-transition-initial-375x812.png`, `guide-transition-ready-375x812.png`, and `guide-transition-paper-375x812.png`. Initial and ready frames retain the same complete yellow window structure; paper motion begins on that persistent canvas without a full-frame replacement.
+- The same browser probe reported zero console, page, and HTTP errors. All four moving papers computed at z-index 34 while the envelope/arm foreground remained at z-index 35, so the left and right incoming sheets pass beneath the envelope artwork.
+- Reduced-motion cold start renders one canonical final fallback and mounts zero dynamic stages. `pnpm lint`, `pnpm typecheck`, all 104 tests, `pnpm prisma:validate`, and `pnpm build` passed after the final implementation.
 
 final result: passed
 
@@ -140,7 +144,7 @@ final result: passed
 - The layered-archive probe reported 26 repository source parts, zero `archive-reference.webp` instances, zero retired title parts, zero broken images, and a 375px document width in a 375px viewport. Combined reference/runtime captures show the complete module-three bottom texture and envelope without a seam; visible-state captures show exactly three GIFs with no title-clean patches or double image.
 - Reduced-motion cold-start checks requested no Guide dynamic assets, archive GIFs, Fish patches, or Story patches. The Guide fallback remained visible and the archive title regions remained free of retired static text.
 - Playwright mobile acceptance and category-alignment suites passed 16/16 scenarios, including Guide-to-archive navigation, all six phone sizes, category/report opening, and swipe-back behavior.
-- Unit coverage passed 95/95 tests. `pnpm lint`, `pnpm typecheck`, `pnpm prisma:validate`, and `pnpm build` passed.
+- Unit coverage passed 104/104 tests. `pnpm lint`, `pnpm typecheck`, `pnpm prisma:validate`, and `pnpm build` passed.
 - Physical WeChat testing was not available in this environment; the evidence above uses system Chrome mobile emulation with touch input.
 
 final result: passed
@@ -171,19 +175,19 @@ final result: passed
 **Source visual truth**
 
 - Supplied static placement reference: 782 x 143 crop retained in the review conversation.
-- Four supplied motion sources were copied byte-for-byte to the runtime asset directory. Every GIF is 281 x 176, 24 frames at 150ms per frame, 3.6 seconds per loop, with transparent frames and infinite looping; no frame, crop, palette, or timing was modified.
+- Four newly supplied motion sources were copied byte-for-byte to the runtime asset directory. Every GIF is 281 x 176, 24 frames at 220ms per frame, 5.28 seconds per loop, with transparent frames and infinite looping; no frame, crop, palette, or timing was modified.
 
 **Implementation evidence**
 
-- System Chrome captured equal-pixel frames 450ms apart and compared the 782 x 143 source placement against the live 391 x 852 viewport. Local captures and machine reports were intentionally excluded from Git.
+- System Chrome captured same-size frames 660ms apart and compared the supplied fish silhouettes against the live 375 x 812 viewport. Local captures and machine reports were intentionally excluded from Git.
 
 **Findings and fixes**
 
 - [Fixed P1] The previous runtime used four static PNG crops plus one generic CSS rotate/scale keyframe. It has been replaced by the four supplied GIF motions; `archive-fish-float` keyframes and per-fish CSS timing variables were removed.
-- Silhouette matching identified the correct left-to-right source order as attachment 3, attachment 1, attachment 4, attachment 2. The normalized silhouette Dice matches against the prior approved fish positions were 0.9845, 0.9892, 0.9832, and 0.9852 respectively.
+- Silhouette matching identified the correct left-to-right source order for the latest delivery as attachment 2, attachment 3, attachment 4, attachment 1. This preserves the approved fish direction and footprint at every existing position.
 - The unchanged 2x GIF canvases map to master rectangles `(54, 4408, 140.5, 88)`, `(300, 4404.5, 140.5, 88)`, `(543.5, 4407, 140.5, 88)`, and `(791, 4403, 140.5, 88)`. Their first-frame alpha bounds align with the existing four fish positions.
 - The four assets mount atomically with the existing clean source patch only after preload completion and viewport visibility. They fully unmount offscreen so native GIF decoding does not continue outside the fish region.
-- Normal-motion browser evidence reported four 281 x 176 GIF instances, one clean patch, 200 responses for all five motion assets, 7.06% changed pixels over 450ms, zero horizontal overflow, zero console errors, and zero failed responses.
+- Normal-motion browser evidence reported four 281 x 176 GIF instances, one clean patch, visible frame changes over 660ms, zero horizontal overflow, zero console errors, and zero failed responses.
 - Reduced-motion browser evidence reported zero GIF elements and zero fish-motion/clean-patch requests; the approved static repository artwork remains visible.
 - Fonts, copy, color tokens, source texture, archive layout, title positions, hotspots, and card interactions were unchanged. The GIF palette and transparent edges are the supplied originals.
 

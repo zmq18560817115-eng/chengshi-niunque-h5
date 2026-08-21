@@ -80,4 +80,31 @@ describe("admin content management", () => {
     const current = await prisma.informationModule.findUnique({ where: { id: "seed-module-inspection" }, select: { contentStatus: true } });
     expect(current?.contentStatus).toBe("PUBLISHED");
   });
+
+  it("links admin-authored card text and multi-page image reports to the public card count", async () => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const category = await prisma.informationModule.create({ data: { slug: `linked-report-${suffix}`, title: "联通测试分类", description: "后台分类说明", sortOrder: 9990, contentStatus: "PUBLISHED", isOnline: true, publishedAt: new Date(), createdById: adminId, updatedById: adminId } });
+    const card = await prisma.reportCard.create({ data: { moduleId: category.id, title: "后台卡片标题", description: "后台卡片内容", sortOrder: 10, contentStatus: "PUBLISHED", isOnline: true, publishedAt: new Date(), createdById: adminId, updatedById: adminId } });
+    const first = await prisma.reportAsset.create({ data: { reportCardId: card.id, title: "第一份报告", assetType: "IMAGE", openMode: "SAME_TAB", storageKey: `reports/${suffix}/1.png`, mimeType: "image/png", sortOrder: 10, contentStatus: "PUBLISHED", isOnline: true, publishedAt: new Date(), createdById: adminId, updatedById: adminId, pages: { create: [
+      { storageKey: `reports/${suffix}/1-1.png`, mimeType: "image/png", pageNumber: 1 },
+      { storageKey: `reports/${suffix}/1-2.png`, mimeType: "image/png", pageNumber: 2 },
+      { storageKey: `reports/${suffix}/1-3.png`, mimeType: "image/png", pageNumber: 3 },
+    ] } } });
+    const second = await prisma.reportAsset.create({ data: { reportCardId: card.id, title: "第二份报告", assetType: "IMAGE", openMode: "SAME_TAB", storageKey: `reports/${suffix}/2.png`, mimeType: "image/png", sortOrder: 20, contentStatus: "PUBLISHED", isOnline: true, publishedAt: new Date(), createdById: adminId, updatedById: adminId, pages: { create: [{ storageKey: `reports/${suffix}/2-1.png`, mimeType: "image/png", pageNumber: 1 }] } } });
+
+    try {
+      const service = new PublicContentService();
+      const initial = await service.getModuleBySlug(category.slug);
+      expect(initial?.cards[0]).toMatchObject({ title: "后台卡片标题", description: "后台卡片内容", buttonText: "查看2份报告" });
+      expect(initial?.cards[0]?.assets.map((asset) => asset.pages.length)).toEqual([3, 1]);
+
+      await prisma.reportCard.update({ where: { id: card.id }, data: { title: "更新后的卡片标题", description: "更新后的卡片内容" } });
+      const updated = await service.getModuleBySlug(category.slug);
+      expect(updated?.cards[0]).toMatchObject({ title: "更新后的卡片标题", description: "更新后的卡片内容", buttonText: "查看2份报告" });
+    } finally {
+      await prisma.reportAsset.deleteMany({ where: { id: { in: [first.id, second.id] } } });
+      await prisma.reportCard.delete({ where: { id: card.id } });
+      await prisma.informationModule.delete({ where: { id: category.id } });
+    }
+  });
 });

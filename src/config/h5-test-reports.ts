@@ -21,4 +21,5 @@ export const TEST_REPORT_PLACEHOLDERS: PublicAsset[] = TEST_REPORT_SOURCES.map((
   type: "IMAGE",
   href: item.src,
   openMode: "same_tab",
+  pages: [{ id: `test-report-page-${index + 1}`, pageNumber: 1, href: item.src }],
 }));

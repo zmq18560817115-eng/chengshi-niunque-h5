@@ -14,6 +14,7 @@ describe("PostgreSQL integration", () => {
         "InformationModule",
         "ReportCard",
         "ReportAsset",
+        "ReportAssetPage",
         "PublishVersion",
         "AuditLog",
         "SiteSetting",

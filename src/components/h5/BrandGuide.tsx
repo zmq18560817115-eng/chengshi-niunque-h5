@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
@@ -13,7 +13,7 @@ const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp",
   "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-foreground-top.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
-  "swipe-hint-text.webp", "swipe-hint-arrow.webp",
+  "swipe-hint-text.webp", "swipe-hint-arrow.webp", "guide-final-fallback.webp",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const guideAssets = guideAssetNames.map(assetUrl);
@@ -27,26 +27,14 @@ function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError
   </>;
 }
 
-function GuideBootstrapFrame({ onFirstFrameError, onFinalFallbackError }: { onFirstFrameError: () => void; onFinalFallbackError: () => void }) {
-  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
-    const failedSource = event.currentTarget.currentSrc || event.currentTarget.src;
-    if (failedSource.includes("guide-final-fallback.webp")) onFinalFallbackError();
-    else onFirstFrameError();
-  };
-  return <picture className="brand-guide-bootstrap-frame">
-    <source media="(prefers-reduced-motion: reduce)" srcSet={assetUrl("guide-final-fallback.webp")}/>
-    <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" fetchPriority="high" unoptimized decoding="async" onError={handleError}/>
-  </picture>;
-}
-
 function GuideLayers({ animated, onError }: { animated: boolean; onError: (name: string) => void }) {
   const image = (name: (typeof guideAssetNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onError={() => onError(name)}/>;
   return <div className={`brand-guide-dynamic-stage ${animated ? "is-animated-canvas" : "is-initial-canvas"}`}>
     {image("guide-background.webp", "brand-guide-base", true)}
-    {image("guide-arch.webp", "brand-guide-arch")}
     {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
     {animated && image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
     {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
+    {image("guide-arch.webp", "brand-guide-arch", true)}
     {animated && <>
       {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top")}
       {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left")}
@@ -58,6 +46,13 @@ function GuideLayers({ animated, onError }: { animated: boolean; onError: (name:
       </div>
     </>}
     {image("guide-foreground-top.webp", "brand-guide-foreground-top", true)}
+  </div>;
+}
+
+function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerError: (name: string) => void; onFinalFallbackError: () => void }) {
+  return <div className="brand-guide-bootstrap-frame">
+    <GuideLayers animated={false} onError={onLayerError}/>
+    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
   </div>;
 }
 
@@ -99,12 +94,12 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, [animationStarted]);
 
   const enter = useCallback(() => {
-    if (entering.current || leaving || preview) return;
+    if (entering.current || leaving || preview || !swipeReady) return;
     entering.current = true;
     setLeaving(true);
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(() => onEnter ? onEnter() : window.location.assign("/reports"), reducedMotion ? 150 : 460);
-  }, [leaving, onEnter, preview]);
+  }, [leaving, onEnter, preview, swipeReady]);
 
   const handleLayerError = useCallback((name: string) => {
     console.error(`[BrandGuide] asset failed: ${name}`);
@@ -116,9 +111,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     console.error("[BrandGuide] asset failed: guide-final-fallback.webp");
     setFallbackUnavailable(true);
     setSwipeReady(true);
-  }, []);
-  const handleFirstFrameError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-first-frame.webp");
   }, []);
   const handleMotionBoundaryError = useCallback(() => {
     setAssetStatus("failed");
@@ -132,8 +124,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, []);
   const startAnimation = useCallback(() => setAnimationStarted(true), []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const bootstrapFrame = <GuideBootstrapFrame onFirstFrameError={handleFirstFrameError} onFinalFallbackError={handleFallbackError}/>;
-  const firstFrame = <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={handleFirstFrameError}/>;
+  const bootstrapFrame = <GuideBootstrapFrame onLayerError={handleLayerError} onFinalFallbackError={handleFallbackError}/>;
+  const firstFrame = <GuideLayers animated={false} onError={handleLayerError}/>;
   const mountMotionStage = motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
@@ -166,7 +158,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
       <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向左滑动，或点击滑动提示进入档案"}</small>
-      <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview}>进入档案</button>
+      <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview || !swipeReady}>进入档案</button>
     </section>
   </main>;
 }

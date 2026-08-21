@@ -24,11 +24,11 @@ function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback
   const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim());
   const description = card?.description?.trim();
   const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);
-  const genericButton = !card?.buttonText?.trim() || ["查看报告", "查看资料"].includes(card.buttonText.trim());
+  const reportCount = card?.assets.length ?? 0;
   return {
     title: placeholderTitle ? fallback.title : card?.title ?? fallback.title,
     description: placeholderDescription ? fallback.description : description,
-    buttonText: genericButton ? fallback.buttonText : card?.buttonText ?? fallback.buttonText,
+    buttonText: reportCount > 0 ? `查看${reportCount}份报告` : card ? "暂无报告" : fallback.buttonText,
   };
 }
 

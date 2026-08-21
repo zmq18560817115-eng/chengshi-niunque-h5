@@ -35,7 +35,8 @@ export const h5MotionTiming = {
     paperDurationMs: 1500,
     hintStartMs: 420,
     hintDurationMs: 560,
-    swipeReadyMs: 420,
+    // 最后一张纸（220ms stagger）落定后再开放滑动/点击进入。
+    swipeReadyMs: 2140,
   },
   archiveLatestCircle: {
     delayMs: 250,

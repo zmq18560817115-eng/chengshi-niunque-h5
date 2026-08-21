@@ -1,4 +1,5 @@
 import type { AssetType } from "@prisma/client";
+import { createHash } from "node:crypto";
 import {
   PublicContentRepository,
   type PublicModuleRecord,
@@ -12,6 +13,7 @@ export type PublicAsset = {
   type: AssetType;
   href: string;
   openMode: "same_tab" | "new_tab";
+  pages: Array<{ id: string; pageNumber: number; href: string }>;
 };
 
 export type PublicReportCard = {
@@ -32,6 +34,7 @@ export type PublicModule = {
 };
 
 export type PublicContent = {
+  version: string;
   modules: PublicModule[];
   settings: Array<{ key: string; name: string; value: unknown }>;
 };
@@ -49,6 +52,30 @@ function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number])
   return `/reports/${viewer}/${asset.id}`;
 }
 
+export function reportButtonText(reportCount: number): string {
+  return reportCount > 0 ? `查看${reportCount}份报告` : "暂无报告";
+}
+
+function contentVersion(modules: PublicModuleRecord[], settings: Array<{ updatedAt: Date }>): string {
+  const publicShape = {
+    settings: settings.map((setting) => setting.updatedAt.toISOString()),
+    modules: modules.map((module) => ({
+      id: module.id,
+      updatedAt: module.updatedAt.toISOString(),
+      cards: module.cards.map((card) => ({
+        id: card.id,
+        updatedAt: card.updatedAt.toISOString(),
+        assets: card.assets.map((asset) => ({
+          id: asset.id,
+          updatedAt: asset.updatedAt.toISOString(),
+          pages: asset.pages.map((page) => ({ id: page.id, updatedAt: page.updatedAt.toISOString() })),
+        })),
+      })),
+    })),
+  };
+  return createHash("sha256").update(JSON.stringify(publicShape)).digest("hex");
+}
+
 export class PublicContentService {
   constructor(private readonly repository = new PublicContentRepository()) {}
 
@@ -59,6 +86,7 @@ export class PublicContentService {
     ]);
 
     return {
+      version: contentVersion(modules, settings),
       modules: modules.map((module) => ({
         id: module.id,
         slug: module.slug,
@@ -68,7 +96,7 @@ export class PublicContentService {
           id: card.id,
           title: card.title,
           description: card.description,
-          buttonText: card.buttonText,
+          buttonText: reportButtonText(card.assets.length),
           footerNote: card.footerNote,
           assets: card.assets.map((asset) => ({
             id: asset.id,
@@ -77,6 +105,11 @@ export class PublicContentService {
             type: asset.assetType,
             href: assetHref(asset),
             openMode: asset.openMode === "NEW_TAB" ? "new_tab" : "same_tab",
+            pages: asset.assetType === "IMAGE"
+              ? asset.pages.length > 0
+                ? asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` }))
+                : [{ id: asset.id, pageNumber: 1, href: `/reports/image/${asset.id}` }]
+              : [],
           })),
         })),
       })),
@@ -97,5 +130,12 @@ export class PublicContentService {
     const category = await this.getModuleBySlug(slug);
     const card = category?.cards.find((item) => item.id === cardId);
     return category && card ? { module: category, card } : null;
+  }
+
+  async getCardSnapshot(slug: string, cardId: string): Promise<{ version: string; result: { module: PublicModule; card: PublicReportCard } | null }> {
+    const content = await this.getContent();
+    const category = content.modules.find((item) => item.slug === slug);
+    const card = category?.cards.find((item) => item.id === cardId);
+    return { version: content.version, result: category && card ? { module: category, card } : null };
   }
 }

@@ -58,6 +58,7 @@ export default async function ModulePage({ params, searchParams }: { params: Pro
           externalUrl: asset.externalUrl,
           sortOrder: asset.sortOrder,
           contentStatus: asset.contentStatus,
+          pages: asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber })),
         })),
       })),
     }}

@@ -9,7 +9,7 @@ import { BrandGuide } from "@/components/h5/BrandGuide";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { CategoryDetail } from "@/components/h5/CategoryDetail";
 
-type PreviewAsset = { id: string; title: string; description: string | null; assetType: AssetType; openMode: AssetOpenMode; storageKey: string | null; externalUrl: string | null; sortOrder: number; contentStatus: ContentStatus };
+type PreviewAsset = { id: string; title: string; description: string | null; assetType: AssetType; openMode: AssetOpenMode; storageKey: string | null; externalUrl: string | null; sortOrder: number; contentStatus: ContentStatus; pages: Array<{ id: string; pageNumber: number }> };
 type PreviewCard = { id: string; title: string; description: string | null; buttonText: string; footerNote: string | null; sortOrder: number; contentStatus: ContentStatus; assets: PreviewAsset[] };
 export type PreviewModule = { id: string; title: string; slug: string; description: string | null; sortOrder: number; contentStatus: ContentStatus; cards: PreviewCard[] };
 export type PreviewSelection = { type: "module" } | { type: "card"; id: string } | { type: "asset"; id: string };
@@ -20,7 +20,7 @@ function assetHref(asset: PreviewAsset) {
 }
 
 function toPublicModule(module: PreviewModule): PublicModule {
-  return { id: module.id, slug: module.slug, title: module.title || "未填写模块名称", description: module.description, cards: [...module.cards].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((card) => ({ id: card.id, title: card.title || "未填写卡片标题", description: card.description, buttonText: card.buttonText, footerNote: card.footerNote, assets: [...card.assets].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((asset) => ({ id: asset.id, title: asset.title || "尚未配置资料", description: asset.description, type: asset.assetType, href: assetHref(asset), openMode: asset.openMode === "NEW_TAB" ? "new_tab" : "same_tab" })) })) };
+  return { id: module.id, slug: module.slug, title: module.title || "未填写模块名称", description: module.description, cards: [...module.cards].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((card) => { const assets = [...card.assets].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((asset) => ({ id: asset.id, title: asset.title || "尚未配置资料", description: asset.description, type: asset.assetType, href: assetHref(asset), openMode: asset.openMode === "NEW_TAB" ? "new_tab" as const : "same_tab" as const, pages: asset.assetType === "IMAGE" ? asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` })) : [] })); return { id: card.id, title: card.title || "未填写卡片标题", description: card.description, buttonText: assets.length ? `查看${assets.length}份报告` : "暂无报告", footerNote: card.footerNote, assets }; }) };
 }
 
 export function mergePreviewModules(module: PreviewModule, published: PublicModule[], moduleOrders: Array<{ id: string; sortOrder: number }>) {

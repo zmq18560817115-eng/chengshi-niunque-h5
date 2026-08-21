@@ -157,8 +157,24 @@ model ReportAsset {
   reportCard    ReportCard    @relation(fields: [reportCardId], references: [id], onDelete: Restrict)
   createdBy     AdminUser     @relation("AssetCreator", fields: [createdById], references: [id])
   updatedBy     AdminUser     @relation("AssetUpdater", fields: [updatedById], references: [id])
+  pages         ReportAssetPage[]
 
   @@index([reportCardId, contentStatus, isOnline, deletedAt, sortOrder])
+}
+
+model ReportAssetPage {
+  id            String      @id @default(cuid())
+  reportAssetId String
+  storageKey    String
+  mimeType      String
+  byteSize      BigInt?
+  pageNumber    Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  reportAsset   ReportAsset @relation(fields: [reportAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([reportAssetId, pageNumber])
+  @@index([reportAssetId, pageNumber])
 }
 
 model PublishVersion {

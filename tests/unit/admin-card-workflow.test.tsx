@@ -56,16 +56,16 @@ describe("admin card publishing workflow", () => {
   it("keeps the create flow concise and explains the next step", () => {
     render(<ModuleWorkspace initialModule={baseModule} publishedModules={[]} moduleOrders={[]} />);
 
-    expect(screen.getByText("第一步只创建草稿；创建后进入第二步添加图片、PDF 或外部链接。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "创建草稿并添加资料" })).toBeInTheDocument();
+    expect(screen.getByText("第一步创建卡片；第二步按“每份报告”上传一组有序图片。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "创建草稿并添加报告" })).toBeInTheDocument();
   });
 
   it("offers a direct publish path when adding the first asset", () => {
     render(<ModuleWorkspace initialModule={baseModule} initialSelection={{ type: "card", id: "card-1" }} publishedModules={[]} moduleOrders={[]} />);
 
-    expect(screen.getByRole("button", { name: "仅保存资料草稿" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "发布资料并上线卡片" })).toBeInTheDocument();
-    expect(screen.getByText("推荐：资料确认无误后直接上线；尚未准备好时再选择仅保存草稿。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存报告草稿" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "发布报告并上线卡片" })).toBeInTheDocument();
+    expect(screen.getByText("卡片按钮数量由已发布报告数自动生成，不需要手动填写。")).toBeInTheDocument();
   });
 
   it("keeps card editing independent from the required asset fields", () => {

@@ -24,6 +24,9 @@ const publicModuleQuery = {
         assets: {
           where: publicVisibility,
           orderBy: stableOrder(),
+          include: {
+            pages: { orderBy: [{ pageNumber: "asc" }, { id: "asc" }] },
+          },
         },
       },
     },
@@ -43,7 +46,7 @@ export class PublicContentRepository {
     return this.client.siteSetting.findMany({
       where: publicVisibility,
       orderBy: stableOrder(),
-      select: { key: true, name: true, value: true },
+      select: { key: true, name: true, value: true, updatedAt: true },
     });
   }
 }

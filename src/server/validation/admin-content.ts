@@ -2,7 +2,8 @@ import type { AssetOpenMode, AssetType, ContentStatus } from "@prisma/client";
 
 export type ModuleInput = { title: string; slug: string; description?: string; sortOrder: number; status: ContentStatus };
 export type CardInput = { moduleId: string; title: string; description?: string; buttonText?: string; footerNote?: string; sortOrder: number; status: ContentStatus };
-export type AssetInput = { reportCardId: string; title: string; description?: string; assetType: AssetType; openMode: AssetOpenMode; externalUrl?: string; storageKey?: string; sortOrder: number; status: ContentStatus };
+export type AssetPageInput = { storageKey: string; mimeType: string; byteSize: bigint | null; pageNumber: number };
+export type AssetInput = { reportCardId: string; title: string; description?: string; assetType: AssetType; openMode: AssetOpenMode; externalUrl?: string; storageKey?: string; pages: AssetPageInput[]; sortOrder: number; status: ContentStatus };
 export type PublishCheckItem = { ok: boolean; label: string; detail: string };
 
 const statuses = new Set<ContentStatus>(["DRAFT", "PUBLISHED", "OFFLINE"]);
@@ -50,15 +51,27 @@ export function validateAssetInput(input: Record<string, unknown>): AssetInput {
   if (!openModes.has(openMode)) throw new Error("请选择有效的打开方式");
   const externalUrl = optionalText(input.externalUrl);
   const storageKey = optionalText(input.storageKey, 500);
+  const pages = Array.isArray(input.pages) ? input.pages.map((value, index) => {
+    const page = value as Record<string, unknown>;
+    const pageStorageKey = optionalText(page.storageKey, 500);
+    const mimeType = optionalText(page.mimeType, 100);
+    if (!pageStorageKey || pageStorageKey.startsWith("/") || pageStorageKey.includes("..")) throw new Error(`第 ${index + 1} 张图片的存储路径无效`);
+    if (!mimeType?.startsWith("image/")) throw new Error(`第 ${index + 1} 张图片的格式无效`);
+    const byteSize = page.byteSize === null || page.byteSize === undefined ? null : BigInt(Number(page.byteSize));
+    return { storageKey: pageStorageKey, mimeType, byteSize, pageNumber: index + 1 };
+  }) : [];
+  if (pages.length > 50) throw new Error("一份报告最多上传 50 张图片");
   if (assetType === "EXTERNAL_LINK") {
     if (!externalUrl) throw new Error("请填写外部链接地址");
     let parsed: URL;
     try { parsed = new URL(externalUrl); } catch { throw new Error("请输入完整有效的网址，例如 https://example.com/report"); }
     if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("外部链接仅支持 HTTP 或 HTTPS 地址");
-  } else if (!storageKey || storageKey.startsWith("/") || storageKey.includes("..")) {
+  } else if (assetType === "IMAGE" && pages.length === 0 && (!storageKey || storageKey.startsWith("/") || storageKey.includes(".."))) {
+    throw new Error("请至少上传一张报告图片");
+  } else if (assetType === "PDF" && (!storageKey || storageKey.startsWith("/") || storageKey.includes(".."))) {
     throw new Error("请在高级设置中填写有效的文件存储路径");
   }
-  return { reportCardId: text(input.reportCardId, "所属卡片"), title: text(input.title, "资料名称"), description: optionalText(input.description), assetType, openMode, externalUrl: assetType === "EXTERNAL_LINK" ? externalUrl : undefined, storageKey: assetType === "EXTERNAL_LINK" ? undefined : storageKey, sortOrder: order(input.sortOrder), status: status(input.status) };
+  return { reportCardId: text(input.reportCardId, "所属卡片"), title: text(input.title, "资料名称"), description: optionalText(input.description), assetType, openMode, externalUrl: assetType === "EXTERNAL_LINK" ? externalUrl : undefined, storageKey: assetType === "EXTERNAL_LINK" ? undefined : storageKey, pages, sortOrder: order(input.sortOrder), status: status(input.status) };
 }
 
 export function lifecycle(contentStatus: ContentStatus, previous?: { publishedAt: Date | null }) {
@@ -66,13 +79,13 @@ export function lifecycle(contentStatus: ContentStatus, previous?: { publishedAt
   return { contentStatus, isOnline: contentStatus === "PUBLISHED", publishedAt: contentStatus === "PUBLISHED" ? previous?.publishedAt ?? now : previous?.publishedAt ?? null, offlineAt: contentStatus === "OFFLINE" ? now : null };
 }
 
-type CheckModule = { title: string; cards: Array<{ title: string; sortOrder: number; contentStatus: ContentStatus; assets: Array<{ title: string; assetType: AssetType; externalUrl: string | null; storageKey: string | null; contentStatus: ContentStatus; sortOrder?: number }> }> };
+type CheckModule = { title: string; cards: Array<{ title: string; sortOrder: number; contentStatus: ContentStatus; assets: Array<{ title: string; assetType: AssetType; externalUrl: string | null; storageKey: string | null; contentStatus: ContentStatus; sortOrder?: number; pages?: unknown[] }> }> };
 export function checkModulePublishReadiness(module: CheckModule): PublishCheckItem[] {
   const titledCards = module.cards.filter((card) => card.title.trim());
   const publishedCards = titledCards.filter((card) => card.contentStatus === "PUBLISHED");
   const cardOrders = titledCards.map((card) => card.sortOrder);
   const assets = publishedCards.flatMap((card) => card.assets.filter((asset) => asset.contentStatus === "PUBLISHED"));
-  const invalidAssets = assets.filter((asset) => !asset.title.trim() || (asset.assetType === "EXTERNAL_LINK" ? !asset.externalUrl || !/^https?:\/\//.test(asset.externalUrl) : !asset.storageKey));
+  const invalidAssets = assets.filter((asset) => !asset.title.trim() || (asset.assetType === "EXTERNAL_LINK" ? !asset.externalUrl || !/^https?:\/\//.test(asset.externalUrl) : asset.assetType === "IMAGE" ? !asset.storageKey && !asset.pages?.length : !asset.storageKey));
   const duplicateAssetOrders = publishedCards.some((card) => {
     const orders = card.assets.filter((asset) => asset.contentStatus === "PUBLISHED" && asset.sortOrder !== undefined).map((asset) => asset.sortOrder);
     return new Set(orders).size !== orders.length;
