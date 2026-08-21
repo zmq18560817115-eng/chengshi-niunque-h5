@@ -68,7 +68,7 @@ describe("archive story copy motion", () => {
     act(() => vi.advanceTimersByTime(10000));
     expect(root).toHaveAttribute("data-motion-complete", "false");
     act(() => notify?.([{ isIntersecting: true, intersectionRatio: .3 } as IntersectionObserverEntry], {} as IntersectionObserver));
-    act(() => vi.advanceTimersByTime(6599));
+    act(() => vi.advanceTimersByTime(1349));
     expect(root).toHaveAttribute("data-motion-complete", "false");
     act(() => vi.advanceTimersByTime(1));
     expect(root).toHaveAttribute("data-motion-complete", "true");

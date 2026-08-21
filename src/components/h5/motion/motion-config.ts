@@ -54,11 +54,11 @@ export const h5MotionTiming = {
   },
   archiveStoryCopy: {
     delayMs: 150,
-    // 逐字渐显：保持柔边扫入，整体较上一版略微加快。
-    lineDurationMs: 2850,
-    // 基础行间隔；同一语句的换行通过偏移提前衔接，避免换行处出现停顿。
-    lineStepMs: 1850,
-    lineOffsetsMs: [0, -350, 0, -950] as const,
+    // 快速逐字渐显：保留柔边扫入，但在约 2.35 秒内显示完四行。
+    lineDurationMs: 900,
+    // 紧凑衔接各行，同一语句的换行通过偏移提前进入。
+    lineStepMs: 500,
+    lineOffsetsMs: [0, -100, 0, -200] as const,
     easing: "linear",
     threshold: 0.3,
   },

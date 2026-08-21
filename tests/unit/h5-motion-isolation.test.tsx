@@ -156,9 +156,9 @@ describe("H5 motion isolation", () => {
     expect(h5MotionTiming.archiveResultColor.delayAfterCircleMs).toBeLessThanOrEqual(250);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeLessThanOrEqual(800);
-    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBe(2850);
-    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBe(1850);
-    expect(h5MotionTiming.archiveStoryCopy.lineOffsetsMs).toEqual([0, -350, 0, -950]);
+    expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBe(900);
+    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBe(500);
+    expect(h5MotionTiming.archiveStoryCopy.lineOffsetsMs).toEqual([0, -100, 0, -200]);
     expect(h5MotionTiming.archiveStoryCopy.lineStepMs + h5MotionTiming.archiveStoryCopy.lineOffsetsMs[3]).toBeLessThan(h5MotionTiming.archiveStoryCopy.lineStepMs);
     const lineStarts = h5MotionTiming.archiveStoryCopy.lineOffsetsMs.map(
       (offset, index) => index * h5MotionTiming.archiveStoryCopy.lineStepMs + offset,
@@ -167,7 +167,7 @@ describe("H5 motion isolation", () => {
       h5MotionTiming.archiveStoryCopy.delayMs
       + Math.max(...lineStarts)
       + h5MotionTiming.archiveStoryCopy.lineDurationMs,
-    ).toBe(7600);
+    ).toBe(2350);
     const component = readFileSync("src/components/h5/motion/modules/ArchiveStoryCopyMotion.tsx", "utf8");
     expect(component).toContain("if (!ready || !started || !visible || complete) return;");
     expect(component).toContain("remainingMs.current = Math.max(0, remainingMs.current - (performance.now() - startedAt));");
