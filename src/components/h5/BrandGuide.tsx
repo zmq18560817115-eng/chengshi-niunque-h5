@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
@@ -57,6 +58,7 @@ function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerEr
 }
 
 export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; onEnter?: () => void }) {
+  const router = useRouter();
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
   const [assetStatus, setAssetStatus] = useState<AssetStatus>(motionEnabled ? "loading" : "disabled");
@@ -88,6 +90,10 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, [motionEnabled]);
 
   useEffect(() => {
+    if (!preview && !onEnter) router.prefetch("/reports");
+  }, [onEnter, preview, router]);
+
+  useEffect(() => {
     if (!animationStarted) return;
     const timer = window.setTimeout(() => setSwipeReady(true), h5MotionTiming.guide.swipeReadyMs);
     return () => window.clearTimeout(timer);
@@ -98,8 +104,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     entering.current = true;
     setLeaving(true);
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => onEnter ? onEnter() : window.location.assign("/reports"), reducedMotion ? 150 : 460);
-  }, [leaving, onEnter, preview, swipeReady]);
+    window.setTimeout(() => onEnter ? onEnter() : router.push("/reports"), reducedMotion ? 150 : 460);
+  }, [leaving, onEnter, preview, router, swipeReady]);
 
   const handleLayerError = useCallback((name: string) => {
     console.error(`[BrandGuide] asset failed: ${name}`);

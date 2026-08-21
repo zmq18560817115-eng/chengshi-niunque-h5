@@ -254,13 +254,10 @@ button, a { font: inherit; }
 .brand-guide { container-type: size; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background: #f8e89d url("/design/guide/guide-background.webp") center / cover no-repeat; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: pan-y; overscroll-behavior: none; }
 .brand-guide::-webkit-scrollbar { width: 0; height: 0; }
 .brand-guide.is-leaving { opacity: .95; transform: translate3d(-100%,0,0); pointer-events: none; }
-.brand-guide-stage { position: relative; isolation: isolate; width: min(100%, 46.153846vh, var(--h5-content-width)); width: min(100%, 46.153846svh, var(--h5-content-width)); width: min(100%, 46.153846dvh, var(--h5-content-width)); height: auto; aspect-ratio: 750 / 1625; flex: 0 0 auto; overflow: hidden; background: #f8e89d; }
-@supports (width: 1cqw) {
-  .brand-guide-stage { width: min(100cqw, 46.153846cqh, var(--h5-content-width)); }
-}
+.brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 0 0 auto; overflow: hidden; background: #f8e89d; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .brand-guide-bootstrap-frame { position: absolute; z-index: 45; inset: 0; display: block; width: 100%; height: 100%; }
 .brand-guide-bootstrap-reduced { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-base { z-index: 10; }

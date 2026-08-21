@@ -78,12 +78,21 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".motion-stage-fallback .brand-guide-fallback");
   });
 
-  it("contains the 750 by 1625 guide in one viewport over the repository texture", () => {
+  it("prefetches the archive and keeps guide navigation inside the Next client router", () => {
+    const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
+    expect(guide).toContain('router.prefetch("/reports")');
+    expect(guide).toContain('router.push("/reports")');
+    expect(guide).not.toContain('window.location.assign("/reports")');
+  });
+
+  it("covers the viewport with every guide layer on the same undistorted canvas", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(css).toContain("overflow: hidden; align-items: center;");
-    expect(css).toContain(".brand-guide-stage { position: relative; isolation: isolate; width: min(100%, 46.153846vh, var(--h5-content-width)); width: min(100%, 46.153846svh, var(--h5-content-width));");
-    expect(css).toContain("object-fit: contain; object-position: center;");
+    expect(css).toContain(".brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%;");
+    expect(css).toContain("object-fit: cover; object-position: center;");
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
+    expect(css).toContain(".brand-guide-paper { z-index: 34;");
+    expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
     expect(css).toContain('background: #f8e89d url("/design/guide/guide-background.webp") center / cover no-repeat');
     expect(css).not.toContain("guide-initial-frame-out");
     expect(css).not.toContain("guide-final-frame-in");
@@ -92,12 +101,12 @@ describe("H5 motion isolation", () => {
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("keeps the complete guide artwork inside a %ix%i phone viewport", (width, height) => {
+  ])("scales the guide proportionally to cover a %ix%i phone viewport", (width, height) => {
     const masterRatio = 750 / 1625;
-    const stageWidth = Math.min(width, height * masterRatio, 750);
+    const stageWidth = Math.max(width, height * masterRatio);
     const stageHeight = stageWidth / masterRatio;
-    expect(stageWidth).toBeLessThanOrEqual(width);
-    expect(stageHeight).toBeLessThanOrEqual(height + Number.EPSILON);
+    expect(stageWidth).toBeGreaterThanOrEqual(width);
+    expect(stageHeight).toBeGreaterThanOrEqual(height - Number.EPSILON);
     expect(stageWidth / stageHeight).toBeCloseTo(masterRatio, 8);
   });
 
@@ -189,6 +198,20 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".archive-fish-motion-gif");
     expect(css).not.toContain("@keyframes archive-fish-float");
     expect(css).not.toContain("--archive-fish-duration");
+  });
+
+  it("slows every archive fish GIF frame without adding heavier replacement assets", () => {
+    for (const index of [1, 2, 3, 4]) {
+      const name = `fish-motion-0${index}.gif`;
+      const gif = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
+      const delays: number[] = [];
+      for (let offset = 0; offset <= gif.length - 8; offset += 1) {
+        if (gif[offset] === 0x21 && gif[offset + 1] === 0xf9 && gif[offset + 2] === 0x04) delays.push(gif.readUInt16LE(offset + 4));
+      }
+      expect(delays).toHaveLength(24);
+      expect(new Set(delays)).toEqual(new Set([36]));
+      expect(gif.byteLength).toBeLessThan(22_000);
+    }
   });
 
   it("places the archive unlock ribbon below the yellow page and reveals it from real scroll progress", () => {
