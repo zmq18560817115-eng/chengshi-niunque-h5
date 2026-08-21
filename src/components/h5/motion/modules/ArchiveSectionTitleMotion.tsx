@@ -33,7 +33,7 @@ const titleGroups: readonly TitleGroup[] = [
     slug: "review-assurance",
     label: "复核保障",
     gif: "/design/final-v1/复核保障_逐字跳动.gif",
-    left: 87.5,
+    left: 62.5,
     top: 3165,
     width: 439,
     height: 102,
