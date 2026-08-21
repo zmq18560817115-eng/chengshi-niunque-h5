@@ -257,7 +257,7 @@ button, a { font: inherit; }
 .brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 0 0 auto; overflow: hidden; background: #f8e89d; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .brand-guide-bootstrap-frame { position: absolute; z-index: 45; inset: 0; display: block; width: 100%; height: 100%; }
 .brand-guide-bootstrap-reduced { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-base { z-index: 10; }
@@ -272,7 +272,8 @@ button, a { font: inherit; }
 .brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
 .brand-guide-window-mask { z-index: 25; pointer-events: none; }
 .brand-guide-foreground-top { z-index: 35; }
-.brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; transform-origin: 78% 95%; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.2,.78,.24,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-swipe-hint { position: absolute; z-index: 40; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); width: min(42vw, 11.875rem); aspect-ratio: 253 / 55; overflow: hidden; opacity: 0; transform-origin: right bottom; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.2,.78,.24,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-swipe-text, .brand-guide-swipe-arrow { position: absolute; top: calc(-1507 / 55 * 100%); left: calc(-464 / 253 * 100%); display: block; width: calc(750 / 253 * 100%); height: auto; max-width: none; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-swipe-arrow { animation: guide-hint-float 1.15s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; will-change: transform; }
 .brand-guide-fallback { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
@@ -288,7 +289,7 @@ button, a { font: inherit; }
 .brand-guide.is-motion-disabled .brand-guide-swipe-hint,
 .brand-guide.is-motion-disabled .brand-guide-swipe-arrow { animation-play-state: paused !important; }
 .brand-guide-accessible-copy { position: absolute; z-index: 50; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; white-space: nowrap; }
-.brand-guide-enter-action { position: absolute; z-index: 50; right: 3%; bottom: max(1.5%, env(safe-area-inset-bottom)); width: 46%; height: 11%; padding: 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.brand-guide-enter-action { position: absolute; z-index: 50; right: max(.75rem, env(safe-area-inset-right)); bottom: max(.75rem, env(safe-area-inset-bottom)); width: min(46vw, 13rem); height: max(3rem, 9vh); padding: 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .brand-guide-enter-action:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
 @keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }
 /* 单曲线平滑落入（保留原起止坐标），去掉多段缓动切换造成的速度突变=卡顿 */
@@ -298,7 +299,7 @@ button, a { font: inherit; }
 @keyframes guide-paper-from-bottom { from { transform: translate3d(1.2%,21%,0) rotate(3deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-hint-in { 0% { transform: translate3d(0, 3.8%, 0) scale(.94); opacity: 0; } 58% { transform: translate3d(0, -.35%, 0) scale(1.025); opacity: 1; } 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } }
-@keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.65rem, 0, 0); } }
+@keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(-.45rem, 0, 0); } }
 .reports-archive { animation: reports-enter .32s ease both; }
 .reports-archive.reports-entry-transition { animation: reports-slide-in 460ms cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition { animation: h5-page-enter .28s cubic-bezier(.22,1,.36,1) both; }

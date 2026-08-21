@@ -98,6 +98,14 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("guide-final-frame-in");
   });
 
+  it("anchors the complete swipe hint inside the viewport safe area", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain(".brand-guide-swipe-hint { position: absolute; z-index: 40; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom));");
+    expect(css).toContain("width: min(42vw, 11.875rem); aspect-ratio: 253 / 55; overflow: hidden;");
+    expect(css).toContain(".brand-guide-swipe-text, .brand-guide-swipe-arrow { position: absolute; top: calc(-1507 / 55 * 100%); left: calc(-464 / 253 * 100%);");
+    expect(css).toContain("transform-origin: right bottom;");
+  });
+
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],

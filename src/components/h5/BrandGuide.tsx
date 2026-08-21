@@ -42,8 +42,8 @@ function GuideLayers({ animated, onError }: { animated: boolean; onError: (name:
       {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right")}
       {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
       <div className="brand-guide-swipe-hint" aria-hidden="true">
-        {image("swipe-hint-text.webp", "brand-guide-swipe-text")}
-        {image("swipe-hint-arrow.webp", "brand-guide-swipe-arrow")}
+        <Image className="brand-guide-swipe-text" src={assetUrl("swipe-hint-text.webp")} alt="" width={750} height={1625} sizes="42vw" unoptimized decoding="async" onError={() => onError("swipe-hint-text.webp")}/>
+        <Image className="brand-guide-swipe-arrow" src={assetUrl("swipe-hint-arrow.webp")} alt="" width={750} height={1625} sizes="42vw" unoptimized decoding="async" onError={() => onError("swipe-hint-arrow.webp")}/>
       </div>
     </>}
     {image("guide-foreground-top.webp", "brand-guide-foreground-top", true)}
