@@ -9,6 +9,7 @@ import { archiveFishWarmAssets } from "@/components/h5/motion/modules/ArchiveFis
 import { archiveSectionTitleWarmAssets } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { archiveStoryWarmAssets } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
+import { preloadHomepageAssets, type HomepageAssetRequest } from "@/components/h5/homepage-preload";
 
 type LoadingPhase = "loading" | "leaving" | "ready";
 type BufferAssetState = "loading" | "ready" | "failed";
@@ -16,41 +17,29 @@ type BufferAssetState = "loading" | "ready" | "failed";
 const loadingGifDurationMs = 3600;
 const reducedLoadingDurationMs = 600;
 const loadingExitDurationMs = 260;
-const warmupTimeoutMs = 12000;
-const experienceWarmAssets = [...new Set([
-  ...guideWarmAssets,
-  ...archiveArtworkWarmAssets,
-  ...archiveUnlockWarmAssets,
-  ...archiveFishWarmAssets,
-  ...archiveStoryWarmAssets,
-  ...archiveSectionTitleWarmAssets,
-])];
-
-function preloadImage(src: string) {
-  return new Promise<void>((resolve, reject) => {
-    const image = new window.Image();
-    image.decoding = "async";
-    const loaded = new Promise<void>((loadedResolve, loadedReject) => {
-      image.onload = () => loadedResolve();
-      image.onerror = () => loadedReject(new Error(src));
-    });
-    image.src = src;
-    const decoded = image.decode ? image.decode() : Promise.resolve();
-    void Promise.all([loaded, decoded]).then(() => resolve()).catch(() => reject(new Error(src)));
-  });
-}
+const publicDataWarmupTimeoutMs = 12000;
+const bufferAssetTimeoutMs = 12000;
+const experienceWarmRequests: readonly HomepageAssetRequest[] = [
+  ...guideWarmAssets.map((src) => ({ src, priority: "high" as const })),
+  ...archiveArtworkWarmAssets.map((src) => ({ src, priority: "high" as const })),
+  ...archiveUnlockWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveFishWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveStoryWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveSectionTitleWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+];
 
 export function GuideExperience() {
   const router = useRouter();
   const [phase, setPhase] = useState<LoadingPhase>("loading");
   const [bufferAssetState, setBufferAssetState] = useState<BufferAssetState>("loading");
   const [warmupComplete, setWarmupComplete] = useState(false);
+  const [warmupFailedAssets, setWarmupFailedAssets] = useState(0);
   const [bufferPlaybackComplete, setBufferPlaybackComplete] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
-    let timeout = 0;
+    let publicDataTimeout = 0;
     router.prefetch("/reports");
 
     const publicContent = fetch("/api/public/content", {
@@ -61,19 +50,23 @@ export function GuideExperience() {
       if (!response.ok) throw new Error("PUBLIC_CONTENT_UNAVAILABLE");
       return response.json();
     });
-    const experienceArtwork = Promise.allSettled(experienceWarmAssets.map(preloadImage));
-    const timeoutFallback = new Promise<void>((resolve) => {
-      timeout = window.setTimeout(resolve, warmupTimeoutMs);
+    const experienceArtwork = preloadHomepageAssets(experienceWarmRequests).then((result) => {
+      if (result.failed.length > 0) console.error(`[GuideExperience] homepage assets failed: ${result.failed.join(", ")}`);
+      if (!cancelled) setWarmupFailedAssets(result.failed.length);
+      router.prefetch("/reports");
+    });
+    const publicDataFallback = new Promise<void>((resolve) => {
+      publicDataTimeout = window.setTimeout(resolve, publicDataWarmupTimeoutMs);
     });
 
-    void Promise.race([Promise.allSettled([publicContent, experienceArtwork]), timeoutFallback]).then(() => {
+    void Promise.all([Promise.race([publicContent.then(() => undefined).catch(() => undefined), publicDataFallback]), experienceArtwork]).then(() => {
       if (!cancelled) setWarmupComplete(true);
     });
 
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearTimeout(timeout);
+      window.clearTimeout(publicDataTimeout);
     };
   }, [router]);
 
@@ -98,7 +91,7 @@ export function GuideExperience() {
 
   useEffect(() => {
     if (bufferAssetState !== "loading") return;
-    const timer = window.setTimeout(() => setBufferAssetState("failed"), warmupTimeoutMs);
+    const timer = window.setTimeout(() => setBufferAssetState("failed"), bufferAssetTimeoutMs);
     return () => window.clearTimeout(timer);
   }, [bufferAssetState]);
 
@@ -109,6 +102,8 @@ export function GuideExperience() {
       className={`guide-loading-buffer is-${phase}`}
       data-buffer-asset-state={bufferAssetState}
       data-buffer-warmup-state={warmupComplete ? "ready" : "loading"}
+      data-buffer-assets-total={experienceWarmRequests.length}
+      data-buffer-assets-failed={warmupFailedAssets}
       aria-label="营养信息加载"
     >
       <section className="guide-loading-buffer-stage" aria-live="polite" aria-busy={phase === "loading"}>

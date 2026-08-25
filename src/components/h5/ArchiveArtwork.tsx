@@ -102,7 +102,8 @@ export function ArchiveArtwork({ preview = false, exitingSlug = null }: { previe
           style={{ ...layerStyle(layer), zIndex: layerStack(layer.id) }}
           sizes="(max-width: 750px) 150vw, 1125px"
           priority={Boolean(layer.eager)}
-          loading={layer.eager ? undefined : "lazy"}
+          fetchPriority={layer.eager ? "high" : "auto"}
+          loading={layer.eager ? undefined : "eager"}
           unoptimized={layer.unoptimized}
           data-source-part={layer.id}
           data-archive-module={moduleSlug}

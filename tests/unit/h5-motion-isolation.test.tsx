@@ -178,10 +178,11 @@ describe("H5 motion isolation", () => {
     expect([gif.readUInt16LE(6), gif.readUInt16LE(8)]).toEqual([2000, 4334]);
     expect(route).toContain("<GuideExperience/>");
     expect(experience).toContain('fetch("/api/public/content"');
-    expect(experience).toContain("experienceWarmAssets.map(preloadImage)");
+    expect(experience).toContain("preloadHomepageAssets(experienceWarmRequests)");
     expect(experience).toContain("archiveArtworkWarmAssets");
     expect(experience).toContain("archiveSectionTitleWarmAssets");
-    expect(experience).toContain("warmupTimeoutMs = 12000");
+    expect(experience).toContain("publicDataWarmupTimeoutMs = 12000");
+    expect(experience).toContain("priority: \"high\" as const");
     expect(experience).toContain("loadingGifDurationMs = 3600");
     expect(experience).toContain('src="/design/guide/data-loading-buffer.gif"');
     expect(css).toContain(".guide-loading-buffer.is-leaving");
