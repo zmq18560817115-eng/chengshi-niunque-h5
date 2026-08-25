@@ -10,7 +10,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
-import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity } from "@/components/h5/category-route-transition";
+import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity, prepareCategoryRouteContinuity } from "@/components/h5/category-route-transition";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -31,6 +31,7 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
 
   const enter = (module: PublicModule) => {
     if (leaving || preview) return;
+    prepareCategoryRouteContinuity();
     setPressedSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);

@@ -146,11 +146,12 @@ describe("H5 motion isolation", () => {
 
     expect(css).toContain('.category-page-final[data-route-entry="reports-archive"] { animation: category-detail-enter-up-fade');
     expect(css).toContain("transform: translate3d(0,var(--category-route-entry-distance),0);");
-    expect(css).toContain('html[data-category-view-transition="active"]::view-transition-old(root)');
-    expect(css).toContain('html[data-category-view-transition="active"]::view-transition-new(root)');
-    expect(css).toContain("@keyframes category-route-old-overlap");
-    expect(css).toContain("@keyframes category-route-new-overlap");
-    expect(css).toContain("from { opacity: .42;");
+    expect(css).toContain('.category-page-final[data-route-entry="reports-archive-buffer"]');
+    expect(css).toContain("#h5-category-route-buffer-host");
+    expect(css).toContain(".h5-category-route-buffer.is-moving");
+    expect(css).toContain(".h5-category-route-buffer.is-releasing");
+    expect(css).toContain("@keyframes category-route-buffer-enter");
+    expect(css).toContain("from { opacity: .72;");
     expect(css).toContain("@keyframes archive-selected-module-extract-up");
     expect(css).toContain(".reports-archive-source-layer.archive-module-exit-layer");
     expect(css).toContain(".archive-section-title-group.archive-module-exit-layer");
@@ -160,10 +161,12 @@ describe("H5 motion isolation", () => {
     expect(archive).toContain("data-exit-slug={exitingSlug ?? undefined}");
     expect(artwork).toContain('"module-2-review-folder": "review-assurance"');
     expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
-    expect(category).toContain("categoryRouteOverlapEntrySource");
+    expect(category).toContain("categoryRouteBufferedEntrySource");
     expect(category).toContain("announceCategoryRouteReady();");
-    expect(routeTransition).toContain("startViewTransition");
-    expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 300");
+    expect(routeTransition).toContain("prepareCategoryRouteContinuity");
+    expect(routeTransition).toContain("freezeClone");
+    expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 220");
+    expect(routeTransition).not.toContain("startViewTransition");
   });
 
   it("uses the supplied data-loading GIF before mounting the guide", () => {
@@ -360,12 +363,12 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("top: 2545.5");
     expect(component).toContain("left: 556");
     expect(component).toContain("top: 2779.5");
-    expect(component).toContain("left: 117.5");
+    expect(component).toContain("left: 102");
     expect(component).toContain("top: 3155.5");
     expect(component).toContain("left: 542.5");
     expect(component).toContain("top: 3518");
     expect(component).toContain("left: 475, top: 2787.5");
-    expect(component).toContain("left: 34, top: 3168");
+    expect(component).toContain("left: 18.5, top: 3168");
     expect(component).toContain("left: 468.5, top: 3532.5");
     expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
     expect(component).not.toContain("aspectRatio:");

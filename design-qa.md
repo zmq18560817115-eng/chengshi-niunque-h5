@@ -1,5 +1,72 @@
 # Design QA
 
+## Latest pass — Equal title ② margins and opaque full-page continuity buffer
+
+### Comparison Target
+
+- Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-4629b43a-dd11-4f6e-aa21-583b1cd23ddf.png` (414 x 196), showing the requested final ②-title placement inside the yellow tab.
+- Browser implementation: `http://127.0.0.1:3000/reports` and the three `/reports/[slug]` detail routes.
+- Same-state focused comparison: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v3/title-equal-margin-source-vs-browser.png`.
+- Review transition filmstrip: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v3/slide-filmstrip.png`.
+- Inspection transition filmstrip: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v3/inspection-slide-filmstrip.png`.
+- Production transition filmstrip: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v3/production-slide-filmstrip.png`.
+- State: normal motion preference, homepage scrolled to the module tabs, one module clicked, destination artwork allowed to report `complete` and non-zero `naturalWidth`, then the paired full-screen slide allowed to settle.
+
+### Viewport And Normalization
+
+- Browser viewport: 2560 x 1440 CSS pixels at device pixel ratio 1. The centered H5 canvas measured 750 CSS pixels wide, exactly twice the 375px reference width.
+- Focused comparison: the supplied 414 x 196 crop and the equivalent browser-owned region were kept at the same 414 x 196 density and placed side by side; desktop chrome is excluded.
+- Transition filmstrips: the app-owned `(905, 0)-(1655, 1440)` H5 viewport was cropped without rescaling, then reduced uniformly to 300 x 576 per sample. Frame labels are capture checkpoints rather than a frame-perfect video clock because screenshot capture consumes time.
+
+### Findings
+
+- No actionable P0, P1, or P2 differences remain in the requested correction.
+- Fonts and typography: all three titles remain the supplied raster GIF/poster letterforms. The ② number and title move as a lockup, preserving glyph weight, baseline, punctuation, and the measured 22-master-unit internal clearance.
+- Spacing and layout rhythm: review title group x=102, ring x=18.5, and digit x=36 produce a measured combined visible x-range of 18.5–461.5 inside the yellow tab's effective x-range of 0–480. The resulting 18.5-master-unit left and right insets are equal; the reference/implementation comparison shows no title pixel crossing onto the white paper.
+- Colors and visual tokens: the yellow, green, and brown artwork remains untouched. The route handoff keeps both full pages at opacity 1, so no blend, grey flash, or washed-out texture is introduced.
+- Image quality and asset fidelity: the transition buffer is a frozen clone of the already-rendered repository artwork, and the destination uses its existing supplied 2000 x 4333 page image. No placeholder, CSS drawing, generated art, or stretched screenshot is used.
+- Copy and content: module headings, folder copy, detail-card copy, buttons, status labels, and backend-provided content are unchanged.
+- Behavior and continuity: the complete old viewport stays fixed while the route and primary detail artwork load. When ready, old and new opaque viewports move upward together for 1600ms with a shared easing curve; one leaves by exactly `-100dvh` as the other enters from `100dvh`. The common edge remains covered for the entire handoff, removing the previous blank interval and double-exposed crossfade.
+- Accessibility and responsiveness: semantic module buttons, tap regions, 375px scaling, reduced-motion handling, scroll restoration, and swipe-back behavior remain active. Reduced motion uses the existing short continuity fade instead of the long paired slide.
+
+### Comparison History
+
+1. The preceding overlap fade produced visible double exposure and could release the old page before the destination artwork was ready, creating the reported visual breakpoint.
+2. A first DOM-buffer prototype still faded the old and new pages over each other and was rejected after filmstrip review because both headings and textures appeared simultaneously.
+3. The final buffer captures the complete old viewport before module extraction, holds it without movement during route preparation, and releases only after the destination's primary image load signal is rendered.
+4. The two opaque pages now use matching 1600ms full-viewport transforms. Review, inspection, and production filmstrips show the same continuous edge with no blank or double exposure.
+5. The ② lockup moved another 15.5 master units left from the preceding state. Alpha-bound measurement now leaves exactly 18.5 master units at both ends of the usable yellow tab.
+
+### Interaction And Console Verification
+
+- Inspection reached `/reports/inspection-projects`; review reached `/reports/review-assurance`; production reached `/reports/production-traceability` through the shared buffer path.
+- Inspection runtime samples showed the old page buffer present before route change, `data-route-entry="reports-archive-buffer"` only after the 2000px-wide destination artwork was complete, and buffer removal after the paired slide settled.
+- Review and production filmstrips show a complete old page, a single opaque moving seam, and the complete destination page. No sampled frame exposes the desktop/canvas background.
+- The title sequence remains one GIF plus two exact posters in repeating ①→②→③ order; its existing 3800ms play and 4000ms handoff timing was not changed.
+- Historical hot-reload log entries were created while the transition module was replaced in place and are not reproducible in the compiled page. A fresh post-build browser tab completed all three routes with zero warning or error logs.
+- Full verification passed: lint, TypeScript, 22 test files / 115 tests, Prisma schema validation, the optimized production build, and a fresh-browser interaction/console gate.
+
+### Open Questions
+
+- None.
+
+### Implementation Checklist
+
+- [x] Move the complete ② title lockup left until its yellow-tab end margins are equal.
+- [x] Hold the complete old page until the selected detail artwork is ready.
+- [x] Replace the ghosting crossfade with a slow, paired, opaque full-screen upward slide.
+- [x] Apply one transition implementation to all three homepage modules.
+- [x] Preserve all other homepage motion, detail-page content, interactions, and backend/admin linkage.
+- [x] Pass the complete automated gates and a fresh-browser console check.
+
+### Follow-up Polish
+
+- No P3 visual polish is required for this scoped correction.
+
+final result: passed
+
+---
+
 ## Latest pass — Homepage-to-category continuity, title ② alignment, and 4-second sequence
 
 ### Comparison Target

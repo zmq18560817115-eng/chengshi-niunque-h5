@@ -60,13 +60,13 @@ const titleGroups: readonly TitleGroup[] = [
     label: "复核保障",
     gif: `${archiveMotionRoot}/section-title-review.gif`,
     poster: `${archiveMotionRoot}/section-title-review-poster.webp`,
-    left: 117.5,
+    left: 102,
     top: 3155.5,
     width: 378.5,
     height: 114,
     numberParts: [
-      { src: `${archiveMotionRoot}/section-number-review-ring.png`, left: 34, top: 3168, width: 80.5, height: 84.5 },
-      { src: `${archiveMotionRoot}/section-number-review-digit.png`, left: 51.5, top: 3181.5, width: 43.5, height: 55 },
+      { src: `${archiveMotionRoot}/section-number-review-ring.png`, left: 18.5, top: 3168, width: 80.5, height: 84.5 },
+      { src: `${archiveMotionRoot}/section-number-review-digit.png`, left: 36, top: 3181.5, width: 43.5, height: 55 },
     ],
   },
   {
