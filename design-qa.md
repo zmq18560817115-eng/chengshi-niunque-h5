@@ -1,194 +1,62 @@
 # Design QA
 
-## Sources of truth
+## Comparison Target
 
-- Category masters: `public/design/final-v1/category-inspection-clean.webp`, `category-review-clean.webp`, `category-traceability-clean.webp` (1000 x 2166).
-- Formal category references: `docs/input/design/final-v1/references-最终效果/报告点击页-01.jpg`, `报告点击页-02.jpg`, `报告点击页-03.jpg` (2000 x 4333).
-- Guide first paint and normal-motion loading use the same repository layers as the animated 750 x 1625 canvas: background, open-eye character, window mask, arch, and foreground. The legacy `guide-first-frame.webp` is no longer rendered. `guide-final-fallback.webp` is reserved for reduced-motion, disabled, or failed states.
-- Archive visual reference: `public/design/final-v1/archive-reference.webp` (1000 x 5557). Runtime static artwork uses untouched module-one/two parts plus the untouched complete module-three output slice; the flattened full-page reference is not rendered.
-- User device captures supplied on 2026-08-13 and 2026-08-17 were used to identify the category copy drift and ribbon seam.
+- Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-dbfae28d-1316-463e-a0c1-3057f261f09c.jpg`
+- Source component asset: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-a46d7505-b1f4-4f2b-a183-872d17e28cef.png`
+- Browser-rendered implementation: `D:/chengshi-niunque-h5/design-qa-evidence/implementation-guide-normalized-750x1624.png`
+- Full-view comparison: `D:/chengshi-niunque-h5/design-qa-evidence/comparison-guide-full.png`
+- Focused lower-region comparison: `D:/chengshi-niunque-h5/design-qa-evidence/comparison-guide-bottom.png`
+- Route-motion evidence: `D:/chengshi-niunque-h5/design-qa-evidence/transition-guide-exit.png` and `D:/chengshi-niunque-h5/design-qa-evidence/transition-archive-entry.png`
+- Route/state: `/go`, animation settled at 2,800 ms, motion allowed, entry unlocked; `/reports` after entry.
 
-## Implementation evidence
+## Viewport And Normalization
 
-- Existing responsive evidence: `test-results/category-visual-alignment/`.
-- Current category reference, implementation, overlay, and difference images: `test-results/category-visual-acceptance/`.
-- Current eight-viewport category results: `test-results/category-visual-acceptance/viewport-results.json`.
-- Guide motion frames: `test-results/current-visual-fix/guide-start-390.png`, `guide-middle-390.png`, `guide-final-390.png`.
-- Current 375 x 812 user-flow captures: `docs/audit-2026-08-18-mobile-user/flow-inspection-projects-375x812.png` and `flow-review-assurance-375x812.png`.
+- Source pixels: 2000 × 4333, normalized to 750 × 1624 for comparison.
+- Browser capture pixels: 1500 × 3248 from the in-app browser's doubled screenshot surface.
+- App CSS canvas: 750 × 1624 under the browser's 375 × 812 mobile viewport override.
+- Density normalization: the app-owned upper-left 750 × 1624 canvas was cropped from the doubled browser capture, producing a 1:1 comparison against the normalized source. Browser canvas padding was excluded.
+- The final hint measured 394.39 × 47.23 px at x=177.80 px with 43.84 px bottom clearance, matching the source's 52.6% width, horizontal center, aspect ratio, and approximately 2.7% bottom clearance.
 
-## Overlay and interaction review
+## Findings
 
-- Category card rectangles and copy layers use raw 1000 x 2166 master pixels converted by container query units.
-- Current 24-case Chromium inspection covers three category pages at 320, 360, 375 x 667, 375 x 812, 390, 393, 414, and 430px; all retain the expected slot count and have no horizontal overflow.
-- Category title, description, report button, arrow, and status label now follow the reference master coordinates.
-- The first two category pages reuse the original transparent status-text artwork. Page one is `已通过 / 符合标准 / 已通过`; page two is `已核对 / 已留档 / 持续关注`, matching `报告点击页-01.jpg` and `报告点击页-02.jpg` without browser-font substitution.
-- Backend card title, description, and button text take priority. Reference copy is used only for an empty fixed slot, so category and report maintenance remains data-driven.
-- Each complete card remains the click target; visual copy, arrow, and status layers do not intercept pointer events.
-- Guide papers share one 420ms start and one 1500ms duration. Only transform and opacity vary; final coordinates remain the approved artwork coordinates.
-- Archive ribbon renders the untouched 3034 x 4334 repository `h5长图-下滑条.png` on the same half-scale transform as module one. Its runtime stack remains between the folder back and yellow folder front, so the yellow page itself masks the top edge; user scroll reveals the remaining source from master y=1860 through y=2154.
-- Archive result-colour motion uses the original-pixel crop at master bounds `(63, 1820, 691, 1933)`. Only the 628 x 113 changing region is composited, and it shares the latest-circle trigger/root margin so the two motions remain one continuous sequence during scrolling.
-- Fish canvases use the archive 1000 x 5557 origin. Browser inspection confirmed the module changes from `is-ready` to `is-visible` when its trigger enters the viewport.
+- No actionable P0, P1, or P2 differences remain in the requested adjustment.
+- Fonts and typography: the visible instruction is the supplied raster asset, so its hand-drawn letterforms, weight, spacing, punctuation, and wrapping match the source exactly.
+- Spacing and layout rhythm: the instruction is centered and scales from the same measured percentage as the source. Its separate 48 px-or-larger invisible action area does not change the visible layout.
+- Colors and visual tokens: the original transparent orange/brown asset is used without recoloring; the underlying yellow texture remains visible with no white box or alpha halo.
+- Image quality and asset fidelity: the supplied RGBA component is used directly at its native aspect ratio. No CSS drawing, replacement glyph, SVG approximation, stretching, or generated substitute is present.
+- Copy and content: the visible copy is the supplied “上滑查看完整营养信息!” artwork. Screen-reader guidance now says “向上滑动，或点击下方提示进入档案”.
+- Accessibility and behavior: the entry remains a semantic button with a practical touch target; deliberate upward touch gestures enter only after the existing paper animation unlocks. Reduced-motion mode keeps a static final reference and a fade-only route change.
+- The source full-page reference shows the open-eye state while the settled implementation capture shows the existing blink state. This is intentional because the request explicitly preserves the guide artwork and animation; the comparison judges the newly supplied lower instruction and its placement.
+- The black Next.js development badge in the browser capture is dev-only infrastructure and is not part of the production page.
 
-## Deviations
+## Comparison History
 
-- Category copy remains HTML so the management backend can update titles and descriptions. Its font outline cannot be pixel-identical to baked artwork, but its baseline, size, wrapping, and placement are aligned inside the supplied paper regions.
-- The home/archive composition intentionally remains a vertically scrollable long image. Acceptance is based on full-width fitting and zero horizontal overflow, not one-screen height.
-- Motion frames intentionally differ from the final reference only during animation; completed states return to the reference coordinates.
+1. First pass found a P2 scale mismatch at the 750 px design canvas: the instruction was capped at 212 px instead of the source-equivalent 394.5 px.
+2. Fixed `--guide-entry-hint-width` to retain the 52.6vw ratio through the full 750 px H5 canvas, with a 24.65rem ceiling, and updated the responsive image sizes metadata.
+3. Post-fix full and focused comparisons show the instruction aligned to the source at 394.39 px wide, centered, with matching bottom clearance. No P0/P1/P2 findings remain.
 
-## Deployment review
+## Interaction And Console Verification
 
-- The production build succeeds and emits all public, report, and admin routes.
-- `compose.yaml` currently defines PostgreSQL and MinIO only, while `deploy/nginx/default.conf` expects an `app:3000` service. A company-server deployment therefore still needs explicit application/nginx service wiring or an external application process.
-- This workstation could not reach PostgreSQL at `localhost:5432`, so live publish/filter integration and `prisma migrate status` must be repeated in the deployment environment.
+- Targeted interaction tests passed for upward swipe, invalid-direction rejection, animation lock, click-once navigation, preview, failure fallback, and reduced motion.
+- In-app browser click navigation reached `/reports`, and the archive page was visible after transition.
+- The guide exit was captured with `is-leaving`, opacity fading toward 0, and a negative Y translation. The archive uses the matching `reports-slide-up-fade` entrance and finishes at opacity 1 / zero translation.
+- A fresh `/go` → `/reports` browser run produced no console warnings or errors.
 
-## Final QA result
+## Open Questions
 
-- Category visual implementation: **passed**.
-- First and second category status identifiers: **passed** against the supplied original artwork.
-- Mobile-width acceptance: **passed** at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932.
-- Full deployment readiness: **conditional** on database/object-storage connectivity, migration status, and application service wiring.
+- None.
 
-## Guide layered-canvas verification — 2026-08-21
+## Implementation Checklist
 
-**Source visual truth**
+- [x] Remove the old lower-right hint layers and their animation.
+- [x] Mount the supplied static lower-center upward-swipe hint.
+- [x] Change the guide gesture to deliberate upward swipe while retaining click entry.
+- [x] Change guide/archive route motion to upward slide plus fade.
+- [x] Preserve the guide artwork, blink, paper timing, entry lock, preview, and reduced-motion behavior.
 
-- User initial-state reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-19ec3a42-dafa-4706-8add-ab8f321437a6.jpg` (2000 x 4333).
-- User completed-state reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-b55d4685-437b-4b97-acde-d617882a30d4.jpg` (2000 x 4333).
-- User-recorded failure video: `C:/Users/bu/Desktop/H5设计开发/测试/首页测试错误.mp4` (766 x 1472, 18.8s). The original was kept unchanged; review frames were generated only under ignored `artifacts/qa-guide-video-20260821/`.
-- CSS master canvas: 750 x 1625. Exact same-state comparisons: `artifacts/qa-guide-exact-20260821/start-reference-runtime-heat.png` and `final-reference-runtime-heat.png`; focused right-paper evidence: `final-right-paper-focus.png`.
+## Follow-up Polish
 
-**Findings and fixes**
-
-- [Fixed P1] The prior full-width stage exceeded short screens and introduced an internal vertical scroll. The shared 750 x 1625 stage now fits within both viewport dimensions, stays centered, and uses the repository paper texture in any side gutters. No layer is stretched or cropped.
-- [Fixed P1] SSR, hydration, and loading now assemble the exact same repository layers as the animated zero frame. The window mask, arch, character, and foreground are therefore present from the first rendered frame; the 180ms ready handoff no longer introduces a missing frame or changes page geometry.
-- [Fixed P1] The supplied window mask and arch remain above the character. Incoming report papers are below the complete envelope/arm foreground, matching the source-image occlusion. The runtime order is background 10, character 20, window mask 25, arch 27, papers 34, foreground 35, and hint 40.
-- [Fixed P1] The normal animation no longer mounts or swaps a full-canvas initial/final image. The closed-eye layer alone progresses continuously from opacity 0 to 1 between 350 and 620ms; each paper keeps its own transform/opacity animation on the same persistent canvas.
-- [Fixed P2] Exact final-state comparison exposed the right report paper left/down from the supplied reference. Pixel registration corrected its final position by `(+76, -17)` master pixels while preserving the original movement delta. Full-frame mean absolute error improved from 7.904 to 6.563 and the materially changed pixel ratio improved from 12.077% to 10.125%; the remaining differences are raster resampling and edge compression rather than a visible layer-placement error.
-- Entry remains locked until the last staggered paper completes at 2140ms.
-- Fonts, colors, image copy and supplied raster artwork are unchanged. No CSS-drawn replacement was introduced.
-
-**Browser evidence**
-
-- System Chrome verified 320 x 568, 360 x 640, 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, 430 x 932, 768 x 1024, and the supplied recording size 766 x 1472. Every root had `scrollHeight === clientHeight`, zero document overflow, a complete centered 750 / 1625 stage, and no console or page error. Short screens retain textured side gutters instead of cropping the stage; taller screens scale the same fixed page without stretching any layer.
-- A 900ms delayed-resource probe at 375 x 812 captured `artifacts/guide-transition-initial-375x812.png`, `guide-transition-ready-375x812.png`, and `guide-transition-paper-375x812.png`. Initial and ready frames retain the same complete yellow window structure; paper motion begins on that persistent canvas without a full-frame replacement.
-- The same browser probe reported zero console, page, and HTTP errors. All four moving papers computed at z-index 34 while the envelope/arm foreground remained at z-index 35, so the left and right incoming sheets pass beneath the envelope artwork.
-- Reduced-motion cold start renders one canonical final fallback and mounts zero dynamic stages. `pnpm lint`, `pnpm typecheck`, all 104 tests, `pnpm prisma:validate`, and `pnpm build` passed after the final implementation.
-
-final result: passed
-
-## Archive unlock-ribbon source-layer verification — 2026-08-21
-
-**Source visual truth**
-
-- User-supplied final-state reference: 415 x 908 ribbon crop retained in the review conversation.
-- Runtime now uses the repository source `public/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png` directly (3034 x 4334). The former derived 1000 x 5557 ribbon canvas is no longer rendered.
-- The source file is not cropped, redrawn, or re-encoded. It shares module one's exact `(-406, 0, 1517 x 2167)` master placement.
-
-**Layering and motion evidence**
-
-- The stack is folder back z=10, ribbon z=20, yellow folder front z=30. The yellow page therefore forms the real top occlusion instead of a simulated mask or cover patch.
-- Initial progress 0 clips the source at master y=1860. A hidden-ribbon pixel baseline found 0 materially changed pixels at y=1840 and y=1860, confirming the ribbon is fully occluded on entry. At y=1880 the first 59 material pixels appear, so scroll reveal begins directly below the source seam.
-- Final progress 1 exposes the untouched source through master y=2154, including the complete swallow-tail end.
-
-**Browser evidence**
-
-- System Chrome passed 375 x 667, 375 x 812, 390 x 844, and 430 x 932. All runs retained the exact source geometry, zero horizontal overflow, and zero console or response errors. Reduced-motion showed the same final source under the yellow front layer. Local captures and machine reports were intentionally excluded from Git.
-
-final result: passed
-
-## Review-assurance title alignment verification — 2026-08-21
-
-**Source visual truth**
-
-- User-reported issue crop: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-3671f8e0-c06c-4043-92c1-8dab682a28d5.png` (438 x 160). It shows the right edge of `②复核保障` entering the green fold instead of remaining on the yellow tab.
-- Approved runtime title asset: `public/design/final-v1/复核保障_逐字跳动.gif` (878 x 204). The supplied GIF is kept intact; no crop, redraw, mask, or replacement text is used.
-- The yellow archive folder and adjacent layers remain the untouched repository artwork assembled by `ArchiveArtwork`.
-
-**Implementation evidence**
-
-- Full runtime viewport: `artifacts/qa-review-title-20260821/archive-review-title-375x812@2x.png` (750 x 1624 physical pixels from a 375 x 812 CSS viewport at device scale factor 2).
-- Focused runtime crop: `artifacts/qa-review-title-20260821/review-title-implementation.png` (438 x 160).
-- Same-pixel comparison, reported issue on the left and corrected runtime on the right: `artifacts/qa-review-title-20260821/review-title-source-vs-implementation.png` (876 x 160).
-- Runtime report: `artifacts/qa-review-title-20260821/report.json`.
-
-**State and findings**
-
-- Normal-motion `/reports` state, scrolled to the second archive tab with the supplied GIF decoded and visible.
-- The complete title canvas remains 439 x 102 master pixels at top 3165. Only its master left anchor changed from the previously shipped 62.5 to 25, placing the visible title within the yellow tab before the green fold.
-- Browser geometry resolved to left 9.375 CSS px, width 164.625 CSS px at the 375px reference viewport, with one GIF instance, natural size 878 x 204, zero horizontal overflow, zero console errors, and zero failed responses.
-- Iteration history: 62.5 still crossed the fold; 47.5 reduced but did not remove the overlap; 25 aligns the title's visible right edge with the yellow safe area in the same-size focused comparison.
-- No other archive title, artwork layer, hotspot, animation timing, asset, copy, font, or color changed.
-
-final result: passed
-
-## Runtime and motion verification — 2026-08-20
-
-**Source visual truth**
-
-- The supplied final artwork remains the sole composition reference. `docs/input/` was kept read-only.
-- The flattened full-page archive reference is no longer rendered. `ArchiveArtwork` positions byte-identical public runtime copies of the untouched module-one/two source parts on one 1000 x 5557 master; `docs/input/` remains read-only and excluded from production Docker builds. It uses the complete 2000 x 2365 repository output `完整长图-共三个模块_04.jpg` as the module-three part at 0.5 scale from `(0, 4374.5)`. The image is not cropped or modified. Module-two resources 11–19 (the retired static circle, number, and title layers) are omitted, and no runtime title-clean patch or hand-drawn replacement is used.
-- The only visible archive title assets are the three supplied full-title GIF files: `检测项目_逐字跳动.gif`, `复核保障_逐字跳动.gif`, and `生产溯源_逐字跳动.gif`.
-- Category cards use eight configured status mappings backed by seven unique supplied design-text images plus the shared supplied fish artwork.
-
-**Implementation evidence**
-
-- Archive title GIFs retain their original 2x canvases and map to the 1000 x 5557 master at `(486, 2788)`, `(87.5, 3165)`, and `(472, 3522.5)`. They preload only near the title region, mount only while visible, and fully unload offscreen.
-- Reduced-motion, preview, disabled, timeout, and image-failure states never restore the retired static titles. In those states the title areas remain empty because the only title renderers are the supplied GIFs.
-- Fish animation uses the four supplied full-canvas GIF assets, starts only in its viewport region, and fully unmounts offscreen. Once the story assets are ready, its clean animation base is stable before the reveal trigger; the four-line reveal pauses offscreen and only records completion after 7.6 seconds of accumulated visible playback.
-- Motion preload timeout is terminal, so a late resource resolution cannot revive a failed animation. Dynamic reduced-motion changes reset the Guide timeline and do not leave Fish or Story running offscreen.
-- The Guide uses one 750 x 1625 stage across background, masks, character, papers, hints, and hit behavior. Category status art, card copy offsets, batch bubble, navigation targets, and archive hotspots remain mapped on their supplied master canvases.
-
-**Browser and automated evidence**
-
-- System Chrome checked `/go`, `/reports`, and all three category routes at 375 x 667, 375 x 812, 390 x 844, 393 x 852, 414 x 896, and 430 x 932: the 30 normal-motion route/viewport checks reported zero broken images, console/page/request errors, horizontal overflow, and archive-hotspot overlap.
-- The layered-archive probe reported 26 repository source parts, zero `archive-reference.webp` instances, zero retired title parts, zero broken images, and a 375px document width in a 375px viewport. Combined reference/runtime captures show the complete module-three bottom texture and envelope without a seam; visible-state captures show exactly three GIFs with no title-clean patches or double image.
-- Reduced-motion cold-start checks requested no Guide dynamic assets, archive GIFs, Fish patches, or Story patches. The Guide fallback remained visible and the archive title regions remained free of retired static text.
-- Playwright mobile acceptance and category-alignment suites passed 16/16 scenarios, including Guide-to-archive navigation, all six phone sizes, category/report opening, and swipe-back behavior.
-- Unit coverage passed 104/104 tests. `pnpm lint`, `pnpm typecheck`, `pnpm prisma:validate`, and `pnpm build` passed.
-- Physical WeChat testing was not available in this environment; the evidence above uses system Chrome mobile emulation with touch input.
-
-final result: passed
-
-## Production traceability fish-badge verification — 2026-08-19
-
-**Source visual truth**
-
-- Current capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-50699630-d19b-401d-be4f-44f35336be04.png` (750 x 1448).
-- Formal reference capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-a0cafdba-4fe6-47a0-86ec-cbac1c4bdf71.jpg` (2000 x 4333).
-- Runtime category artwork: `public/design/final-v1/category-traceability-clean.webp`.
-
-**Findings and fixes**
-
-- [Fixed P1] The production artwork already contains the approved `已核验 / 已核对` fish badges. A second generic HTML badge had been layered above them, creating an enlarged duplicate during responsive scaling.
-- The duplicate foreground badge is now suppressed only for production traceability; the original artwork badge remains the single visible source.
-- Card title, description, report-button content, card routes and database-backed published-card ordering are unchanged.
-- The entire card remains the click target.
-
-**Browser evidence**
-
-- System Chrome screenshots and all six responsive route checks show the approved fish-status artwork without the former duplicate foreground badge; the card route and full-card hit target remain intact.
-
-final result: passed
-
-## Archive fish GIF replacement verification — 2026-08-21
-
-**Source visual truth**
-
-- Supplied static placement reference: 782 x 143 crop retained in the review conversation.
-- Four newly supplied motion sources were copied byte-for-byte to the runtime asset directory. Every GIF is 281 x 176, 24 frames at 220ms per frame, 5.28 seconds per loop, with transparent frames and infinite looping; no frame, crop, palette, or timing was modified.
-
-**Implementation evidence**
-
-- System Chrome captured same-size frames 660ms apart and compared the supplied fish silhouettes against the live 375 x 812 viewport. Local captures and machine reports were intentionally excluded from Git.
-
-**Findings and fixes**
-
-- [Fixed P1] The previous runtime used four static PNG crops plus one generic CSS rotate/scale keyframe. It has been replaced by the four supplied GIF motions; `archive-fish-float` keyframes and per-fish CSS timing variables were removed.
-- Silhouette matching identified the correct left-to-right source order for the latest delivery as attachment 2, attachment 3, attachment 4, attachment 1. This preserves the approved fish direction and footprint at every existing position.
-- The unchanged 2x GIF canvases map to master rectangles `(54, 4408, 140.5, 88)`, `(300, 4404.5, 140.5, 88)`, `(543.5, 4407, 140.5, 88)`, and `(791, 4403, 140.5, 88)`. Their first-frame alpha bounds align with the existing four fish positions.
-- The four assets mount atomically with the existing clean source patch only after preload completion and viewport visibility. They fully unmount offscreen so native GIF decoding does not continue outside the fish region.
-- Normal-motion browser evidence reported four 281 x 176 GIF instances, one clean patch, visible frame changes over 660ms, zero horizontal overflow, zero console errors, and zero failed responses.
-- Reduced-motion browser evidence reported zero GIF elements and zero fish-motion/clean-patch requests; the approved static repository artwork remains visible.
-- Fonts, copy, color tokens, source texture, archive layout, title positions, hotspots, and card interactions were unchanged. The GIF palette and transparent edges are the supplied originals.
+- No P3 polish is required for this scoped change.
 
 final result: passed

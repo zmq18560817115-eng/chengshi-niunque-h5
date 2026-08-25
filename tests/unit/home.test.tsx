@@ -18,6 +18,6 @@ describe("brand guide", () => {
     render(<GoPage/>);
     expect(screen.getByRole("heading", { name: "Honest Nutri 品牌引导" })).toBeInTheDocument();
     expect(screen.getByRole("button")).toHaveAccessibleName("进入档案");
-    expect(screen.getByText("向左滑动，或点击滑动提示进入档案")).toBeInTheDocument();
+    expect(screen.getByText("向上滑动，或点击下方提示进入档案")).toBeInTheDocument();
   });
 });

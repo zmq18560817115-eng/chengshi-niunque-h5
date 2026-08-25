@@ -98,12 +98,12 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("guide-final-frame-in");
   });
 
-  it("anchors the complete swipe hint inside the viewport safe area", () => {
+  it("anchors the static upward-swipe hint at the lower center", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain(".brand-guide-swipe-hint { position: absolute; z-index: 40; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom));");
-    expect(css).toContain("width: min(42vw, 11.875rem); aspect-ratio: 253 / 55; overflow: hidden;");
-    expect(css).toContain(".brand-guide-swipe-text, .brand-guide-swipe-arrow { position: absolute; top: calc(-1507 / 55 * 100%); left: calc(-464 / 253 * 100%);");
-    expect(css).toContain("transform-origin: right bottom;");
+    expect(css).toContain("--guide-entry-hint-width: min(52.6vw, 24.65rem);");
+    expect(css).toContain("--guide-entry-hint-bottom: max(2.7dvh, env(safe-area-inset-bottom));");
+    expect(css).toContain(".brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom);");
+    expect(css).not.toContain("guide-hint-float");
   });
 
   it.each([
@@ -118,14 +118,23 @@ describe("H5 motion isolation", () => {
     expect(stageWidth / stageHeight).toBeCloseTo(masterRatio, 8);
   });
 
-  it("reveals the swipe hint after the papers with a perceptible entrance", () => {
-    expect(h5MotionTiming.guide.hintStartMs).toBe(h5MotionTiming.guide.paperStartMs);
-    expect(h5MotionTiming.guide.hintDurationMs).toBeGreaterThanOrEqual(500);
+  it("keeps the new guide hint static while unlocking entry after the papers", () => {
     expect(h5MotionTiming.guide.swipeReadyMs).toBe(
       h5MotionTiming.guide.paperStartMs + 220 + h5MotionTiming.guide.paperDurationMs,
     );
     const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).not.toContain("@keyframes guide-hint-in");
+    expect(css).toContain(".brand-guide.is-reduced .brand-guide-fallback { visibility: visible; opacity: 1; }");
+    expect(css).toContain(".brand-guide.is-reduced .brand-guide-entry-hint,");
     expect(css).toContain("@keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }");
+  });
+
+  it("moves the guide and archive upward while fading between pages", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain(".brand-guide.is-leaving { opacity: 0; transform: translate3d(0,-12dvh,0);");
+    expect(css).toContain("animation: reports-slide-up-fade var(--h5-route-transition-duration) var(--h5-route-transition-easing) both;");
+    expect(css).toContain("@keyframes reports-slide-up-fade { from { opacity: 0; transform: translate3d(0,12dvh,0); } to { opacity: 1; transform: translate3d(0,0,0); } }");
+    expect(css).not.toContain("translate3d(100%,0,0)");
   });
 
   it("keeps the supplied window frame above the masked character and incoming papers beneath the envelope foreground", () => {

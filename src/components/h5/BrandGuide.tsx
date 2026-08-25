@@ -14,7 +14,7 @@ const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp",
   "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-foreground-top.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
-  "swipe-hint-text.webp", "swipe-hint-arrow.webp", "guide-final-fallback.webp",
+  "swipe-up-hint.png",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const guideAssets = guideAssetNames.map(assetUrl);
@@ -22,9 +22,9 @@ const guideAssets = guideAssetNames.map(assetUrl);
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
     {!unavailable && (
-      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
     )}
-      <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>向左滑动进入</span>
+      <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>上滑查看完整营养信息</span>
   </>;
 }
 
@@ -37,23 +37,23 @@ function GuideLayers({ animated, onError }: { animated: boolean; onError: (name:
     {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
     {image("guide-arch.webp", "brand-guide-arch", true)}
     {animated && <>
-      {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top")}
-      {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left")}
-      {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right")}
-      {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
-      <div className="brand-guide-swipe-hint" aria-hidden="true">
-        <Image className="brand-guide-swipe-text" src={assetUrl("swipe-hint-text.webp")} alt="" width={750} height={1625} sizes="42vw" unoptimized decoding="async" onError={() => onError("swipe-hint-text.webp")}/>
-        <Image className="brand-guide-swipe-arrow" src={assetUrl("swipe-hint-arrow.webp")} alt="" width={750} height={1625} sizes="42vw" unoptimized decoding="async" onError={() => onError("swipe-hint-arrow.webp")}/>
-      </div>
+      {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top", true)}
+      {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left", true)}
+      {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right", true)}
+      {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom", true)}
     </>}
     {image("guide-foreground-top.webp", "brand-guide-foreground-top", true)}
   </div>;
 }
 
+function GuideEntryHint({ onError }: { onError: (name: string) => void }) {
+  return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint.png")} alt="" aria-hidden="true" width={1052} height={126} sizes="(max-width: 750px) 52.6vw, 395px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint.png")}/>;
+}
+
 function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerError: (name: string) => void; onFinalFallbackError: () => void }) {
   return <div className="brand-guide-bootstrap-frame">
     <GuideLayers animated={false} onError={onLayerError}/>
-    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
+    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
   </div>;
 }
 
@@ -114,7 +114,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setSwipeReady(true);
   }, []);
   const handleFallbackError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-final-fallback.webp");
+    console.error("[BrandGuide] asset failed: guide-final-fallback-v3.webp");
     setFallbackUnavailable(true);
     setSwipeReady(true);
   }, []);
@@ -138,8 +138,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
     "--guide-paper-start": `${h5MotionTiming.guide.paperStartMs}ms`,
     "--guide-paper-duration": `${h5MotionTiming.guide.paperDurationMs}ms`,
-    "--guide-hint-start": `${h5MotionTiming.guide.hintStartMs}ms`,
-    "--guide-hint-duration": `${h5MotionTiming.guide.hintDurationMs}ms`,
   } as CSSProperties;
 
   return <main data-motion-module="guide" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""}`}
@@ -154,16 +152,17 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       if (!start || !touch || !swipeReady) return;
       const deltaX = touch.clientX - start.x;
       const deltaY = touch.clientY - start.y;
-      if (deltaX <= -50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) enter();
+      if (deltaY <= -50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) enter();
     }}>
-    <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-hint-start-ms={h5MotionTiming.guide.hintStartMs} data-hint-duration-ms={h5MotionTiming.guide.hintDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
+    <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
         <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
           <GuideLayers animated onError={handleLayerError}/>
         </MotionStage>
       </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
+      <GuideEntryHint onError={handleLayerError}/>
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
-      <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向左滑动，或点击滑动提示进入档案"}</small>
+      <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
       <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview || !swipeReady}>进入档案</button>
     </section>
   </main>;

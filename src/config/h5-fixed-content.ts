@@ -9,7 +9,7 @@ export type H5FixedContent = {
 export const h5FixedContent: H5FixedContent = {
   brandName: "Honest Nutri · 诚实纽雀",
   guideTitle: "每一份安心，都有据可查",
-  guideDescription: "向左滑动或点击滑动提示，进入透明档案",
+  guideDescription: "向上滑动或点击下方提示，进入透明档案",
   guideButtonText: "进入档案",
   archiveEyebrow: "Honest Nutri",
   archiveTitle: "诚实透明档案",
