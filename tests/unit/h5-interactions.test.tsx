@@ -218,7 +218,7 @@ describe("multi-page H5 interactions", () => {
     fireEvent.load(screen.getByRole("img", { name: "正在公开你的营养信息" }));
     await act(async () => {
       pendingImages.forEach(({ resolve }) => resolve());
-      await Promise.resolve();
+      for (let step = 0; step < 12; step += 1) await Promise.resolve();
     });
     await act(async () => {
       vi.advanceTimersByTime(3600);
@@ -230,6 +230,28 @@ describe("multi-page H5 interactions", () => {
     });
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
+  });
+
+  it("keeps the loading buffer visible after the data timeout until every homepage image has decoded", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) }));
+    const { container } = render(<GuideExperience />);
+    const buffer = container.querySelector(".guide-loading-buffer");
+
+    expect(Number(buffer?.getAttribute("data-buffer-assets-total"))).toBeGreaterThan(0);
+    fireEvent.load(screen.getByRole("img", { name: "正在公开你的营养信息" }));
+    await act(async () => {
+      vi.advanceTimersByTime(15000);
+      await Promise.resolve();
+    });
+    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
+    expect(container.querySelector(".guide-loading-buffer")).toHaveAttribute("data-buffer-warmup-state", "loading");
+    expect(container.querySelector(".brand-guide")).not.toBeInTheDocument();
+
+    await act(async () => {
+      pendingImages.forEach(({ resolve }) => resolve());
+      for (let step = 0; step < 12; step += 1) await Promise.resolve();
+    });
   });
 
   it("enters on a deliberate upward swipe after guide assets are ready", async () => {

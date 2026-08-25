@@ -11,6 +11,7 @@ import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFi
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity, prepareCategoryRouteContinuity } from "@/components/h5/category-route-transition";
+import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -28,6 +29,11 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   }, [preview]);
 
   useEffect(() => { if (!preview) visibleModules.forEach((module) => router.prefetch(`/reports/${module.slug}`)); }, [preview, router, visibleModules]);
+
+  useEffect(() => {
+    if (preview) return;
+    return () => releaseHomepagePreloadedAssets();
+  }, [preview]);
 
   const enter = (module: PublicModule) => {
     if (leaving || preview) return;

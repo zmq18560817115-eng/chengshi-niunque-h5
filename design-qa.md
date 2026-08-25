@@ -1,5 +1,33 @@
 # Design QA
 
+## Latest pass — Guide-to-homepage asset continuity
+
+### Scope And Evidence
+
+- Runtime path: `http://localhost:3000/go` → `http://localhost:3000/reports`.
+- The loading buffer now waits for real image load and decode completion; the 12-second public-data fallback cannot bypass artwork preparation.
+- Browser verification reached `/reports` with all 21 archive source layers present, `complete=true`, non-zero `naturalWidth`, and zero broken image URLs.
+- All 11 previously deferred archive layers rendered with `loading="eager"`; the 10 first-screen priority layers remained high-priority images.
+- Fresh browser warning/error log after the full transition was empty.
+
+### Findings
+
+- No actionable P0, P1, or P2 continuity issue remains.
+- The previous global 12-second race could reveal the guide while large homepage images were still pending, and resolved preload promises did not retain decoded image objects. The browser could therefore request or decode individual archive parts again during the guide-to-homepage handoff.
+- Homepage assets are now retained by their exact repository URLs, retried once on failure, and released only when the homepage unmounts. The `/reports` route is prefetched both at warm-up start and after artwork completion.
+- Direct `/reports` visits also request every archive layer eagerly, preventing lower-page folders and decorations from appearing only after scrolling.
+- No visual assets, coordinates, animation timing, route behavior, public API, admin field, Prisma model, or storage integration changed.
+
+### Verification
+
+- Regression coverage confirms that advancing beyond the 12-second data timeout does not remove the loading buffer while homepage image decodes remain pending.
+- Existing warm-up coverage confirms that completing every image decode and the supplied loading playback still hands off to the unchanged guide page.
+- Full verification passed: lint, TypeScript, 22 test files / 116 tests, Prisma schema validation, optimized production build, and the fresh-browser transition check.
+
+final result: passed
+
+---
+
 ## Latest pass — Equal title ② margins and opaque full-page continuity buffer
 
 ### Comparison Target
