@@ -18,6 +18,7 @@ const guideAssetNames = [
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const guideAssets = guideAssetNames.map(assetUrl);
+export const guideWarmAssets = [...guideAssets, assetUrl("guide-final-fallback-v3.webp")] as const;
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>

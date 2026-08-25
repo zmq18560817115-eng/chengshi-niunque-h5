@@ -10,7 +10,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
-import { categoryRouteEntryAttribute } from "@/components/h5/category-route-transition";
+import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity } from "@/components/h5/category-route-transition";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -36,25 +36,29 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
       setLeaving(true);
-      window.setTimeout(() => router.push(`/reports/${module.slug}`), 220);
-    }, 70);
+      window.setTimeout(() => navigateWithCategoryContinuity(() => router.push(`/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
+    }, archiveModuleExitDelayMs);
   };
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle}>
-    {/* Runtime artwork is assembled from the approved source parts. The old
-        plant decoration and module-two title layers are omitted because their
-        supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
-    <ArchiveArtwork preview={preview} />
-    <ArchiveFishFloatMotion preview={preview} />
-    <ArchiveStoryCopyMotion preview={preview} />
-    <ArchiveSectionTitleMotion preview={preview} />
-    <nav className="reports-archive-hotspots" aria-label="档案分类">
-      {visibleModules.map((module) => {
-        const layout = getArchiveModuleLayout(module.slug)!;
-        const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, "--archive-order": layout.order } as CSSProperties;
-        return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
-          <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving} onClick={() => enter(module)}><span>{module.title}</span></button>;
-      })}
-    </nav>
+  const exitingSlug = leaving ? pressedSlug : null;
+
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} data-exit-slug={exitingSlug ?? undefined}>
+    <div className="reports-archive-canvas">
+      {/* Runtime artwork is assembled from the approved source parts. The old
+          plant decoration and module-two title layers are omitted because their
+          supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
+      <ArchiveArtwork preview={preview} exitingSlug={exitingSlug} />
+      <ArchiveFishFloatMotion preview={preview} />
+      <ArchiveStoryCopyMotion preview={preview} />
+      <ArchiveSectionTitleMotion preview={preview} exitingSlug={exitingSlug} />
+      <nav className="reports-archive-hotspots" aria-label="档案分类">
+        {visibleModules.map((module) => {
+          const layout = getArchiveModuleLayout(module.slug)!;
+          const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, "--archive-order": layout.order } as CSSProperties;
+          return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
+            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving} onClick={() => enter(module)}><span>{module.title}</span></button>;
+        })}
+      </nav>
+    </div>
   </main>;
 }

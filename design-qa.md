@@ -1,5 +1,74 @@
 # Design QA
 
+## Latest pass — Homepage-to-category continuity, title ② alignment, and 4-second sequence
+
+### Comparison Target
+
+- Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-d1459075-b1d2-4e9c-ae2b-5779d26378c0.png` (2000 x 4420), the first reported current-state crop `C:/Users/bu/AppData/Local/Temp/codex-clipboard-3afa7f8f-c5a3-4aa9-bab7-7778f3765578.png` (380 x 132), and the final left-shift request `C:/Users/bu/AppData/Local/Temp/codex-clipboard-15d3ac87-549c-4cb9-be5d-54cd1fad9257.png` (450 x 150).
+- Browser implementation: `http://127.0.0.1:3000/reports` and all three `/reports/[slug]` category routes.
+- Full visible-viewport comparison: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v2/module-viewport-source-vs-browser.png`.
+- Focused title comparison: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v2/review-left-supplement-source-vs-browser.png`; full browser capture: `review-title-left-final.png` in the same directory.
+- Transition-state evidence: `D:/chengshi-niunque-h5/design-qa-evidence/route-continuity-v2/final-transition-filmstrip.png`.
+- State: homepage scrolled to the three module tabs, normal motion preference, one title active at a time, then each module pressed and allowed to reach its matching detail route.
+
+### Viewport And Normalization
+
+- Browser viewport: 2560 x 1440 CSS pixels at device pixel ratio 1. The centered H5 canvas measured 750 CSS pixels wide and is the project's doubled 375px reference surface.
+- Full comparison: source crop `(0, 440)-(2000, 4280)` was downsampled to 750 x 1440; the browser-owned H5 viewport was cropped from `(905, 0)-(1655, 1440)` without rescaling before both panels were reduced equally for the combined evidence.
+- Focused title comparison: source crop `(0, 1840)-(1200, 2240)` and the equivalent browser H5 crop were normalized to matching 600 x 200 panels. Browser chrome and surrounding desktop canvas were excluded.
+- Transition filmstrip: six app-owned H5 viewport samples show the selected homepage module exit, route handoff, and settled category page. Frame labels are sampling checkpoints rather than a frame-perfect video clock because screenshot capture itself consumes time.
+
+### Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- Fonts and typography: the three module titles remain supplied raster letterforms. The complete ②/title lockup moved left together, so glyph weight, internal spacing, and rendering remain unchanged.
+- Spacing and layout rhythm: review-title group `(117.5, 3155.5)`, ring `(34, 3168)`, and digit `(51.5, 3181.5)` preserve the existing 22-master-unit ring/title clearance and baseline. The title's visible right edge is x=477, while the yellow folder boundary is x=480 or farther across the occupied title rows, so the entire lockup is contained in yellow. Folder lips, papers, mascot, heading, report-step copy, and module click regions remain at their existing coordinates.
+- Colors and visual tokens: no palette, opacity token, texture, border, radius, or shadow was changed. Route continuity uses opacity only during motion; settled pages retain the supplied colors.
+- Image quality and asset fidelity: the supplied title GIFs retain all 36 original frames, dimensions, and compressed image blocks. Only GIF frame-delay metadata changed; no illustration, logo, icon, texture, or title was redrawn or replaced.
+- Copy and content: all fixed artwork copy and all live admin/backend card content remain unchanged.
+- Behavior: navigation begins while the selected folder is still visible. Supported browsers retain the old page snapshot while the category page rises and fades in over it; the non-View-Transition fallback starts the category page at opacity 0.42 instead of a blank frame. Both paths avoid exposing the canvas background.
+- Accessibility and responsiveness: semantic module buttons, labels, tap regions, keyboard behavior, reduced-motion handling, 375px reference scaling, and scroll restoration remain active. Reduced motion uses a short continuity fade beginning at opacity 0.72.
+
+### Comparison History
+
+1. The reported implementation had two P2 issues: title ② sat too close to its number ring, and the old route completed its extraction before a fully transparent category page mounted, exposing a visual break.
+2. Source measurement placed the ② ring at original x=159–314 and the title at x=360–1025. At 0.5 master scale this required title group x=161; y=3155.5 preserves the source baseline. The folder, ring, digit, and click region were not moved.
+3. Route handoff was changed from sequential hide-then-show to overlap: selected-module extraction is 520ms, navigation begins at 300ms, and old/new page snapshots share a 760ms upward fade. The fallback category entrance begins at non-zero opacity.
+4. The first asynchronous handoff attempt waited for a passive effect and produced a browser timeout; this was a P1 runtime finding. Readiness now fires during the detail page layout commit, eliminating the wait cycle. A fresh browser session completed the route with the transition marker removed and no console error.
+5. Post-fix combined visual evidence aligns title ② with the source. Browser filmstrip and computed pseudo-element styles confirm `category-route-old-overlap` and `category-route-new-overlap`, both at 0.76s, with no blank sample.
+6. The final supplemental crop requested a further left shift. Pixel-boundary measurement showed the title's right edge crossing the yellow folder edge by up to 38.5 master units. The full ②/title lockup moved left 43.5 units, retaining its internal gap and leaving a 3-unit minimum inset; the new combined evidence shows no title pixel on the white paper.
+
+### Interaction And Console Verification
+
+- Detection, review, and production buttons each reached their matching category route through the shared overlap path.
+- A clean review transition ended at `/reports/review-assurance`, removed `data-category-view-transition`, retained `data-route-entry="reports-archive-overlap"`, and produced no warning or error logs.
+- A clean production sample reported `category-route-old-overlap` and `category-route-new-overlap`, each with `0.76s` duration; the marker cleared after completion.
+- Fourteen one-second title samples returned ① for seconds 0–3, ② for 4–7, ③ for 8–11, then ① again. Every sample contained exactly one GIF and two posters.
+- Each title GIF contains 36 frames, 20 delays of 110ms and 16 delays of 100ms for exactly 3800ms, no infinite-loop extension, and a 200ms final-frame hold before the 4000ms handoff.
+- Browser layout inspection confirmed the final review group at the expected scaled coordinate, with every visible title asset loaded and the full lockup contained by the yellow tab.
+- Full verification passed: lint, TypeScript, 22 test files / 115 tests, Prisma schema validation, and the optimized production build.
+
+### Open Questions
+
+- None.
+
+### Implementation Checklist
+
+- [x] Remove the blank visual interval between homepage module exit and category entry.
+- [x] Reuse one upward-overlap transition for all three modules with a non-blank fallback.
+- [x] Move the complete title ② lockup left while preserving its ring gap and baseline, fully containing it in the yellow folder.
+- [x] Extend each title GIF to exactly 3.8 seconds and hand off every 4 seconds in repeating ①→②→③ order.
+- [x] Preserve all other animation, artwork, routes, interactions, and backend/admin linkage.
+- [x] Pass focused/full combined visual QA, interaction checks, console checks, automated gates, and production build.
+
+### Follow-up Polish
+
+- No P3 visual polish is required for this scoped correction.
+
+final result: passed
+
+---
+
 ## Comparison Target
 
 - Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-e246eaf0-3fca-48ea-b34c-c24d86a08e97.png`
@@ -62,6 +131,197 @@ final result: passed
 
 ---
 
+# Design QA — Homepage title-two alignment and motion de-ghosting
+
+## Comparison Target
+
+- Focused source visual: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-559e59bd-49f7-4604-808a-776477d4a3b6.png`.
+- Full-page source visual: `D:/chengshi-niunque-h5/design-qa-evidence/home-layout/reference-750.png`, normalized from the supplied 2000 x 10682 homepage reference.
+- Browser evidence before correction: `D:/chengshi-niunque-h5/design-qa-evidence/title-motion-fix/review-active-before-viewport.png`.
+- Browser evidence after correction: `D:/chengshi-niunque-h5/design-qa-evidence/title-motion-fix/review-active-after-viewport.png` and `review-inactive-final-viewport.png`.
+- Combined focused evidence: `D:/chengshi-niunque-h5/design-qa-evidence/title-motion-fix/review-final-source-vs-browser.png`.
+- Combined full-view evidence: `D:/chengshi-niunque-h5/design-qa-evidence/title-motion-fix/full-source-vs-browser.png`.
+- Route/state: `/reports`, title region intersecting the viewport, normal motion preference, no module pressed.
+
+## Viewport And Normalization
+
+- Browser surface: 2560 x 1440 CSS pixels at device pixel ratio 1; the app-owned H5 canvas is centered at 750 CSS pixels wide.
+- Full source and browser canvas are compared at 750 x 4006 pixels. The focused review-tab comparison uses the same feature scale and excludes desktop canvas padding.
+- Active and inactive states were captured separately so position and layer composition could be judged without treating different GIF frames as layout drift.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- Title ② alignment: the review title group is now at master `(161, 3155.5)`. The supplied ② ring/digit keeps its existing coordinate and size, while “复核保障” aligns with the source tab baseline and preserves the original ring/title clearance.
+- De-ghosting: an active group renders only its GIF; inactive groups render only their exact frame-zero WebP posters. The previous simultaneous poster-plus-GIF composition cannot occur.
+- Timing: each 36-frame GIF now distributes 100ms and 110ms frame delays for one exact 3800ms playthrough. The infinite-loop extension is removed, and the sequence hands off every 4000ms, leaving a 200ms final-frame hold instead of restarting or jumping before the next title.
+- Assets, colors, raster letterforms, number pieces, click regions, folder layers, module extraction, route entry, and backend/admin content remain unchanged.
+
+## Comparison History
+
+1. Before correction, the active review group contained both `.archive-section-title-poster` and `.archive-section-title-gif`, producing two coincident title layers. Later source measurement also showed insufficient clearance between the ② ring and review lettering, and the original 1800ms looping asset restarted exactly at each sequence handoff.
+2. The final group coordinate is `(161, 3155.5)`. Poster and GIF rendering remain mutually exclusive. Only GIF timing metadata and its loop extension changed; compressed frame pixels, canvas dimensions, and the 36 supplied frames were preserved.
+3. The final focused source-versus-browser comparison aligns the review lettering with the source. Runtime sampling confirms one active GIF plus two inactive posters for the full repeating cycle.
+
+## Interaction And Console Verification
+
+- Fourteen consecutive one-second samples covered ①→②→③→①. Every sample reported exactly one GIF, two posters, and render layers matching the active title only; each title remained active for four samples before handoff.
+- All three patched title files remain 36 frames at their original dimensions. Their 100ms/110ms delays total 3800ms, and no `NETSCAPE2.0` loop extension is present.
+- Clicking ②复核保障 still reached `/reports/review-assurance`; browser back restored `/reports` with all three module buttons enabled.
+- Browser warning/error log after the interaction was empty.
+- Full verification passed: lint, TypeScript, 22 test files / 115 tests, Prisma schema validation, and the optimized production build.
+
+## Open Questions
+
+- None.
+
+## Implementation Checklist
+
+- [x] Align title ② to the supplied source without moving its number part.
+- [x] Remove the active poster/GIF overlap that caused ghosting.
+- [x] Lengthen each supplied title animation and prevent an end-of-loop jump.
+- [x] Preserve the repeating ①→②→③ order and every existing route and interaction.
+- [x] Verify focused and full-page combined evidence, browser behavior, tests, and production build.
+
+## Follow-up Polish
+
+- No P3 visual polish is required for this scoped correction.
+
+final result: passed
+
+---
+
+# Design QA — Homepage top-whitespace correction
+
+## Comparison Target
+
+- Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-a3d8bac3-0f05-4b14-84ca-a62df6e343fa.jpg`.
+- Browser-rendered implementation before correction: `D:/chengshi-niunque-h5/design-qa-evidence/home-layout/implementation-before-h5.png`.
+- Browser-rendered implementation after correction: `D:/chengshi-niunque-h5/design-qa-evidence/home-layout/implementation-after-h5.png`.
+- Full-view combined evidence after correction: `D:/chengshi-niunque-h5/design-qa-evidence/home-layout/comparison-after-full.png`.
+- Focused top and three-folder comparison: `D:/chengshi-niunque-h5/design-qa-evidence/home-layout/comparison-after-top.png`.
+- Before-fix evidence: `comparison-before-full.png` and `comparison-before-top.png` in the same directory.
+- Route/state: `/reports`, all 21 archive artwork layers loaded with non-zero natural widths, page-entry animation settled, title motion allowed, and no module pressed.
+
+## Viewport And Normalization
+
+- Source pixels: 2000 x 10682, normalized to 750 x 4006 for comparison with the app-owned H5 canvas.
+- Browser viewport: 2560 x 1440 CSS pixels, device pixel ratio reported as 1, with the centered H5 canvas measuring 750 CSS pixels wide.
+- Before-fix implementation canvas: 750 x 4167.75 CSS pixels, captured as the 750 x 4168 app-owned region.
+- After-fix implementation canvas: 750 x 4005.75 CSS pixels, captured as the 750 x 4006 app-owned region.
+- Density normalization: the source was downsampled by 2000/750; the implementation crop was retained at one image pixel per measured CSS pixel. Browser padding and surrounding desktop canvas were excluded.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- Fonts and typography: the logo, hero title, batch copy, three folder titles, report steps, and brand-story copy remain the supplied raster artwork or the already-approved title GIF/poster assets. No font, weight, line-height, wrapping, or antialiasing rule changed.
+- Spacing and layout rhythm: the source ratio is 1000 x 5341, while the previous runtime exposed the full 1000 x 5557 internal master and added 216 units above the intended visible composition. Cropping that exact amount from the shared parent aligns the book edge, evidence heading, all three folder lips, brown copy block, fish divider, and brand-story envelope with the reference without per-layer drift.
+- Colors and visual tokens: all paper, yellow, green, brown, orange, pink, blue, and ink colors still come from the existing repository assets and current global tokens. No recoloring, opacity substitution, gradient, border, radius, or shadow was introduced.
+- Image quality and asset fidelity: every existing raster layer is retained at its original scale. The fix changes only the visible parent canvas; no supplied asset was resized independently, recompressed, redrawn, or replaced with CSS/SVG/HTML art.
+- Copy and content: all fixed artwork copy and all backend/admin-linked content remain unchanged.
+- Icons and decorative marks: the supplied logo, paperclip, graduation cap, arrows, mascot, fish, folder tabs, and envelope remain source imagery with unchanged stacking order.
+- Responsiveness and accessibility: the visible canvas keeps the project 375px reference behavior and 750px maximum width. All three semantic module buttons remain enabled, retain practical tap regions, labels, focus behavior, and percentage-based alignment inside the uniformly shifted internal canvas. The page has no horizontal overflow.
+
+## Comparison History
+
+1. The before-fix combined comparison exposed a P2 layout mismatch: the browser canvas was 750 x 4168 while the normalized source was 750 x 4006, leaving excessive cream space above the yellow archive and shifting every later section downward.
+2. The fix introduced one shared `reports-archive-canvas` wrapper. Its original 1000 x 5557 coordinate space is preserved at 104.0432503277% of the outer height and shifted upward by 4.0432503277%, while the outer page uses the source-aligned 1000 x 5341 ratio.
+3. The post-fix full and focused comparisons show matching page height and aligned section boundaries. Because the artwork, hotspots, triggers, and motion groups share the same parent, their relative registration remains unchanged. No P0/P1/P2 issue remains.
+
+## Interaction And Console Verification
+
+- A complete 11-second browser sample returned ③生产溯源 → ①检测项目 → ②复核保障 → ③生产溯源 → ①检测项目. Every sample contained exactly one active title GIF and exactly two inactive title posters.
+- The three module hotspots measured 390–397.5 CSS pixels wide and 158.36–191.70 CSS pixels high on the 750px canvas, remaining aligned with their corresponding folder regions after the crop.
+- Clicking ②复核保障 left the root transition disabled, applied `archive-selected-module-extract-up` only to the selected yellow folder/title group, left the green folder at `animation-name: none`, and reached `/reports/review-assurance`. Browser back restored `/reports`, the previous scroll region, and all three buttons.
+- All archive images reported complete with non-zero natural widths before the final capture. Browser logs contained only React development and Fast Refresh information; no warnings or errors were present.
+
+## Open Questions
+
+- None.
+
+## Implementation Checklist
+
+- [x] Match the visible homepage height to the 2000 x 10682 source ratio.
+- [x] Remove the excessive top whitespace with one parent-level crop.
+- [x] Preserve all artwork coordinates, title sequencing, selected-module extraction, hotspots, routes, and backend linkage.
+- [x] Verify the full page and focused top/module regions in combined source-versus-implementation evidence.
+
+## Follow-up Polish
+
+- No P3 visual polish is required for this scoped correction.
+
+final result: passed
+
+---
+
+# Design QA — Loading buffer, review title, and selected-module extraction
+
+## Comparison Target
+
+- Loading source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-6d2cd344-ee0c-43c9-9594-c7c6166d48b3.gif`.
+- Review-title issue evidence: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-31a053c2-28c6-4f73-8919-ab7a237b4fec.png`.
+- Browser-rendered implementations: `D:/chengshi-niunque-h5/design-qa-evidence/loading-and-module-exit/loading-buffer.png` and `D:/chengshi-niunque-h5/design-qa-evidence/loading-and-module-exit/archive-after.png`.
+- Full-view combined evidence: `D:/chengshi-niunque-h5/design-qa-evidence/loading-and-module-exit/loading-source-vs-browser.png`.
+- Focused review-title evidence: `D:/chengshi-niunque-h5/design-qa-evidence/loading-and-module-exit/review-title-issue-vs-fixed-aligned.png`.
+- Interaction-sequence evidence: `D:/chengshi-niunque-h5/design-qa-evidence/loading-and-module-exit/review-transition-sequence.png`.
+- Routes/state: `/go` during loading and after handoff; `/reports` before and during a selected review-module exit; all three category destination routes with motion allowed.
+
+## Viewport And Normalization
+
+- Loading GIF source: 2000 x 4334 pixels, 45 frames at 80ms each, one 3600ms loop.
+- Browser viewport and implementation capture: 2560 x 1440 CSS pixels, device pixel ratio 1, screenshot 2560 x 1440 pixels.
+- Loading comparison normalization: source GIF frame 6 was rendered with the production `object-fit: cover` rule and both source and browser capture were normalized to 1280 x 720 before being placed in one 2560 x 764 comparison. This removes animated-frame timing, density, and crop differences from the visual judgment.
+- Review issue source: 424 x 182 pixels. The browser region was cropped at the same visible feature scale from the centered 750px archive canvas and normalized to 424 x 182. Browser canvas padding was excluded.
+- The archive full-page evidence is 5120 x 8336 pixels; the interaction sequence uses the app-owned centered 750 x 1440 region, normalized to three equal 375 x 720 panels.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- Fonts and typography: the loading copy and all three module titles are unchanged supplied raster letterforms. The review-title artwork is now at final master coordinate `(161, 3155.5)`, while the independent ② part retains its original absolute position; no font, weight, line-height, or glyph substitute was introduced.
+- Spacing and layout rhythm: the fixed review title remains inside the yellow folder tab and maintains clearance from the ring, character, and right paper. On click, only the selected folder and its title/number group move; the archive root and the two other folder layers retain their settled coordinates.
+- Colors and visual tokens: the loading screen, green/yellow/brown folders, title colors, paper textures, and detail pages remain the supplied artwork. The only new motion values use the existing route easing token.
+- Image quality and asset fidelity: the production loading GIF is a byte-identical repository copy. The reduced-motion poster is an exact first-frame WebP derivative. No CSS illustration, inline SVG, emoji, placeholder, or generated substitute is used.
+- Copy and content: the loader still reads “正在公开你的营养信息…”, and the three module names remain 检测项目、复核保障、生产溯源. Existing live detail copy and backend-provided values are unchanged.
+- Responsiveness and accessibility: the loader fills the current guide viewport with the same cover behavior as the guide, exposes loading status and alt text, and uses a static poster for reduced motion. Existing semantic module buttons, labels, tap regions, keyboard behavior, and routes remain active.
+
+## Comparison History
+
+1. The attached review crop showed the title visibly displaced to the right and low inside the yellow tab. This was recorded as a P2 alignment mismatch. The prior archive route transition also moved and faded the whole homepage, which did not meet the requested selected-module extraction behavior.
+2. `section-title-review.gif` was moved to the final source-aligned `(161, 3155.5)` without moving the ② source parts. The clicked folder layer and matching title/number group now share `archive-selected-module-extract-up` at 15dvh over 520ms before the overlapping route handoff.
+3. Post-fix combined evidence shows the loading frame matching the supplied GIF, the review title corrected within the folder tab, and the selected yellow folder absent from its settled position mid-transition while the green and brown folders remain fixed. No P0/P1/P2 findings remain.
+
+## Interaction And Console Verification
+
+- `/go` initially showed the supplied GIF at natural size 2000 x 4334 and did not mount `BrandGuide`. After the complete 3600ms playback and 260ms exit, the loader was absent and the existing guide mounted in its ready/animating state.
+- During loading, `/reports`, `/api/public/content`, the guide artwork, all 21 archive layers, and the homepage motion/title assets were warmed; the 12000ms timeout remains a fail-open fallback.
+- Browser sampling across one complete 11-second window returned the repeating ①→②→③ order. Every one-second sample contained exactly one `.archive-section-title-gif` and two static title posters, confirming that no active title has a duplicate poster layer.
+- After entering `/reports` from the ready guide, all 21 `reports-archive-source-layer` images reported `complete=true` with non-zero natural widths on the first sampled homepage frame; no progressive layer gap was observed.
+- Review mid-transition: root animation `none`; selected folder and title animation `archive-selected-module-extract-up`; sampled transform `translateY(-255.608px)` and opacity `0.0927`; inspection folder animation `none`. The destination reached `/reports/review-assurance` with the existing `category-detail-enter-up-fade` animation.
+- Inspection and production were also clicked in the in-app browser. Each set its own slug, animated only its folder and title group, left both non-selected folders at animation `none`, and reached its existing category route.
+- Console errors checked: none. Existing Next.js development-only LCP suggestions for delivered artwork remain warnings and are unrelated to this change.
+- Full verification passed: lint, TypeScript, 22 test files / 115 tests, Prisma schema validation, and the optimized production build.
+
+## Open Questions
+
+- None.
+
+## Implementation Checklist
+
+- [x] Place the supplied loading buffer before the guide and warm public data, guide assets, and all homepage artwork/motion assets.
+- [x] Keep inactive titles on exact frame-zero posters and mount only one 3800ms single-run title GIF at a time in the repeating ①→②→③ order, with a 4000ms handoff interval.
+- [x] Preserve the full GIF loop and add reduced-motion/failure fallbacks.
+- [x] Correct the review title without moving the existing ② part.
+- [x] Extract only the clicked folder and matching title/number group for all three modules.
+- [x] Preserve destination entry motion, routes, other page animation, backend linkage, and admin-managed content.
+
+## Follow-up Polish
+
+- No P3 visual polish is required for this scoped change.
+
+final result: passed
+
+---
+
 # Design QA — Archive category route transition
 
 ## Scope and references
@@ -75,7 +335,7 @@ final result: passed
 
 - All three homepage hotspots set the clicked slug before navigation. The destination consumes only its matching marker, preventing the new transition from appearing on direct category URLs.
 - Homepage exit: `archive-category-exit-up-fade`, 220ms, upward distance `8dvh`, opacity 1 → 0.
-- Category entry: `category-detail-enter-up-fade`, 560ms, initial distance `14dvh` below the settled canvas, opacity 0 → 1. The category artwork contains the folder and title region, so both move on the same fixed canvas without relative drift.
+- Category entry fallback: `category-detail-enter-up-fade`, 760ms, initial distance `8dvh` below the settled canvas, opacity .42 → 1. Supported browsers use the 760ms old/new root overlap instead. The category artwork contains the folder and title region, so both move on the same fixed canvas without relative drift.
 - Browser samples immediately after destination mount:
   - inspection: opacity `0.0888`, Y translation `186.5px`;
   - review: opacity `0.0898`, Y translation `186.3px`;

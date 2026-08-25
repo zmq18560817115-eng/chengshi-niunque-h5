@@ -16,6 +16,7 @@ const fishAssets = [
   { src: "/design/final-v1/motion/archive-runtime/fish-motion-04.gif", x: 791, y: 4403, width: 140.5, height: 88 },
 ] as const;
 const motionAssets = [cleanBaseAsset.src, ...fishAssets.map(({ src }) => src)];
+export const archiveFishWarmAssets = motionAssets;
 const position = (asset: { x: number; y: number; width: number; height: number }) => ({
   left: `${asset.x / masterWidth * 100}%`,
   top: `${asset.y / masterHeight * 100}%`,

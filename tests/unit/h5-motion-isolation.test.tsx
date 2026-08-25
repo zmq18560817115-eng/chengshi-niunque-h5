@@ -137,16 +137,52 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("translate3d(100%,0,0)");
   });
 
-  it("moves every archive category detail upward with one shared fade transition", () => {
+  it("extracts only the selected archive module before an overlapping upward-fade detail entrance", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const archive = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
+    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
+    const routeTransition = readFileSync("src/components/h5/category-route-transition.ts", "utf8");
 
     expect(css).toContain('.category-page-final[data-route-entry="reports-archive"] { animation: category-detail-enter-up-fade');
     expect(css).toContain("transform: translate3d(0,var(--category-route-entry-distance),0);");
-    expect(css).toContain("@keyframes archive-category-exit-up-fade");
+    expect(css).toContain('html[data-category-view-transition="active"]::view-transition-old(root)');
+    expect(css).toContain('html[data-category-view-transition="active"]::view-transition-new(root)');
+    expect(css).toContain("@keyframes category-route-old-overlap");
+    expect(css).toContain("@keyframes category-route-new-overlap");
+    expect(css).toContain("from { opacity: .42;");
+    expect(css).toContain("@keyframes archive-selected-module-extract-up");
+    expect(css).toContain(".reports-archive-source-layer.archive-module-exit-layer");
+    expect(css).toContain(".archive-section-title-group.archive-module-exit-layer");
+    expect(css).not.toContain("@keyframes archive-category-exit-up-fade");
     expect(archive).toContain("document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);");
+    expect(archive).toContain("navigateWithCategoryContinuity(() => router.push");
+    expect(archive).toContain("data-exit-slug={exitingSlug ?? undefined}");
+    expect(artwork).toContain('"module-2-review-folder": "review-assurance"');
     expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
+    expect(category).toContain("categoryRouteOverlapEntrySource");
+    expect(category).toContain("announceCategoryRouteReady();");
+    expect(routeTransition).toContain("startViewTransition");
+    expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 300");
+  });
+
+  it("uses the supplied data-loading GIF before mounting the guide", () => {
+    const experience = readFileSync("src/components/h5/GuideExperience.tsx", "utf8");
+    const route = readFileSync("src/app/go/page.tsx", "utf8");
+    const gif = readFileSync("public/design/guide/data-loading-buffer.gif");
+    const css = readFileSync("src/app/globals.css", "utf8");
+
+    expect([gif.readUInt16LE(6), gif.readUInt16LE(8)]).toEqual([2000, 4334]);
+    expect(route).toContain("<GuideExperience/>");
+    expect(experience).toContain('fetch("/api/public/content"');
+    expect(experience).toContain("experienceWarmAssets.map(preloadImage)");
+    expect(experience).toContain("archiveArtworkWarmAssets");
+    expect(experience).toContain("archiveSectionTitleWarmAssets");
+    expect(experience).toContain("warmupTimeoutMs = 12000");
+    expect(experience).toContain("loadingGifDurationMs = 3600");
+    expect(experience).toContain('src="/design/guide/data-loading-buffer.gif"');
+    expect(css).toContain(".guide-loading-buffer.is-leaving");
+    expect(css).toContain(".guide-loading-buffer-poster { visibility: hidden; }");
   });
 
   it("keeps the supplied window frame above the masked character and incoming papers beneath the envelope foreground", () => {
@@ -198,7 +234,7 @@ describe("H5 motion isolation", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     expect(reports).toContain('import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";');
-    expect(reports).toContain("<ArchiveArtwork preview={preview} />");
+    expect(reports).toContain("<ArchiveArtwork preview={preview} exitingSlug={exitingSlug} />");
     expect(reports).not.toContain("archive-reference.webp");
     expect(artwork).toContain('data-artwork-source="layered-originals"');
     expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');
@@ -265,18 +301,25 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("var(--archive-unlock-current-bottom)");
   });
 
-  it("replaces the retired decoration and three baked folder titles with the supplied viewport-scoped GIFs", () => {
+  it("replaces the retired decoration and sequences the three supplied title GIFs one at a time", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     const component = readFileSync("src/components/h5/motion/modules/ArchiveSectionTitleMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(reports).toContain('import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";');
-    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} />");
+    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} exitingSlug={exitingSlug} />");
     expect(component).toContain("/design/final-v1/motion/archive-runtime");
     expect(component).toContain("section-click-cue.gif");
     expect(component).toContain("section-title-inspection.gif");
     expect(component).toContain("section-title-review.gif");
     expect(component).toContain("section-title-production.gif");
+    expect(component.match(/section-title-(inspection|review|production)-poster\.webp/g)).toHaveLength(3);
+    expect(component).toContain("archiveTitleSequenceDurationMs = 4000");
+    expect(component).toContain("window.setInterval");
+    expect(component).toContain("data-title-sequence-active={active}");
+    expect(component).toContain("const showGif = active && ready && visible");
+    expect(component).toContain("visible && !showGif");
+    expect(component).toContain('data-title-render-layer={showGif ? "gif" : "poster"}');
     expect(component.match(/section-number-(inspection|review|production)-(ring|digit)\.png/g)).toHaveLength(6);
     const gifDimensions = (name: string) => {
       const gif = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
@@ -286,6 +329,17 @@ describe("H5 motion isolation", () => {
     expect(gifDimensions("section-title-inspection.gif")).toEqual([758, 229]);
     expect(gifDimensions("section-title-review.gif")).toEqual([757, 228]);
     expect(gifDimensions("section-title-production.gif")).toEqual([758, 230]);
+    for (const name of ["section-title-inspection.gif", "section-title-review.gif", "section-title-production.gif"]) {
+      const gif = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
+      expect(gif.includes(Buffer.from("NETSCAPE2.0"))).toBe(false);
+      const delays: number[] = [];
+      for (let offset = 0; offset <= gif.length - 8; offset += 1) {
+        if (gif[offset] === 0x21 && gif[offset + 1] === 0xf9 && gif[offset + 2] === 0x04) delays.push(gif.readUInt16LE(offset + 4));
+      }
+      expect(delays).toHaveLength(36);
+      expect(delays.every((delay) => delay === 10 || delay === 11)).toBe(true);
+      expect(delays.reduce((total, delay) => total + delay, 0)).toBe(380);
+    }
     const pngDimensions = (name: string) => {
       const png = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
       return [png.readUInt32BE(16), png.readUInt32BE(20)];
@@ -306,21 +360,22 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("top: 2545.5");
     expect(component).toContain("left: 556");
     expect(component).toContain("top: 2779.5");
-    expect(component).toContain("left: 156.5");
-    expect(component).toContain("top: 3156");
+    expect(component).toContain("left: 117.5");
+    expect(component).toContain("top: 3155.5");
     expect(component).toContain("left: 542.5");
     expect(component).toContain("top: 3518");
     expect(component).toContain("left: 475, top: 2787.5");
-    expect(component).toContain("left: 77.5, top: 3168");
+    expect(component).toContain("left: 34, top: 3168");
     expect(component).toContain("left: 468.5, top: 3532.5");
     expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
     expect(component).not.toContain("aspectRatio:");
     expect(component).toContain('rootMargin: "45% 0px"');
     expect(component).toContain("h5MotionModules.archiveSectionTitle");
     expect(component).toContain("IntersectionObserver");
-    expect(component).toContain("ready && visible");
+    expect(component).toContain("active && ready && visible");
     expect(css).not.toContain("archive-section-title-clean-patch");
-    expect(css).toContain(".archive-section-title-gif { z-index: 0; }");
+    expect(css).toContain(".archive-section-title-poster { z-index: 0; }");
+    expect(css).toContain(".archive-section-title-gif { z-index: 1; }");
     expect(css).toContain(".archive-section-click-cue-gif { z-index: 0; }");
     expect(css).toContain(".archive-section-number-part");
     expect(css).not.toContain("archive-section-title-hop");

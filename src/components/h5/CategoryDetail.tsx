@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } fro
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
-import { categoryRouteEntryAttribute, categoryRouteEntrySource } from "@/components/h5/category-route-transition";
+import { announceCategoryRouteReady, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteOverlapEntrySource, categoryViewTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -46,7 +46,10 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
     const root = document.documentElement;
     if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
     root.removeAttribute(categoryRouteEntryAttribute);
-    if (motionEnabled) setRouteEntrySource(categoryRouteEntrySource);
+    if (motionEnabled) {
+      setRouteEntrySource(root.hasAttribute(categoryViewTransitionAttribute) ? categoryRouteOverlapEntrySource : categoryRouteEntrySource);
+      announceCategoryRouteReady();
+    }
   }, [module.slug, motionEnabled, preview]);
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
