@@ -30,6 +30,7 @@ describe("multi-page H5 interactions", () => {
   beforeEach(() => {
     pendingImages = [];
     sessionStorage.clear();
+    document.documentElement.removeAttribute("data-category-route-entry");
     vi.stubGlobal("Image", PreloadImageMock);
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
     vi.stubGlobal("IntersectionObserver", class {
@@ -63,6 +64,19 @@ describe("multi-page H5 interactions", () => {
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
+  it("marks a clicked archive folder for the matching upward-fade detail entry", () => {
+    vi.useFakeTimers();
+    const modules = [{ id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] }];
+    const { container } = render(<ReportsArchive modules={modules}/>);
+
+    fireEvent.click(container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!);
+
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", "review-assurance");
+    expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
+    act(() => vi.advanceTimersByTime(70));
+    expect(container.querySelector(".reports-archive")).toHaveClass("is-leaving");
+  });
+
   it("assembles the archive from original layers and preserves navigation hotspots", () => {
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
@@ -74,12 +88,15 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
 
-  it("does not render the retired module-two static title resources", () => {
+  it("does not render the retired module-two decoration or static title resources", () => {
     const { container } = render(<ReportsArchive modules={[]}/>);
     const sourceParts = [...container.querySelectorAll<HTMLElement>("[data-source-part]")]
       .map((layer) => layer.dataset.sourcePart);
     expect(sourceParts).toEqual(expect.arrayContaining(["module-2-resource-10", "module-2-resource-20"]));
     expect(sourceParts).not.toContain("module-1-swipe");
+    for (const resource of ["04", "05", "06", "07"]) {
+      expect(sourceParts).not.toContain(`module-2-resource-${resource}`);
+    }
     for (let resource = 11; resource <= 19; resource += 1) {
       expect(sourceParts).not.toContain(`module-2-resource-${resource}`);
     }
@@ -104,12 +121,14 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(4);
     expect(container.querySelector("[data-motion-module='archiveFishFloat']")).toBeInTheDocument();
     expect(container.querySelector("[data-motion-module='archiveSectionTitle']")).toBeInTheDocument();
+    expect(container.querySelector(".archive-section-click-cue")).toBeInTheDocument();
     expect([...container.querySelectorAll<HTMLElement>(".archive-section-title-group")].map((group) => group.dataset.titleGroup)).toEqual([
       "inspection-projects",
       "review-assurance",
       "production-traceability",
     ]);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-section-number-part")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
   });
@@ -124,6 +143,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-section-title-group")).toHaveLength(3);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-section-number-part")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");

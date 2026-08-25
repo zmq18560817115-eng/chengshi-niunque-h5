@@ -29,6 +29,10 @@ const traceabilityModuleFixture: PublicModule = {
 };
 
 describe("CategoryDetail dynamic card copy", () => {
+  beforeEach(() => {
+    document.documentElement.removeAttribute("data-category-route-entry");
+  });
+
   it("renders card copy as HTML sourced from public content", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} preview />);
 
@@ -44,9 +48,10 @@ describe("CategoryDetail dynamic card copy", () => {
         status.querySelector(".category-card-status-text-art"),
       ),
     ).toBe(true);
-    expect(container.querySelector(".category-page-art")).toHaveAttribute("src", expect.stringContaining("category-inspection-clean.webp"));
-    expect(container.querySelector(".category-inspection-batch-bubble")).toHaveAttribute("src", expect.stringContaining("category-inspection-batch-bubble.png"));
-    expect(container.querySelector(".category-inspection-batch-bubble")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".category-page-art")).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-source.jpg"));
+    expect(container.querySelectorAll(".category-card-backplate")).toHaveLength(3);
+    expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-card-1.png"));
+    expect(container.querySelector(".category-inspection-batch-bubble")).not.toBeInTheDocument();
     expect(container.querySelector(".category-page-final")).not.toHaveClass("h5-page-transition", "is-leaving");
   });
 
@@ -55,14 +60,28 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("油脂新鲜度")).toBeInTheDocument();
     expect(screen.getByText("安全底线")).toBeInTheDocument();
   });
+
+  it("uses the archive-only upward-fade entry marker for the matching category", () => {
+    document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive");
+    expect(document.documentElement).not.toHaveAttribute("data-category-route-entry");
+  });
+
+  it("keeps direct category loads on their existing transition", () => {
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    expect(container.querySelector(".category-page-final")).not.toHaveAttribute("data-route-entry");
+  });
   it("maps card and copy coordinates directly from the shared 1000px master", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} preview />);
     const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
 
-    expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("63");
-    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("529");
-    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("62");
-    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("78");
+    expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("60");
+    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("488.5");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("65");
+    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("80");
     expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("742");
   });
 

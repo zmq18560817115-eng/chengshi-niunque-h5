@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
+import { categoryRouteEntryAttribute, categoryRouteEntrySource } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -35,16 +36,34 @@ function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback
 export function CategoryDetail({ module, preview = false }: { module: PublicModule; preview?: boolean }) {
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
   useEffect(() => { if (!preview) slots.forEach((card, index) => router.prefetch(`/reports/${module.slug}/items/${card?.id ?? placeholderCardId(index)}/reports`)); }, [module.slug, preview, router, slots]);
+  useLayoutEffect(() => {
+    if (preview) return;
+    const root = document.documentElement;
+    if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
+    root.removeAttribute(categoryRouteEntryAttribute);
+    if (motionEnabled) setRouteEntrySource(categoryRouteEntrySource);
+  }, [module.slug, motionEnabled, preview]);
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme}>
-    <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={1000} height={2166} priority sizes="(max-width: 750px) 100vw, 750px"/>
-    {module.slug === "inspection-projects" ? <Image className="category-inspection-batch-bubble" src="/design/final-v1/category-inspection-batch-bubble.png" alt="" aria-hidden="true" width={437} height={203} priority /> : null}
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined}>
+    <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px"/>
+    <div className="category-card-backplates" aria-hidden="true">
+      {theme.cardLayouts.map((layout, index) => {
+        const style = {
+          "--category-card-x": layout.x,
+          "--category-card-y": layout.y,
+          "--category-card-width": layout.width,
+          "--category-card-height": layout.height,
+        } as CSSProperties;
+        return <Image key={layout.backplate.src} className="category-card-backplate" src={layout.backplate.src} alt="" width={layout.backplate.width} height={layout.backplate.height} style={style} priority unoptimized data-index={index}/>;
+      })}
+    </div>
     <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
@@ -52,8 +71,9 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const statusStyle = { "--category-status-text-width": `${fallback.statusArtwork.width / fallback.statusBaseArtwork.width * 100}%` } as CSSProperties;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText} style={statusStyle}><Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /><Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
+        const statusBaseWidth = fallback.statusBaseArtwork?.width ?? 413;
+        const statusStyle = { "--category-status-text-width": `${fallback.statusArtwork.width / statusBaseWidth * 100}%` } as CSSProperties;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText} style={statusStyle}>{fallback.statusBaseArtwork ? <Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /> : null}<Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,

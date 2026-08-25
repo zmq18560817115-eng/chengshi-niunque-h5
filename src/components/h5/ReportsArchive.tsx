@@ -10,6 +10,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
+import { categoryRouteEntryAttribute } from "@/components/h5/category-route-transition";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -32,6 +33,7 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
     if (leaving || preview) return;
     setPressedSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
+    document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
       setLeaving(true);
       window.setTimeout(() => router.push(`/reports/${module.slug}`), 220);
@@ -39,9 +41,9 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   };
 
   return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle}>
-    {/* Runtime artwork is assembled from the untouched approved source parts.
-        Module-two resources 11–19 are deliberately omitted because those are
-        the retired static section-title layers. */}
+    {/* Runtime artwork is assembled from the approved source parts. The old
+        plant decoration and module-two title layers are omitted because their
+        supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
     <ArchiveArtwork preview={preview} />
     <ArchiveFishFloatMotion preview={preview} />
     <ArchiveStoryCopyMotion preview={preview} />

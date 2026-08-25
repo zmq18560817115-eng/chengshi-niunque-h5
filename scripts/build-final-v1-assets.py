@@ -11,9 +11,6 @@ OUTPUT = ROOT / "public" / "design" / "final-v1"
 
 ASSETS = {
     "archive-reference.webp": SOURCE / "references-最终效果" / "完整长图-共三个模块.jpg",
-    "category-inspection.webp": SOURCE / "references-最终效果" / "报告点击页-01.jpg",
-    "category-review.webp": SOURCE / "references-最终效果" / "报告点击页-02.jpg",
-    "category-traceability.webp": SOURCE / "references-最终效果" / "报告点击页-03.jpg",
 }
 
 REPORT_TEXTURE_SOURCE = SOURCE / "categories-三分类页" / "三个模块的底图（都是一样的）.jpg"
