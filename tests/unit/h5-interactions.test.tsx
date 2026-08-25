@@ -142,7 +142,7 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it("enters on a deliberate left swipe after guide assets are ready", async () => {
+  it("enters on a deliberate upward swipe after guide assets are ready", async () => {
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
@@ -151,22 +151,22 @@ describe("multi-page H5 interactions", () => {
     await waitFor(() => expect(page).toHaveClass("is-ready", "is-motion-enabled"));
     expect(stage).toHaveAttribute("data-swipe-state", "locked");
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
-    fireEvent.touchStart(page, { touches: [{ clientX: 260, clientY: 300 }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 190, clientY: 310 }] });
+    fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
     expect(onEnter).not.toHaveBeenCalled();
     await waitFor(() => expect(stage).toHaveAttribute("data-swipe-state", "ready"), { timeout: 3000 });
     expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
-    fireEvent.touchStart(page, { touches: [{ clientX: 260, clientY: 300 }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 190, clientY: 310 }] });
+    fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
     await waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
   });
 
   it.each([
-    ["upward", { x: 200, y: 300 }, { x: 196, y: 220 }],
     ["downward", { x: 200, y: 220 }, { x: 196, y: 300 }],
     ["rightward", { x: 180, y: 260 }, { x: 250, y: 255 }],
-    ["short left", { x: 240, y: 260 }, { x: 195, y: 258 }],
-    ["mostly vertical diagonal", { x: 260, y: 320 }, { x: 195, y: 230 }],
+    ["leftward", { x: 260, y: 300 }, { x: 190, y: 310 }],
+    ["short upward", { x: 200, y: 260 }, { x: 196, y: 215 }],
+    ["mostly horizontal diagonal", { x: 260, y: 320 }, { x: 165, y: 255 }],
   ])("does not enter after a %s gesture", async (_label, start, end) => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
@@ -240,8 +240,8 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-blink-duration-ms", "270");
     expect(stage).toHaveAttribute("data-paper-start-ms", "420");
     expect(stage).toHaveAttribute("data-paper-duration-ms", "1500");
-    expect(stage).toHaveAttribute("data-hint-start-ms", "420");
-    expect(stage).toHaveAttribute("data-hint-duration-ms", "560");
+    expect(stage).not.toHaveAttribute("data-hint-start-ms");
+    expect(stage).not.toHaveAttribute("data-hint-duration-ms");
     expect(stage).toHaveAttribute("data-swipe-ready-ms", "2140");
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
@@ -275,7 +275,7 @@ describe("multi-page H5 interactions", () => {
     await act(async () => pendingImages.forEach(({ reject }) => reject()));
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
     expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback-v3.webp");
     expect(container.querySelector(".brand-guide")).not.toHaveClass("has-no-fallback");
     consoleError.mockRestore();
   });
