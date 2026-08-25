@@ -34,8 +34,9 @@ const atHalfSize = (id: string, src: string, sourceWidth: number, sourceHeight: 
 const moduleOneTransform = { left: -406, top: 0, width: 1517, height: 2167 } as const;
 const moduleOneLayer = (id: string, name: string): ArtworkLayer => ({ id, src: moduleOneAsset(name), ...moduleOneTransform, eager: true });
 
-// The order is the original visual stacking order. Resources 11–19 from
-// module two are intentionally absent: they are the retired static titles.
+// The order is the original visual stacking order. Resources 4–7 are the
+// retired plant decoration. Resources 11–19 move to the title-motion layer,
+// where the number pairs are restored and the static titles are replaced.
 const artworkLayers: readonly ArtworkLayer[] = [
   { id: "paper-texture", src: paperTexture, left: -11, top: 0, width: 1022, height: 7093, eager: true },
 
@@ -50,12 +51,8 @@ const artworkLayers: readonly ArtworkLayer[] = [
   moduleOneLayer("module-1-passed-copy", "h5长图-已通过模块文案.png"),
   atHalfSize("module-2-resource-02", moduleTwoAsset("资源 2.png"), 1244, 715, 190.5, 2247.5),
   atHalfSize("module-2-resource-03", moduleTwoAsset("资源 3.png"), 215, 251, 696, 2199),
-  atHalfSize("module-2-resource-04", moduleTwoAsset("资源 4.png"), 92, 92, 918.5, 2496.5),
-  atHalfSize("module-2-resource-05", moduleTwoAsset("资源 5.png"), 49, 46, 708, 2679),
-  atHalfSize("module-2-resource-06", moduleTwoAsset("资源 6.png"), 31, 30, 733, 2708),
   atHalfSize("module-2-resource-08", moduleTwoAsset("资源 8.png"), 1101, 1216, 51, 2624),
   atHalfSize("module-2-inspection-folder", moduleTwoAsset("绿档.png"), 2893, 4572, -270, 2162, false),
-  atHalfSize("module-2-resource-07", moduleTwoAsset("资源 7.png"), 329, 384, 762, 2558.5),
   atHalfSize("module-2-resource-10", moduleTwoAsset("资源 10.png"), 334, 165, 172, 3044.5),
   atHalfSize("module-2-resource-09", moduleTwoAsset("资源 9.png"), 1201, 1274, 410, 2936.5),
   atHalfSize("module-2-review-folder", moduleTwoAsset("黄档.png"), 2893, 4572, -260, 2162, false),

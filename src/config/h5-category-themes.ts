@@ -10,6 +10,7 @@ export type CategoryCardLayout = {
   y: number;
   width: number;
   height: number;
+  backplate: { src: string; width: number; height: number };
   contentX: number;
   contentY: number;
   contentWidth: number;
@@ -20,52 +21,59 @@ export type CategoryCardFallback = {
   description: string;
   buttonText: string;
   statusText: string;
-  statusBaseArtwork: { src: string; width: number; height: number };
+  statusBaseArtwork?: { src: string; width: number; height: number };
   statusArtwork: { src: string; width: number; height: number };
 };
 
 const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈只看报告结论是否\"符合/通过\",不用自己算公式。";
 
-// Coordinates use the same 1000 x 2166 master as every category artwork.
+const runtimeAsset = (name: string) => `/design/final-v1/category-runtime/${name}`;
+
+// Coordinates use the 1000 x 2166.5 half-scale of the supplied 2000 x 4333
+// references. Each blank backplate covers only the baked card copy so the
+// managed HTML content and the existing report interactions stay live.
 // The runtime scales the complete composition; it never repositions cards per viewport.
 export const categoryCardLayouts = {
   "inspection-projects": [
-    { x: 63, y: 529, width: 874, height: 434, contentX: 62, contentY: 78, contentWidth: 742 },
-    { x: 65, y: 1001, width: 874, height: 442, contentX: 60, contentY: 82, contentWidth: 742 },
-    { x: 61, y: 1487, width: 876, height: 434, contentX: 64, contentY: 82, contentWidth: 742 },
+    { x: 60, y: 488.5, width: 874, height: 434.5, backplate: { src: runtimeAsset("inspection-card-1.png"), width: 1748, height: 869 }, contentX: 65, contentY: 80, contentWidth: 742 },
+    { x: 65.5, y: 963, width: 874, height: 442, backplate: { src: runtimeAsset("inspection-card-2.png"), width: 1748, height: 884 }, contentX: 59.5, contentY: 81.5, contentWidth: 742 },
+    { x: 60, y: 1448, width: 875.5, height: 434.5, backplate: { src: runtimeAsset("inspection-card-3.png"), width: 1751, height: 869 }, contentX: 65, contentY: 81.5, contentWidth: 742 },
   ],
 "review-assurance": [
-  { x: 61, y: 553, width: 874, height: 404, contentX: 63, contentY: 52, contentWidth: 742 },
-  { x: 65, y: 1037, width: 874, height: 404, contentX: 59, contentY: 52, contentWidth: 742 },
-  { x: 55, y: 1495, width: 876, height: 404, contentX: 69, contentY: 52, contentWidth: 742 },
+  { x: 60, y: 520, width: 873.5, height: 404, backplate: { src: runtimeAsset("review-card-1.png"), width: 1747, height: 808 }, contentX: 64, contentY: 49, contentWidth: 742 },
+  { x: 65.5, y: 1002.5, width: 874.5, height: 404, backplate: { src: runtimeAsset("review-card-2.png"), width: 1749, height: 808 }, contentX: 58.5, contentY: 42, contentWidth: 742 },
+  { x: 60, y: 1480, width: 875.5, height: 403.5, backplate: { src: runtimeAsset("review-card-3.png"), width: 1751, height: 807 }, contentX: 64, contentY: 49.5, contentWidth: 742 },
 ],
   "production-traceability": [
-    { x: 61, y: 557, width: 874, height: 402, contentX: 58, contentY: 46, contentWidth: 742 },
-    { x: 65, y: 1037, width: 874, height: 404, contentX: 58, contentY: 46, contentWidth: 742 },
+    { x: 60.5, y: 521, width: 873.5, height: 402, backplate: { src: runtimeAsset("traceability-card-1.png"), width: 1747, height: 804 }, contentX: 58.5, contentY: 47.5, contentWidth: 742 },
+    { x: 65.5, y: 1002.5, width: 874, height: 404, backplate: { src: runtimeAsset("traceability-card-2.png"), width: 1748, height: 808 }, contentX: 57.5, contentY: 42, contentWidth: 742 },
   ],
 } satisfies Record<string, CategoryCardLayout[]>;
 
-export const categoryCardFallbacks = {
+export const categoryCardFallbacks: Record<
+  keyof typeof categoryCardLayouts,
+  CategoryCardFallback[]
+> = {
   "inspection-projects": [
-    { title: "核心营养含量", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
-    { title: "油脂新鲜度", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "符合标准", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-standard.png", width: 325, height: 102 } },
-    { title: "安全底线", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusBaseArtwork: { src: "/design/final-v1/category-status-review.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
+    { title: "核心营养含量", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
+    { title: "油脂新鲜度", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "符合标准", statusArtwork: { src: "/design/final-v1/category-status-inspection-standard.png", width: 325, height: 102 } },
+    { title: "安全底线", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已通过", statusArtwork: { src: "/design/final-v1/category-status-inspection-passed.png", width: 245, height: 102 } },
   ],
   "review-assurance": [
-    { title: "配方与标签", description: sharedCardDescription, buttonText: "查看4份报告", statusText: "已核对", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/配方与标签/资源 35.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-checked.png", width: 244, height: 102 } },
-    { title: "原料与工艺", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已留档", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/原料与工艺/资源 43.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-archived.png", width: 244, height: 102 } },
-    { title: "稳定性与感官", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "持续关注", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块2/稳定性与感官/资源 52.png", width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-watch.png", width: 326, height: 102 } },
+    { title: "配方与标签", description: sharedCardDescription, buttonText: "查看4份报告", statusText: "已核对", statusBaseArtwork: { src: runtimeAsset("review-status-fish-1.png"), width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-checked.png", width: 244, height: 102 } },
+    { title: "原料与工艺", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已留档", statusBaseArtwork: { src: runtimeAsset("review-status-fish-2.png"), width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-archived.png", width: 244, height: 102 } },
+    { title: "稳定性与感官", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "持续关注", statusBaseArtwork: { src: runtimeAsset("review-status-fish-3.png"), width: 413, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-review-watch.png", width: 326, height: 102 } },
   ],
   "production-traceability": [
-    { title: "生产资质", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已核验", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块3/生产资质/资源 65.png", width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-verified.png", width: 245, height: 102 } },
-    { title: "质量管理", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已核对", statusBaseArtwork: { src: "/design/final-v1/报告点击页面输出/报告点击模块3/质量管理/资源 75.png", width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-checked.png", width: 245, height: 102 } },
+    { title: "生产资质", description: sharedCardDescription, buttonText: "查看2份报告", statusText: "已核验", statusBaseArtwork: { src: runtimeAsset("traceability-status-fish-1.png"), width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-verified.png", width: 245, height: 102 } },
+    { title: "质量管理", description: sharedCardDescription, buttonText: "查看3份报告", statusText: "已核对", statusBaseArtwork: { src: runtimeAsset("traceability-status-fish-2.png"), width: 412, height: 189 }, statusArtwork: { src: "/design/final-v1/category-status-traceability-checked.png", width: 245, height: 102 } },
   ],
-} satisfies Record<string, CategoryCardFallback[]>;
+};
 
 export const categoryThemes = {
-  "inspection-projects": { theme: "inspection", backgroundClass: "report-page--inspection", label: "检测项目", artwork: "category-inspection-clean.webp", cardSlots: 3 },
-  "review-assurance": { theme: "review", backgroundClass: "report-page--review", label: "复核保障", artwork: "category-review-clean.webp", cardSlots: 3 },
-  "production-traceability": { theme: "traceability", backgroundClass: "report-page--traceability", label: "生产溯源", artwork: "category-traceability-clean.webp", cardSlots: 2 },
+  "inspection-projects": { theme: "inspection", backgroundClass: "report-page--inspection", label: "检测项目", artwork: "category-runtime/inspection-source.jpg", cardSlots: 3 },
+  "review-assurance": { theme: "review", backgroundClass: "report-page--review", label: "复核保障", artwork: "category-runtime/review-source.jpg", cardSlots: 3 },
+  "production-traceability": { theme: "traceability", backgroundClass: "report-page--traceability", label: "生产溯源", artwork: "category-runtime/traceability-source.jpg", cardSlots: 2 },
 } as const;
 
 export const placeholderCardId = (index: number) => `placeholder-slot-${index + 1}`;

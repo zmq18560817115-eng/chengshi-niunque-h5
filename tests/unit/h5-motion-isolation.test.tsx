@@ -137,6 +137,18 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("translate3d(100%,0,0)");
   });
 
+  it("moves every archive category detail upward with one shared fade transition", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    const archive = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
+    const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
+
+    expect(css).toContain('.category-page-final[data-route-entry="reports-archive"] { animation: category-detail-enter-up-fade');
+    expect(css).toContain("transform: translate3d(0,var(--category-route-entry-distance),0);");
+    expect(css).toContain("@keyframes archive-category-exit-up-fade");
+    expect(archive).toContain("document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);");
+    expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
+  });
+
   it("keeps the supplied window frame above the masked character and incoming papers beneath the envelope foreground", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
@@ -253,23 +265,54 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("var(--archive-unlock-current-bottom)");
   });
 
-  it("replaces the three baked folder titles with the supplied viewport-scoped GIFs", () => {
+  it("replaces the retired decoration and three baked folder titles with the supplied viewport-scoped GIFs", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
+    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     const component = readFileSync("src/components/h5/motion/modules/ArchiveSectionTitleMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(reports).toContain('import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";');
     expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} />");
-    expect(component).toContain("/design/final-v1/检测项目_逐字跳动.gif");
-    expect(component).toContain("/design/final-v1/复核保障_逐字跳动.gif");
-    expect(component).toContain("/design/final-v1/生产溯源_逐字跳动.gif");
+    expect(component).toContain("/design/final-v1/motion/archive-runtime");
+    expect(component).toContain("section-click-cue.gif");
+    expect(component).toContain("section-title-inspection.gif");
+    expect(component).toContain("section-title-review.gif");
+    expect(component).toContain("section-title-production.gif");
+    expect(component.match(/section-number-(inspection|review|production)-(ring|digit)\.png/g)).toHaveLength(6);
+    const gifDimensions = (name: string) => {
+      const gif = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
+      return [gif.readUInt16LE(6), gif.readUInt16LE(8)];
+    };
+    expect(gifDimensions("section-click-cue.gif")).toEqual([840, 412]);
+    expect(gifDimensions("section-title-inspection.gif")).toEqual([758, 229]);
+    expect(gifDimensions("section-title-review.gif")).toEqual([757, 228]);
+    expect(gifDimensions("section-title-production.gif")).toEqual([758, 230]);
+    const pngDimensions = (name: string) => {
+      const png = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
+      return [png.readUInt32BE(16), png.readUInt32BE(20)];
+    };
+    expect(pngDimensions("section-number-inspection-ring.png")).toEqual([161, 169]);
+    expect(pngDimensions("section-number-inspection-digit.png")).toEqual([51, 114]);
+    expect(pngDimensions("section-number-review-ring.png")).toEqual([161, 169]);
+    expect(pngDimensions("section-number-review-digit.png")).toEqual([87, 110]);
+    expect(pngDimensions("section-number-production-ring.png")).toEqual([161, 169]);
+    expect(pngDimensions("section-number-production-digit.png")).toEqual([81, 118]);
+    expect(artwork).not.toContain('moduleTwoAsset("资源 4.png")');
+    expect(artwork).not.toContain('moduleTwoAsset("资源 5.png")');
+    expect(artwork).not.toContain('moduleTwoAsset("资源 6.png")');
+    expect(artwork).not.toContain('moduleTwoAsset("资源 7.png")');
     expect(component).not.toContain("title-clean-");
     expect(component).not.toContain("cleanPatch");
-    expect(component).toContain("left: 486");
-    expect(component).toContain("left: 25");
-    expect(component).toContain("left: 472");
-    expect(component).toContain("top: 2788");
-    expect(component).toContain("top: 3165");
-    expect(component).toContain("top: 3522.5");
+    expect(component).toContain("left: 533");
+    expect(component).toContain("top: 2545.5");
+    expect(component).toContain("left: 556");
+    expect(component).toContain("top: 2779.5");
+    expect(component).toContain("left: 156.5");
+    expect(component).toContain("top: 3156");
+    expect(component).toContain("left: 542.5");
+    expect(component).toContain("top: 3518");
+    expect(component).toContain("left: 475, top: 2787.5");
+    expect(component).toContain("left: 77.5, top: 3168");
+    expect(component).toContain("left: 468.5, top: 3532.5");
     expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
     expect(component).not.toContain("aspectRatio:");
     expect(component).toContain('rootMargin: "45% 0px"');
@@ -278,6 +321,8 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("ready && visible");
     expect(css).not.toContain("archive-section-title-clean-patch");
     expect(css).toContain(".archive-section-title-gif { z-index: 0; }");
+    expect(css).toContain(".archive-section-click-cue-gif { z-index: 0; }");
+    expect(css).toContain(".archive-section-number-part");
     expect(css).not.toContain("archive-section-title-hop");
   });
 
