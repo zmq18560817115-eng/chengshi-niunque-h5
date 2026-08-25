@@ -10,6 +10,7 @@ type TitleGroup = {
   slug: "inspection-projects" | "review-assurance" | "production-traceability";
   label: string;
   gif: string;
+  poster: string;
   left: number;
   top: number;
   width: number;
@@ -29,6 +30,7 @@ type PositionedAsset = {
 const masterWidth = 1000;
 const masterHeight = 5557;
 const archiveMotionRoot = "/design/final-v1/motion/archive-runtime";
+export const archiveTitleSequenceDurationMs = 4000;
 
 const clickCue: PositionedGif = {
   gif: `${archiveMotionRoot}/section-click-cue.gif`,
@@ -43,6 +45,7 @@ const titleGroups: readonly TitleGroup[] = [
     slug: "inspection-projects",
     label: "检测项目",
     gif: `${archiveMotionRoot}/section-title-inspection.gif`,
+    poster: `${archiveMotionRoot}/section-title-inspection-poster.webp`,
     left: 556,
     top: 2779.5,
     width: 379,
@@ -56,19 +59,21 @@ const titleGroups: readonly TitleGroup[] = [
     slug: "review-assurance",
     label: "复核保障",
     gif: `${archiveMotionRoot}/section-title-review.gif`,
-    left: 156.5,
-    top: 3156,
+    poster: `${archiveMotionRoot}/section-title-review-poster.webp`,
+    left: 102,
+    top: 3155.5,
     width: 378.5,
     height: 114,
     numberParts: [
-      { src: `${archiveMotionRoot}/section-number-review-ring.png`, left: 77.5, top: 3168, width: 80.5, height: 84.5 },
-      { src: `${archiveMotionRoot}/section-number-review-digit.png`, left: 95, top: 3181.5, width: 43.5, height: 55 },
+      { src: `${archiveMotionRoot}/section-number-review-ring.png`, left: 18.5, top: 3168, width: 80.5, height: 84.5 },
+      { src: `${archiveMotionRoot}/section-number-review-digit.png`, left: 36, top: 3181.5, width: 43.5, height: 55 },
     ],
   },
   {
     slug: "production-traceability",
     label: "生产溯源",
     gif: `${archiveMotionRoot}/section-title-production.gif`,
+    poster: `${archiveMotionRoot}/section-title-production-poster.webp`,
     left: 542.5,
     top: 3518,
     width: 379,
@@ -78,6 +83,11 @@ const titleGroups: readonly TitleGroup[] = [
       { src: `${archiveMotionRoot}/section-number-production-digit.png`, left: 487.5, top: 3543, width: 40.5, height: 59 },
     ],
   },
+] as const;
+
+export const archiveSectionTitleWarmAssets = [
+  clickCue.gif,
+  ...titleGroups.flatMap((group) => [group.poster, group.gif, ...group.numberParts.map((part) => part.src)]),
 ] as const;
 
 const position = (group: PositionedGif) => ({
@@ -129,6 +139,57 @@ function useViewportGif(enabled: boolean) {
   return { trigger, nearby, visible, ready, handleMotionState };
 }
 
+function useSequentialTitlePlayback(enabled: boolean) {
+  const trigger = useRef<HTMLDivElement>(null);
+  const [regionVisible, setRegionVisible] = useState(false);
+  const [motionAllowed, setMotionAllowed] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [sequenceCycle, setSequenceCycle] = useState(0);
+
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const sync = () => setMotionAllowed(!(media?.matches ?? false));
+    sync();
+    if (!media) return;
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => media.removeEventListener("change", sync);
+    }
+    media.addListener?.(sync);
+    return () => media.removeListener?.(sync);
+  }, []);
+
+  useEffect(() => {
+    const node = trigger.current;
+    if (!enabled || !node || typeof IntersectionObserver === "undefined") {
+      setRegionVisible(false);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      setRegionVisible(entry.isIntersecting && entry.intersectionRatio >= 0.05);
+    }, { threshold: [0, 0.05], rootMargin: "8% 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !motionAllowed || !regionVisible) {
+      setActiveIndex(0);
+      setSequenceCycle(0);
+      return;
+    }
+    setActiveIndex(0);
+    setSequenceCycle((cycle) => cycle + 1);
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % titleGroups.length);
+      setSequenceCycle((cycle) => cycle + 1);
+    }, archiveTitleSequenceDurationMs);
+    return () => window.clearInterval(timer);
+  }, [enabled, motionAllowed, regionVisible]);
+
+  return { trigger, activeIndex, sequenceCycle, running: enabled && motionAllowed && regionVisible };
+}
+
 function ArchiveSectionClickCue({ enabled }: { enabled: boolean }) {
   const { trigger, nearby, visible, ready, handleMotionState } = useViewportGif(enabled);
 
@@ -144,18 +205,20 @@ function ArchiveSectionClickCue({ enabled }: { enabled: boolean }) {
   );
 }
 
-function ArchiveSectionTitleGroup({ group, enabled }: { group: TitleGroup; enabled: boolean }) {
+function ArchiveSectionTitleGroup({ group, enabled, exiting, active, sequenceCycle }: { group: TitleGroup; enabled: boolean; exiting: boolean; active: boolean; sequenceCycle: number }) {
   const { trigger, nearby, visible, ready, handleMotionState } = useViewportGif(enabled);
+  const showGif = active && ready && visible;
 
   return (
-    <div className="archive-section-title-group" data-title-group={group.slug} data-title-label={group.label} data-title-nearby={nearby} data-title-visible={visible} data-title-ready={ready} style={position(group)}>
+    <div className={`archive-section-title-group ${exiting ? "archive-module-exit-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-nearby={nearby} data-title-visible={visible} data-title-ready={ready} data-title-sequence-active={active} data-title-render-layer={showGif ? "gif" : "poster"} style={position(group)}>
       <div ref={trigger} className="archive-section-title-trigger" />
+      {visible && !showGif && <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />}
       {nearby && <MotionBoundary fallback={null}>
-        <MotionStage masterWidth={group.width} masterHeight={group.height} assets={[group.gif, ...group.numberParts.map((part) => part.src)]} enabled={enabled} crossfadeMs={0} fallback={null} onStateChange={handleMotionState}>
-          {ready && visible && <Image className="archive-section-title-layer archive-section-title-gif" src={group.gif} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />}
+        <MotionStage masterWidth={group.width} masterHeight={group.height} assets={[group.poster, group.gif, ...group.numberParts.map((part) => part.src)]} enabled={enabled} crossfadeMs={0} fallback={null} onStateChange={handleMotionState}>
+          {showGif && <Image key={`${group.slug}-${sequenceCycle}`} className="archive-section-title-layer archive-section-title-gif" src={group.gif} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />}
         </MotionStage>
       </MotionBoundary>}
-      {ready && visible && group.numberParts.map((part) => (
+      {visible && group.numberParts.map((part) => (
         <Image
           key={part.src}
           className="archive-section-number-part"
@@ -172,14 +235,16 @@ function ArchiveSectionTitleGroup({ group, enabled }: { group: TitleGroup; enabl
   );
 }
 
-export function ArchiveSectionTitleMotion({ preview = false }: { preview?: boolean }) {
+export function ArchiveSectionTitleMotion({ preview = false, exitingSlug = null }: { preview?: boolean; exitingSlug?: string | null }) {
   const enabled = H5_MOTION_ENABLED && h5MotionModules.archiveSectionTitle && !preview;
+  const { trigger, activeIndex, sequenceCycle, running } = useSequentialTitlePlayback(enabled);
   if (!enabled) return null;
 
   return (
-    <div className="archive-section-title-motion" data-motion-module="archiveSectionTitle" aria-hidden="true">
+    <div className="archive-section-title-motion" data-motion-module="archiveSectionTitle" data-title-sequence-running={running} data-title-sequence-active={running ? titleGroups[activeIndex].slug : "paused"} data-title-sequence-cycle={sequenceCycle} aria-hidden="true">
+      <div ref={trigger} className="archive-section-title-sequence-trigger" />
       <ArchiveSectionClickCue enabled={enabled} />
-      {titleGroups.map((group) => <ArchiveSectionTitleGroup key={group.slug} group={group} enabled={enabled} />)}
+      {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} enabled={enabled} exiting={group.slug === exitingSlug} active={running && index === activeIndex} sequenceCycle={sequenceCycle} />)}
     </div>
   );
 }

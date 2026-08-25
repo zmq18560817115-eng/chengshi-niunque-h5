@@ -16,6 +16,7 @@ const lineAssets = [
   { src: "/design/final-v1/motion/archive-runtime/story-line-04.png", x: 456, y: 4978, width: 112, height: 30 },
 ] as const;
 const motionAssets = [cleanPatch.src, ...lineAssets.map(({ src }) => src)];
+export const archiveStoryWarmAssets = motionAssets;
 const completedKey = "archive-story-copy-complete-v3";
 
 const position = (asset: { x: number; y: number; width: number; height: number }) => ({

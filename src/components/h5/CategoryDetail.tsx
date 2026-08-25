@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } fro
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
-import { categoryRouteEntryAttribute, categoryRouteEntrySource } from "@/components/h5/category-route-transition";
+import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -37,6 +37,8 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
   const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
+  const [pendingRouteEntrySource, setPendingRouteEntrySource] = useState<string | null>(null);
+  const [artworkReady, setArtworkReady] = useState(false);
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
@@ -46,13 +48,24 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
     const root = document.documentElement;
     if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
     root.removeAttribute(categoryRouteEntryAttribute);
-    if (motionEnabled) setRouteEntrySource(categoryRouteEntrySource);
+    if (motionEnabled) {
+      setPendingRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
+    }
   }, [module.slug, motionEnabled, preview]);
+  useEffect(() => {
+    if (!pendingRouteEntrySource || !artworkReady) return;
+    setRouteEntrySource(pendingRouteEntrySource);
+    setPendingRouteEntrySource(null);
+  }, [artworkReady, pendingRouteEntrySource]);
+  useLayoutEffect(() => {
+    if (!routeEntrySource) return;
+    announceCategoryRouteReady();
+  }, [routeEntrySource]);
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
   return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined}>
-    <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px"/>
+    <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px" onLoad={() => setArtworkReady(true)}/>
     <div className="category-card-backplates" aria-hidden="true">
       {theme.cardLayouts.map((layout, index) => {
         const style = {

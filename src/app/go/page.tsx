@@ -1,5 +1,5 @@
-import { BrandGuide } from "@/components/h5/BrandGuide";
+import { GuideExperience } from "@/components/h5/GuideExperience";
 
 export default function GoPage() {
-  return <BrandGuide/>;
+  return <GuideExperience/>;
 }

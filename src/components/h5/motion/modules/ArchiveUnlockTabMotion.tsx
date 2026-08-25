@@ -10,6 +10,7 @@ type UnlockState = "idle" | "revealing" | "revealed" | "fallback";
 
 const tabAsset = "/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png";
 const assets = [tabAsset] as const;
+export const archiveUnlockWarmAssets = assets;
 const startBottom = (5557 - 1860) / 5557 * 100;
 const endBottom = (5557 - 2154) / 5557 * 100;
 

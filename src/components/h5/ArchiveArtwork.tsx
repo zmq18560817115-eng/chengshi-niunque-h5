@@ -10,6 +10,12 @@ const moduleOneAsset = (name: string) => `${archiveOutputRoot}/长图模块1/${n
 const moduleTwoAsset = (name: string) => `${archiveOutputRoot}/长图模块2/${name}`;
 const moduleThreeOutput = "/design/final-v1/长图输出/完整长图-共三个模块_04.jpg";
 
+const layerModule = {
+  "module-2-inspection-folder": "inspection-projects",
+  "module-2-review-folder": "review-assurance",
+  "module-2-production-folder": "production-traceability",
+} as const;
+
 type ArtworkLayer = {
   id: string;
   src: string;
@@ -63,6 +69,8 @@ const artworkLayers: readonly ArtworkLayer[] = [
   { id: "module-3-complete-output", src: moduleThreeOutput, left: 0, top: 4374.5, width: 1000, height: 1182.5, unoptimized: true },
 ] as const;
 
+export const archiveArtworkWarmAssets = artworkLayers.map((layer) => layer.src);
+
 const layerStyle = ({ left, top, width, height }: ArtworkLayer): CSSProperties => ({
   left: `${left / masterWidth * 100}%`,
   top: `${top / masterHeight * 100}%`,
@@ -77,24 +85,30 @@ const layerStack = (id: string) => {
   return 40;
 };
 
-export function ArchiveArtwork({ preview = false }: { preview?: boolean }) {
+export function ArchiveArtwork({ preview = false, exitingSlug = null }: { preview?: boolean; exitingSlug?: string | null }) {
   return (
     <div className="reports-archive-art reports-archive-source-art" role="img" aria-label="诚实透明档案" data-artwork-source="layered-originals">
-      {artworkLayers.map((layer) => (
+      {artworkLayers.map((layer) => {
+        const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
+        const exiting = moduleSlug === exitingSlug;
+        return (
         <Image
           key={layer.id}
-          className="reports-archive-source-layer"
+          className={`reports-archive-source-layer ${exiting ? "archive-module-exit-layer" : ""}`}
           src={layer.src}
           alt=""
           width={layer.width}
           height={layer.height}
           style={{ ...layerStyle(layer), zIndex: layerStack(layer.id) }}
           sizes="(max-width: 750px) 150vw, 1125px"
-          loading={layer.eager ? "eager" : "lazy"}
+          priority={Boolean(layer.eager)}
+          loading={layer.eager ? undefined : "lazy"}
           unoptimized={layer.unoptimized}
           data-source-part={layer.id}
+          data-archive-module={moduleSlug}
         />
-      ))}
+        );
+      })}
       <ArchiveUnlockTabMotion preview={preview} />
     </div>
   );
