@@ -96,32 +96,59 @@ export const archiveArtworkWarmAssets = artworkLayers.map((layer) => layer.src);
 export const archiveArtworkCriticalAssets = artworkLayers.filter((layer) => layerEntryStage(layer.id) <= 3).map((layer) => layer.src);
 export const archiveArtworkDeferredAssets = artworkLayers.filter((layer) => layerEntryStage(layer.id) > 3).map((layer) => layer.src);
 
-export function ArchiveArtwork({ preview = false, exitingSlug = null }: { preview?: boolean; exitingSlug?: string | null }) {
+const guideEntryBookParts = new Set([
+  "module-1-folder-back",
+  "module-1-folder-front",
+  "module-1-logo",
+  "module-1-title",
+  "module-1-badge",
+]);
+const guideEntryBatchParts = new Set([
+  "module-1-batch-coil",
+  "module-1-batch",
+  "module-1-passed-panel",
+  "module-1-passed-copy",
+]);
+
+export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug = null }: { preview?: boolean; activeSlug?: string | null; exitingSlug?: string | null }) {
+  const renderLayer = (layer: ArtworkLayer) => {
+    const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
+    const active = moduleSlug === activeSlug;
+    const exiting = moduleSlug === exitingSlug;
+    return (
+      <Image
+        key={layer.id}
+        className={`reports-archive-source-layer ${active ? "archive-module-pressed-layer" : ""} ${exiting ? "archive-module-exit-layer" : ""}`}
+        src={layer.src}
+        alt=""
+        width={layer.width}
+        height={layer.height}
+        style={{ ...layerStyle(layer), zIndex: layerStack(layer.id) }}
+        sizes="(max-width: 750px) 150vw, 1125px"
+        priority={Boolean(layer.eager)}
+        fetchPriority={layer.eager ? "high" : "low"}
+        loading={layer.eager ? undefined : "lazy"}
+        unoptimized={layer.unoptimized}
+        data-source-part={layer.id}
+        data-archive-module={moduleSlug}
+        data-guide-entry-stage={layerEntryStage(layer.id)}
+      />
+    );
+  };
+
+  const baseLayers = artworkLayers.filter((layer) => !guideEntryBookParts.has(layer.id) && !guideEntryBatchParts.has(layer.id));
+  const bookLayers = artworkLayers.filter((layer) => guideEntryBookParts.has(layer.id));
+  const batchLayers = artworkLayers.filter((layer) => guideEntryBatchParts.has(layer.id));
+
   return (
     <div className="reports-archive-art reports-archive-source-art" role="img" aria-label="诚实透明档案" data-artwork-source="layered-originals">
-      {artworkLayers.map((layer) => {
-        const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
-        const exiting = moduleSlug === exitingSlug;
-        return (
-        <Image
-          key={layer.id}
-          className={`reports-archive-source-layer ${exiting ? "archive-module-exit-layer" : ""}`}
-          src={layer.src}
-          alt=""
-          width={layer.width}
-          height={layer.height}
-          style={{ ...layerStyle(layer), zIndex: layerStack(layer.id) }}
-          sizes="(max-width: 750px) 150vw, 1125px"
-          priority={Boolean(layer.eager)}
-          fetchPriority={layer.eager ? "high" : "low"}
-          loading={layer.eager ? undefined : "lazy"}
-          unoptimized={layer.unoptimized}
-          data-source-part={layer.id}
-          data-archive-module={moduleSlug}
-          data-guide-entry-stage={layerEntryStage(layer.id)}
-        />
-        );
-      })}
+      {baseLayers.map(renderLayer)}
+      <div className="reports-archive-entry-group reports-archive-entry-book" data-guide-entry-group="archive-book">
+        {bookLayers.map(renderLayer)}
+      </div>
+      <div className="reports-archive-entry-group reports-archive-entry-batch" data-guide-entry-group="latest-batch">
+        {batchLayers.map(renderLayer)}
+      </div>
       <ArchiveUnlockTabMotion preview={preview} />
     </div>
   );

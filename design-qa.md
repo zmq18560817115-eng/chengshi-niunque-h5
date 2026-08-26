@@ -1,5 +1,35 @@
 # Design QA
 
+## Latest pass — PDF issue-node repair walk-through (2026-08-26)
+
+### Source and comparison evidence
+
+- Issue source (read-only): `C:/Users/bu/Downloads/问题及修正问题节点.pdf`.
+- Rendered issue pages: `test-results/design-qa/2026-08-26-pdf-issues/source/page-01.png` through `page-05.png`.
+- Live mobile captures: `test-results/design-qa/2026-08-26-pdf-issues/after/01-guide-responsive-mobile.jpg`, `05-category-back-control-mobile.jpg`, and `06-home-full-mobile.jpg`.
+- Required same-input comparisons: `test-results/design-qa/2026-08-26-pdf-issues/after/comparison-guide.jpg` and `comparison-home.jpg`.
+- Browser surface: Codex in-app browser at 480 × 844 CSS px. The capture surface reported DPR .5 and returned a 960 × 1688 bitmap; accepted mobile evidence was normalized to the measured 480 × 844 app viewport without resizing runtime assets.
+
+### Walk-through
+
+1. **Guide adaptation — passed.** The guide root and stage measured 480 × 844 with zero horizontal overflow. On short embedded-browser proportions every approved full-canvas layer switches together to `object-fit: contain`; the existing guide texture fills only the symmetric side remainder, so the logo and prompt are no longer cut by the system/browser bars.
+2. **Guide feedback and continuity — passed.** The existing bottom hint runs a 1700ms, 4px compositor float only when the guide is ready. Accepted entry immediately switches to the 420ms feedback keyframe on the continuity clone. The live check observed `guide-entry-hint-accepted` before the homepage handoff.
+3. **Homepage entry hierarchy — passed.** Existing book parts and latest-batch parts remain separate repository layers in their original coordinates. On guide entry the book group rises first and the latest-batch group follows 180ms later; the browser observed both `archive-guide-entry-rise` animations, all 21 source parts loaded, and zero horizontal overflow.
+4. **Homepage hit regions — passed.** The three semantic regions now use the original green/yellow/brown folder boundaries: 49.406154–56.253374%, 56.253374–62.668706%, and 62.668706–78.720533%. Browser measurements showed contiguous boundaries with only sub-pixel rounding. The existing click-cue artwork keeps its original position and has a matching transparent inspection target.
+5. **Immediate click feedback — passed.** Pointer-down marks the selected source layers/title before any continuity clone is prepared. The clone begins after one 40ms paint opportunity and the previous extra 220ms navigation delay is removed. No route, backend, public-content, Prisma, or storage contract changed.
+6. **Lower-page return affordance — passed.** Category/report pages retain the existing right-swipe gesture and now expose a 44px-high semantic “返回上一页” control. The inspection route settled at 480 × 844 with the control at x=12/y=12 and zero horizontal overflow.
+
+### Asset and fidelity findings
+
+- No supplied image was cropped, redrawn, recompressed, recolored, or replaced. Runtime composition continues to use independent repository assets rather than completed-page screenshots.
+- The guide, homepage, category and report coordinate systems remain proportional. The full homepage comparison preserves the supplied hero, three folder tabs, title lockups, copy block, fish divider, and brand-story envelope.
+- No actionable P0/P1/P2 visual mismatch remains for the PDF-scoped issues.
+- P3 follow-up: an approved branded back-button asset was not found in the repository. The neutral semantic control is intentionally documented in `docs/OPEN_QUESTIONS.md` until design supplies one.
+
+final result: passed
+
+---
+
 ## Latest pass — Guide width adaptation in embedded mobile browsers
 
 ### Comparison target and evidence

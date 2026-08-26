@@ -9,6 +9,8 @@ const devices = [
   { name: "iphone-14-15-pro", width: 393, height: 852 },
   { name: "iphone-plus-pro-max", width: 414, height: 896 },
   { name: "large-android-pro-max", width: 430, height: 932 },
+  { name: "iphone-17-pro-max", width: 440, height: 956 },
+  { name: "iphone-17-pro-max-embedded-short", width: 440, height: 820 },
 ] as const;
 
 const evidenceRoot = "docs/audit-2026-08-18-mobile-user";
@@ -77,8 +79,9 @@ for (const device of devices) {
       return { objectFit: style.objectFit, objectPosition: style.objectPosition };
     }));
     expect(fullCanvasLayerStyles.length).toBeGreaterThan(0);
+    const expectedGuideFit = device.width / device.height >= 15 / 31 ? "contain" : "cover";
     for (const style of fullCanvasLayerStyles) {
-      expect(style.objectFit).toBe("cover");
+      expect(style.objectFit).toBe(expectedGuideFit);
       expect(style.objectPosition).toBe("50% 50%");
     }
     await expectNoHorizontalOverflow(page, device.width);
@@ -102,6 +105,7 @@ test("375x812 user can open every category and a published report", async ({ pag
   for (const slug of ["inspection-projects", "review-assurance", "production-traceability"] as const) {
     await page.goto(`/reports/${slug}`);
     await expect(page.locator(".category-page-final")).toBeVisible();
+    await expect(page.getByRole("button", { name: "返回上一页" })).toBeVisible();
     await expect(page.locator(".category-card-hotspot")).not.toHaveCount(0);
     await expectNoHorizontalOverflow(page, 375);
     await page.screenshot({ path: `${evidenceRoot}/flow-${slug}-375x812.png` });

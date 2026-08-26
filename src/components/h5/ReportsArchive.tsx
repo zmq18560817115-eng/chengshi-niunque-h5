@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
+import { archiveClickCueLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
 import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
@@ -42,6 +42,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const [leaving, setLeaving] = useState(false);
   const [guideEntry, setGuideEntry] = useState(false);
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
+  const navigating = useRef(false);
   const visibleModules = useMemo(() => [...modules].filter((module) => getArchiveModuleLayout(module.slug)).sort((a, b) => getArchiveModuleLayout(a.slug)!.order - getArchiveModuleLayout(b.slug)!.order), [modules]);
 
   useEffect(() => {
@@ -74,12 +75,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   }, [preview]);
 
   const enter = (module: PublicModule) => {
-    if (leaving || preview) return;
-    prepareCategoryRouteContinuity();
+    if (navigating.current || leaving || preview) return;
+    navigating.current = true;
     setPressedSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
+      prepareCategoryRouteContinuity();
       setLeaving(true);
       window.setTimeout(() => navigateWithCategoryContinuity(() => router.push(`/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
     }, archiveModuleExitDelayMs);
@@ -92,16 +94,20 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their
           supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
-      <ArchiveArtwork preview={preview} exitingSlug={exitingSlug} />
+      <ArchiveArtwork preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />
       <ArchiveFishFloatMotion preview={preview} />
       <ArchiveStoryCopyMotion preview={preview} />
-      <ArchiveSectionTitleMotion preview={preview} exitingSlug={exitingSlug} />
+      <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />
       <nav className="reports-archive-hotspots" aria-label="档案分类">
+        {visibleModules[0]?.slug === "inspection-projects" && (preview ?
+          <div className="archive-click-cue-hotspot" data-cue-slug="inspection-projects" style={archiveClickCueLayout}><span>点击进入检测项目</span></div> :
+          <button type="button" className={`archive-click-cue-hotspot ${pressedSlug === "inspection-projects" ? "is-pressed" : ""}`} data-cue-slug="inspection-projects" style={archiveClickCueLayout} aria-label="点击进入检测项目" disabled={leaving} onPointerDown={() => setPressedSlug("inspection-projects")} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(visibleModules[0])}><span>点击进入检测项目</span></button>
+        )}
         {visibleModules.map((module) => {
           const layout = getArchiveModuleLayout(module.slug)!;
           const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, "--archive-order": layout.order } as CSSProperties;
           return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
-            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving} onClick={() => enter(module)}><span>{module.title}</span></button>;
+            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving} onPointerDown={() => setPressedSlug(module.slug)} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(module)}><span>{module.title}</span></button>;
         })}
       </nav>
     </div>

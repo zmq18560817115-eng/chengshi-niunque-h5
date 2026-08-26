@@ -6,6 +6,7 @@ import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
+import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 import { RuntimeLoadingBuffer, runtimeLoadingAnimationDelayMs } from "@/components/h5/RuntimeLoadingBuffer";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
@@ -76,13 +77,14 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ReportsArchive modules={modules}/>);
     const links = [...container.querySelectorAll<HTMLButtonElement>(".archive-category-hotspot")];
     expect(links.map((link) => link.dataset.slug)).toEqual(["inspection-projects", "review-assurance", "production-traceability"]);
-    expect(links.map((link) => link.style.top)).toEqual(["49.4%", "56.25%", "62.67%"]);
+    expect(links.map((link) => link.style.top)).toEqual(["49.406154%", "56.253374%", "62.668706%"]);
+    expect(links.map((link) => link.style.height)).toEqual(["6.84722%", "6.415332%", "16.051827%"]);
     expect(links.map((link) => link.style.left)).toEqual(["0%", "0%", "0%"]);
     expect(links.map((link) => link.style.width)).toEqual(["100%", "100%", "100%"]);
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
-  it("marks a clicked archive folder for the matching upward-fade detail entry", () => {
+  it("shows immediate feedback before buffering the matching category route", () => {
     vi.useFakeTimers();
     const modules = [{ id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
@@ -91,11 +93,26 @@ describe("multi-page H5 interactions", () => {
 
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", "review-assurance");
     expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
+    expect(container.querySelector('[data-slug="review-assurance"]')).toHaveClass("is-pressed");
+    expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-pressed-layer");
     act(() => vi.advanceTimersByTime(40));
     expect(container.querySelector(".reports-archive")).toHaveClass("is-leaving");
     expect(container.querySelector(".reports-archive")).toHaveAttribute("data-exit-slug", "review-assurance");
     expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-exit-layer");
     expect(container.querySelector('[data-archive-module="inspection-projects"]')).not.toHaveClass("archive-module-exit-layer");
+  });
+
+  it("maps the supplied click cue to inspection and covers the complete brown board", () => {
+    const modules = [
+      { id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] },
+      { id: "production", slug: "production-traceability", title: "生产溯源", description: null, cards: [] },
+    ];
+    const { container } = render(<ReportsArchive modules={modules}/>);
+    const cue = screen.getByRole("button", { name: "点击进入检测项目" });
+    const production = container.querySelector<HTMLButtonElement>('[data-slug="production-traceability"]')!;
+    expect(cue).toHaveAttribute("data-cue-slug", "inspection-projects");
+    expect(cue).toHaveStyle({ left: "53.3%", top: "45.80691%", width: "42%", height: "3.707036%" });
+    expect(production).toHaveStyle({ top: "62.668706%", height: "16.051827%" });
   });
 
   it("assembles the archive from original layers and preserves navigation hotspots", () => {
@@ -106,6 +123,8 @@ describe("multi-page H5 interactions", () => {
     expect(artwork).toHaveClass("reports-archive-art", "reports-archive-source-art");
     expect(container.querySelector('[src*="archive-reference.webp"]')).not.toBeInTheDocument();
     expect(container.querySelectorAll(".reports-archive-source-layer").length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-guide-entry-group="archive-book"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-guide-entry-group="latest-batch"]')).toBeInTheDocument();
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -154,6 +173,31 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
     expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
+  });
+
+  it("advances the tight unlock ribbon from trusted scroll without per-frame image duplication", () => {
+    const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+    let scrollY = 0;
+    Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
+    try {
+      const { container } = render(<ArchiveUnlockTabMotion />);
+      const ribbon = container.querySelector(".archive-unlock-tab-motion");
+
+      fireEvent.wheel(window);
+      scrollY = 60;
+      fireEvent.scroll(window);
+      expect(ribbon).toHaveAttribute("data-unlock-state", "revealing");
+      expect(ribbon).toHaveAttribute("data-unlock-progress", "0.333");
+      expect(container.querySelectorAll(".archive-unlock-tab-image")).toHaveLength(1);
+      expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
+
+      scrollY = 180;
+      fireEvent.scroll(window);
+      expect(ribbon).toHaveAttribute("data-unlock-state", "revealed");
+      expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
+    } finally {
+      if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    }
   });
 
   it("runs the archive title posters on a stable compositor-backed 1-2-3 loop", async () => {
@@ -319,11 +363,11 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).not.toHaveBeenCalled();
   });
 
-  it("uses a deliberate right swipe for back navigation without drawing a back button", () => {
+  it("offers a visible back control while retaining deliberate right-swipe navigation", () => {
     vi.useFakeTimers();
-    const { container } = render(<SwipeBackPage className="h5-page-transition" fallbackHref="/reports"><p>资料内容</p></SwipeBackPage>);
+    render(<SwipeBackPage className="h5-page-transition" fallbackHref="/reports"><p>资料内容</p></SwipeBackPage>);
     const page = screen.getByRole("main");
-    expect(container.querySelector("a, button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回上一页" })).toBeInTheDocument();
     fireEvent.touchStart(page, { touches: [{ clientX: 30, clientY: 200 }] });
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: 80, clientY: 205 }] });
     expect(page).not.toHaveClass("is-swipe-back");

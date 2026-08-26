@@ -85,13 +85,16 @@ describe("H5 motion isolation", () => {
     expect(guide).not.toContain('window.location.assign("/reports")');
   });
 
-  it("covers the safe guide viewport with every full-canvas layer on the same undistorted canvas", () => {
+  it("keeps every guide layer on the same undistorted canvas and contains short embedded viewports", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     expect(css).toContain("overflow: hidden; align-items: center;");
     expect(css).toMatch(/\.brand-guide-stage\s*\{[^}]*width:\s*min\(100%,\s*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*hidden;/);
     expect(css).toMatch(/\.brand-guide-base,\s*\.brand-guide-arch,[^{]+\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
+    expect(css).toContain("@media (orientation: portrait) and (min-aspect-ratio: 15 / 31)");
+    expect(css).toMatch(/min-aspect-ratio:\s*15 \/ 31[\s\S]*\.brand-guide-base,[^{]+\{\s*object-fit:\s*contain;/);
+    expect(css).toContain('background-image: url("/design/guide/guide-background.webp")');
     expect(css).toMatch(/\.brand-guide\s*\{[^}]*padding:\s*env\(safe-area-inset-top\) env\(safe-area-inset-right\) env\(safe-area-inset-bottom\) env\(safe-area-inset-left\);/);
     expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
@@ -105,7 +108,7 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("guide-final-frame-in");
   });
 
-  it("anchors the static upward-swipe hint at the lower center", () => {
+  it("anchors the supplied upward-swipe hint at the lower center and animates only its CSS layer", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     expect(css).toContain("--guide-entry-hint-width: 43.4%;");
@@ -114,29 +117,36 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain('src={assetUrl("swipe-up-hint-v2.png")}');
     expect(guide).toContain("width={868} height={260}");
     expect(guide).not.toContain('assetUrl("swipe-up-hint.png")');
-    expect(css).not.toContain("guide-hint-float");
+    expect(css).toContain("@keyframes guide-entry-hint-float");
+    expect(css).toContain('.brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint');
   });
 
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("covers a %ix%i guide safe-content stage without distorting the 750x1625 canvas", (width, height) => {
+  ])("fits a %ix%i guide safe-content stage without distorting the 750x1625 canvas", (width, height) => {
     const stageWidth = Math.min(width, 750);
-    const scale = Math.max(stageWidth / 750, height / 1625);
+    const shortEmbeddedViewport = width / height >= 15 / 31;
+    const scale = shortEmbeddedViewport ? Math.min(stageWidth / 750, height / 1625) : Math.max(stageWidth / 750, height / 1625);
     const layerWidth = 750 * scale;
     const layerHeight = 1625 * scale;
-    expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
-    expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
-    expect(Math.min(layerWidth - stageWidth, layerHeight - height)).toBeCloseTo(0, 8);
+    if (shortEmbeddedViewport) {
+      expect(layerWidth).toBeLessThanOrEqual(stageWidth + 1e-9);
+      expect(layerHeight).toBeLessThanOrEqual(height + 1e-9);
+    } else {
+      expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
+      expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
+    }
     expect(layerWidth / layerHeight).toBeCloseTo(750 / 1625, 8);
   });
 
-  it("keeps the new guide hint static while unlocking entry after the papers", () => {
+  it("starts the light guide-hint loop only after entry unlocks", () => {
     expect(h5MotionTiming.guide.swipeReadyMs).toBe(
       h5MotionTiming.guide.paperStartMs + 220 + h5MotionTiming.guide.paperDurationMs,
     );
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).not.toContain("@keyframes guide-hint-in");
+    expect(css).toContain("@keyframes guide-entry-hint-float");
+    expect(css).toContain("@keyframes guide-entry-hint-accepted");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-fallback { visibility: visible; opacity: 1; }");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-entry-hint,");
     expect(css).toContain("@keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }");
@@ -151,6 +161,8 @@ describe("H5 motion isolation", () => {
     const routeTransition = readFileSync("src/components/h5/guide-route-transition.ts", "utf8");
     expect(css).toContain(".brand-guide.is-leaving { opacity: 0; transform: translate3d(0,0,0);");
     expect(css).toContain('.reports-archive.reports-entry-transition[data-guide-entry="reference-staged"] { animation: none; }');
+    expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-book');
+    expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-batch');
     expect(css).not.toContain("@keyframes guide-route-layer-reveal");
     expect(css).toContain("#h5-guide-route-buffer-host");
     expect(layout).toContain('id="h5-guide-route-buffer-host"');
@@ -165,6 +177,13 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain("guideRouteStageDurationMs = 680");
     expect(routeTransition).toContain('root.setAttribute(guideRouteEntryAttribute, "revealing")');
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
+    expect(routeTransition).toContain('clone.classList.add("is-guide-route-buffer-clone", "is-swipe-accepted")');
+    expect(routeTransition).toContain('"is-swipe-accepted"');
+    expect(routeTransition).not.toContain("getComputedStyle");
+    expect(routeTransition).not.toContain("freezeClone");
+    expect(css).toContain(".brand-guide.is-guide-route-buffer-clone * { animation: none !important; transition: none !important; }");
+    expect(css).toContain(".brand-guide.is-guide-route-buffer-clone.is-ready .brand-guide-paper-right { transform: translate3d(10.133333%,-1.046154%,0) rotate(0) !important; }");
+    expect(css).toContain(".brand-guide.is-guide-route-buffer-clone.is-ready .brand-guide-character-closed { opacity: 1 !important; }");
     expect(css).not.toContain("translate3d(100%,0,0)");
   });
 
@@ -199,7 +218,7 @@ describe("H5 motion isolation", () => {
     expect(category).toContain("announceCategoryRouteReady();");
     expect(routeTransition).toContain("prepareCategoryRouteContinuity");
     expect(routeTransition).toContain("freezeClone");
-    expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 220");
+    expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 0");
     expect(routeTransition).not.toContain("startViewTransition");
   });
 
@@ -321,7 +340,7 @@ describe("H5 motion isolation", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     expect(reports).toContain("ArchiveArtwork, archiveArtworkCriticalAssets, archiveArtworkDeferredAssets");
-    expect(reports).toContain("<ArchiveArtwork preview={preview} exitingSlug={exitingSlug} />");
+    expect(reports).toContain("<ArchiveArtwork preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />");
     expect(reports).not.toContain("archive-reference.webp");
     expect(artwork).toContain('data-artwork-source="layered-originals"');
     expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');
@@ -370,10 +389,15 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("places the archive unlock ribbon below the yellow page and reveals it from real scroll progress", () => {
+  it("keeps the archive unlock ribbon on a single tight compositor layer", () => {
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     const component = readFileSync("src/components/h5/motion/modules/ArchiveUnlockTabMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
+    const clipRule = css.match(/\.archive-unlock-tab-clip\s*\{([^}]*)\}/)?.[1] ?? "";
+    const movingRule = css.match(/\.archive-unlock-tab-clip\.is-moving\s*\{([^}]*)\}/)?.[1] ?? "";
+    const imageRule = css.match(/\.archive-unlock-tab-image\s*\{([^}]*)\}/)?.[1] ?? "";
+    const percent = (rule: string, property: string) => Number(rule.match(new RegExp(`${property}:\\s*([\\d.]+)%`))?.[1]);
+
     expect(artwork).not.toContain('moduleOneLayer("module-1-swipe"');
     expect(artwork).toContain("<ArchiveUnlockTabMotion preview={preview} />");
     expect(artwork).toContain('id === "module-1-folder-back"');
@@ -381,15 +405,26 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("accumulated.current / h5MotionTiming.archiveUnlockTab.revealDistancePx");
     expect(component).toContain("data-unlock-progress");
     expect(component).not.toContain("sessionStorage");
-    expect(component).toContain("/design/final-v1/长图输出/长图模块1/h5长图-下滑条.png");
-    expect(component).toContain("width={3034}");
-    expect(component).toContain("height={4334}");
-    expect(component).toContain("1817 / 5557");
-    expect(component).toContain("5557 - 1860");
+    expect(component).toContain("/design/final-v1/archive-unlock-ribbon.webp");
+    expect(component).toContain("width={193}");
+    expect(component).toContain("height={674}");
+    expect(component).not.toContain("h5长图-下滑条.png");
+    expect(component).not.toContain("MotionStage");
+    expect(component).not.toContain("setProgress");
+    expect(component).toContain("--archive-unlock-hidden-bottom");
     expect(css).toContain("z-index: 20");
-    expect(css).toContain("left: -40.6%");
-    expect(css).toContain("width: 151.7%");
-    expect(css).toContain("var(--archive-unlock-current-bottom)");
+    expect(percent(clipRule, "left")).toBeCloseTo(83.35, 6);
+    expect(percent(clipRule, "top")).toBeCloseTo(32.6974986504, 6);
+    expect(percent(clipRule, "width")).toBeCloseTo(9.65, 6);
+    expect(percent(clipRule, "height")).toBeCloseTo(6.06442324996, 6);
+    expect(imageRule).toContain("inset: 0");
+    expect(imageRule).toContain("width: 100%");
+    expect(imageRule).toContain("height: 100%");
+    expect(movingRule).toContain("clip-path: inset(0 0 var(--archive-unlock-hidden-bottom) 0)");
+    expect(css).not.toContain("--archive-unlock-reveal-top");
+    expect(css).not.toContain("left: -40.6%");
+    expect(css).not.toContain("width: 151.7%");
+    expect(css).not.toContain(".archive-unlock-tab-motion > .motion-stage");
   });
 
   it("replaces the retired decoration and sequences the three supplied title posters with compositor bounce motion", () => {
@@ -398,7 +433,7 @@ describe("H5 motion isolation", () => {
     const component = readFileSync("src/components/h5/motion/modules/ArchiveSectionTitleMotion.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(reports).toContain("ArchiveSectionTitleMotion, archiveSectionTitleWarmAssets");
-    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} exitingSlug={exitingSlug} />");
+    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />");
     expect(component).toContain("/design/final-v1/motion/archive-runtime");
     expect(component).toContain("section-click-cue.gif");
     expect(component).not.toContain("section-title-inspection.gif");
@@ -465,7 +500,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("backface-visibility: hidden");
     expect(css).toContain("will-change: transform");
     expect(css).not.toContain(".archive-section-title-gif");
-    expect(css).toContain(".archive-section-click-cue-gif { z-index: 0; }");
+    expect(css).toContain(".archive-section-click-cue-gif { z-index: 0; animation: archive-click-cue-attention");
+    expect(css).toContain("@keyframes archive-click-cue-attention");
     expect(css).toContain(".archive-section-number-part");
   });
 

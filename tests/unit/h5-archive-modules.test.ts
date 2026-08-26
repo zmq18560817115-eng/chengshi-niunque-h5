@@ -2,9 +2,9 @@ import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 
 describe("archive module visual mapping", () => {
   it("keeps the three artwork layers mapped to their matching routes", () => {
-    expect(getArchiveModuleLayout("inspection-projects")).toMatchObject({ order: 0, left: "0%", top: "49.4%", width: "100%", height: "6.85%", label: "检测项目" });
-    expect(getArchiveModuleLayout("review-assurance")).toMatchObject({ order: 1, left: "0%", top: "56.25%", width: "100%", height: "6.42%", label: "复核保障" });
-    expect(getArchiveModuleLayout("production-traceability")).toMatchObject({ order: 2, left: "0%", top: "62.67%", width: "100%", height: "6.5%", label: "生产溯源" });
+    expect(getArchiveModuleLayout("inspection-projects")).toMatchObject({ order: 0, left: "0%", top: "49.406154%", width: "100%", height: "6.84722%", label: "检测项目" });
+    expect(getArchiveModuleLayout("review-assurance")).toMatchObject({ order: 1, left: "0%", top: "56.253374%", width: "100%", height: "6.415332%", label: "复核保障" });
+    expect(getArchiveModuleLayout("production-traceability")).toMatchObject({ order: 2, left: "0%", top: "62.668706%", width: "100%", height: "16.051827%", label: "生产溯源" });
   });
 
   it("does not invent a visual slot for an unknown module", () => {

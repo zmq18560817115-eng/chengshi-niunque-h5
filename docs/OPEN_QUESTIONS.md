@@ -35,3 +35,4 @@ These are not blockers for the skeleton.
 17. Confirm the final artwork, font, illustration, copy, and easing curves for the guide, archive, category, and report pages; the current implementation intentionally uses structural placeholders.
 18. Confirm whether `/go` should remain a temporary 307 redirect to `/`, become permanent, or preserve channel tracking parameters.
 19. Confirm whether report images require pinch-to-zoom, drag boundaries, and landscape rules beyond the current 1–3x controls.
+20. Provide an approved branded artwork asset for the visible “返回上一页” control if the current neutral safe-area text button should be replaced; no existing category arrow is semantically suitable for reuse.

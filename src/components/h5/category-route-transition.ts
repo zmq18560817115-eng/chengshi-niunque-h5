@@ -6,7 +6,7 @@ export const categoryRouteReadyEvent = "h5-category-route-ready";
 export const categoryRouteBufferHostId = "h5-category-route-buffer-host";
 export const archiveModuleExitDelayMs = 40;
 export const archiveModuleExitDurationMs = 520;
-export const archiveModuleNavigationDelayMs = 220;
+export const archiveModuleNavigationDelayMs = 0;
 export const categoryRouteBufferReleaseDurationMs = 1600;
 
 let bufferCleanupTimer: number | undefined;

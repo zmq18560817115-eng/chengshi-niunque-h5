@@ -8,29 +8,6 @@ export const guideRouteStageDurationMs = 680;
 let bufferCleanupTimer: number | undefined;
 let stageCleanupTimer: number | undefined;
 
-const freezeProperties = [
-  "opacity",
-  "transform",
-  "visibility",
-  "clip-path",
-  "mask-position",
-  "-webkit-mask-position",
-  "stroke-dashoffset",
-] as const;
-
-function freezeClone(source: HTMLElement, clone: HTMLElement) {
-  const sourceNodes = [source, ...source.querySelectorAll<HTMLElement | SVGElement>("*")];
-  const cloneNodes = [clone, ...clone.querySelectorAll<HTMLElement | SVGElement>("*")];
-  sourceNodes.forEach((sourceNode, index) => {
-    const cloneNode = cloneNodes[index];
-    if (!cloneNode) return;
-    const computed = window.getComputedStyle(sourceNode);
-    cloneNode.style.setProperty("animation", "none", "important");
-    cloneNode.style.setProperty("transition", "none", "important");
-    freezeProperties.forEach((property) => cloneNode.style.setProperty(property, computed.getPropertyValue(property), "important"));
-  });
-}
-
 export function prepareGuideRouteContinuity() {
   const root = document.documentElement;
   const host = document.getElementById(guideRouteBufferHostId);
@@ -42,7 +19,7 @@ export function prepareGuideRouteContinuity() {
   const sourceRect = source.getBoundingClientRect();
   const clone = source.cloneNode(true) as HTMLElement;
   clone.classList.remove("is-leaving");
-  freezeClone(source, clone);
+  clone.classList.add("is-guide-route-buffer-clone", "is-swipe-accepted");
   Object.assign(clone.style, {
     position: "absolute",
     left: `${sourceRect.left}px`,
