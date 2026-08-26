@@ -35,7 +35,7 @@ type PositionedAsset = {
 const masterWidth = 1000;
 const masterHeight = 5557;
 const archiveMotionRoot = "/design/final-v1/motion/archive-runtime";
-export const archiveTitleBounceDurationMs = 936;
+export const archiveTitleBounceDurationMs = 1217;
 
 const clickCue: PositionedGif = {
   gif: `${archiveMotionRoot}/section-click-cue.gif`,
@@ -172,8 +172,8 @@ function useSequentialTitlePlayback(enabled: boolean) {
       return;
     }
     const observer = new IntersectionObserver(([entry]) => {
-      setRegionVisible(entry.isIntersecting && entry.intersectionRatio >= 0.05);
-    }, { threshold: [0, 0.05], rootMargin: "8% 0px" });
+      setRegionVisible(entry.isIntersecting);
+    }, { threshold: 0, rootMargin: "16% 0px" });
     observer.observe(node);
     return () => observer.disconnect();
   }, [enabled]);

@@ -7,21 +7,24 @@ import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
 import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
-import { ArchiveArtwork, archiveArtworkWarmAssets } from "@/components/h5/ArchiveArtwork";
+import { ArchiveArtwork, archiveArtworkCriticalAssets, archiveArtworkDeferredAssets } from "@/components/h5/ArchiveArtwork";
 import { ArchiveFishFloatMotion, archiveFishWarmAssets } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion, archiveSectionTitleWarmAssets } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion, archiveStoryWarmAssets } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity, prepareCategoryRouteContinuity } from "@/components/h5/category-route-transition";
 import { announceGuideRouteReady, guideRouteEntryAttribute } from "@/components/h5/guide-route-transition";
-import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 const reportsReadinessRequests = [
-  ...archiveArtworkWarmAssets.map((src) => ({ src, priority: "high" as const })),
-  ...archiveUnlockWarmAssets.map((src) => ({ src, priority: "auto" as const })),
-  ...archiveFishWarmAssets.map((src) => ({ src, priority: "auto" as const })),
-  ...archiveStoryWarmAssets.map((src) => ({ src, priority: "auto" as const })),
-  ...archiveSectionTitleWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveArtworkCriticalAssets.map((src) => ({ src, priority: "high" as const })),
+  ...archiveUnlockWarmAssets.map((src) => ({ src, priority: "high" as const })),
+] as const;
+const reportsDeferredWarmRequests = [
+  ...archiveArtworkDeferredAssets.map((src) => ({ src, priority: "low" as const })),
+  ...archiveFishWarmAssets.map((src) => ({ src, priority: "low" as const })),
+  ...archiveStoryWarmAssets.map((src) => ({ src, priority: "low" as const })),
+  ...archiveSectionTitleWarmAssets.map((src) => ({ src, priority: "low" as const })),
 ] as const;
 
 type ReportsArchiveProps = { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig };
@@ -56,6 +59,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     if (preview || !readinessReady) return;
     if (document.documentElement.hasAttribute(guideRouteEntryAttribute)) setGuideEntry(true);
     announceGuideRouteReady();
+  }, [preview, readinessReady]);
+
+  useEffect(() => {
+    if (preview || !readinessReady) return;
+    void preloadHomepageAssets(reportsDeferredWarmRequests).then((result) => {
+      if (result.failed.length > 0) console.error(`[ReportsArchive] deferred assets failed: ${result.failed.join(", ")}`);
+    });
   }, [preview, readinessReady]);
 
   useEffect(() => {

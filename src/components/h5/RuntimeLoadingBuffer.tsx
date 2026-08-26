@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export type RuntimeLoadingPhase = "loading" | "leaving";
 
 export const routeLoadingRevealDelayMs = 220;
+export const runtimeLoadingAnimationDelayMs = 900;
 
 export function DeferredRuntimeLoadingBuffer({
   delayMs = routeLoadingRevealDelayMs,
@@ -35,6 +36,17 @@ export function RuntimeLoadingBuffer({
   label?: string;
   reason?: string;
 }) {
+  const [showAnimatedBuffer, setShowAnimatedBuffer] = useState(false);
+
+  useEffect(() => {
+    if (phase !== "loading") {
+      setShowAnimatedBuffer(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowAnimatedBuffer(true), runtimeLoadingAnimationDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
   return (
     <div className={`runtime-loading-layer is-${phase}`} data-loading-reason={reason}>
       <main className={`guide-loading-buffer is-${phase}`} aria-label="页面加载缓冲" aria-busy={phase === "loading"}>
@@ -48,16 +60,15 @@ export function RuntimeLoadingBuffer({
             priority
             unoptimized
           />
-          <Image
+          {showAnimatedBuffer ? <Image
             className="guide-loading-buffer-gif"
             src="/design/guide/data-loading-buffer.gif"
             alt={label}
             fill
             sizes="(max-width: 750px) 100vw, 750px"
-            priority
-            fetchPriority="high"
+            fetchPriority="low"
             unoptimized
-          />
+          /> : null}
           <span className="sr-only">{label}</span>
         </section>
       </main>

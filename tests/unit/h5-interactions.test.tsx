@@ -6,7 +6,8 @@ import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
-import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { RuntimeLoadingBuffer, runtimeLoadingAnimationDelayMs } from "@/components/h5/RuntimeLoadingBuffer";
+import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 type PendingImage = { src: string; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
@@ -26,6 +27,18 @@ class PreloadImageMock {
         reject: () => { this.onerror?.(); reject(); },
       });
     });
+  }
+}
+
+async function resolvePendingImages(predicate: (image: PendingImage) => boolean) {
+  const resolved = new Set<PendingImage>();
+  for (let round = 0; round < 80; round += 1) {
+    const batch = pendingImages.filter((image) => predicate(image) && !resolved.has(image));
+    batch.forEach((image) => {
+      resolved.add(image);
+      image.resolve();
+    });
+    await Promise.resolve();
   }
 }
 
@@ -161,7 +174,7 @@ describe("multi-page H5 interactions", () => {
     await act(async () => { await Promise.resolve(); });
 
     const sequence = container.querySelector("[data-motion-module='archiveSectionTitle']");
-    expect(archiveTitleBounceDurationMs).toBe(936);
+    expect(archiveTitleBounceDurationMs).toBe(1217);
     expect(sequence).toHaveAttribute("data-title-sequence-running", "true");
     expect(sequence).toHaveAttribute("data-title-sequence-mode", "css-compositor-loop");
     expect([...container.querySelectorAll("[data-title-sequence-order]")].map((group) => group.getAttribute("data-title-sequence-order"))).toEqual(["1", "2", "3"]);
@@ -201,22 +214,18 @@ describe("multi-page H5 interactions", () => {
 
   it("warms homepage artwork in the background without fixing the loading page before the guide", async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) });
-    vi.stubGlobal("fetch", fetchMock);
     const { container } = render(<GuideExperience />);
 
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("/api/public/content", expect.objectContaining({ cache: "no-store" }));
-    expect(pendingImages.some(({ src }) => src.includes("底图纹理.png"))).toBe(true);
-    expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(true);
+    expect(pendingImages.every(({ src }) => src.includes("/design/guide/"))).toBe(true);
+    expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
     act(() => vi.advanceTimersByTime(599));
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
     await act(async () => {
-      pendingImages.filter(({ src }) => src.includes("/design/guide/")).forEach(({ resolve }) => resolve());
-      for (let step = 0; step < 12; step += 1) await Promise.resolve();
+      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
     await act(async () => {
@@ -224,12 +233,29 @@ describe("multi-page H5 interactions", () => {
     });
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    expect(pendingImages.some(({ src }) => src.includes("底图纹理.png"))).toBe(true);
+    await act(async () => { await Promise.resolve(); });
+    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(true);
+  });
+
+  it("limits competing image warmups and defers the large loading GIF for short waits", async () => {
+    vi.useFakeTimers();
+    const warmup = preloadHomepageAssets(Array.from({ length: 7 }, (_, index) => ({ src: `/warm-${index}.webp`, priority: "high" as const })));
+    expect(pendingImages).toHaveLength(4);
+    await act(async () => {
+      await resolvePendingImages(({ src }) => src.startsWith("/warm-"));
+    });
+    await expect(warmup).resolves.toEqual({ total: 7, failed: [] });
+
+    const { container } = render(<RuntimeLoadingBuffer />);
+    expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(runtimeLoadingAnimationDelayMs - 1));
+    expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(container.querySelector(".guide-loading-buffer-gif")).toBeInTheDocument();
   });
 
   it("keeps the loading buffer only until the current guide artwork has decoded", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) }));
     const { container } = render(<GuideExperience />);
     await act(async () => {
       vi.advanceTimersByTime(15000);
@@ -239,20 +265,17 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
 
     await act(async () => {
-      pendingImages.filter(({ src }) => src.includes("/design/guide/")).forEach(({ resolve }) => resolve());
-      for (let step = 0; step < 12; step += 1) await Promise.resolve();
+      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
   });
 
   it("never mounts the loading buffer when the current guide artwork is ready inside the reveal threshold", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) }));
     const { container } = render(<GuideExperience />);
 
     await act(async () => {
-      pendingImages.filter(({ src }) => src.includes("/design/guide/")).forEach(({ resolve }) => resolve());
-      for (let step = 0; step < 12; step += 1) await Promise.resolve();
+      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
       await vi.advanceTimersByTimeAsync(1000);
     });
 

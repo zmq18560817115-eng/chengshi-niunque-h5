@@ -33,11 +33,11 @@ for (const width of widths) {
         const style = getComputedStyle(node);
         return { image: style.backgroundImage, position: style.backgroundPosition, repeat: style.backgroundRepeat, size: style.backgroundSize };
       });
-      expect(backdrop.image).toContain("report-texture.webp");
-      expect(backdrop.image).not.toContain("category-runtime");
-      expect(backdrop.position).toBe("50% 50%");
+      expect(backdrop.image).toContain("category-paper-base.jpg");
+      expect(backdrop.image).toContain("category-runtime");
+      expect(backdrop.position).toContain("50%");
       expect(backdrop.repeat).toBe("repeat-x");
-      expect(backdrop.size).toBe("auto 100%");
+      expect(backdrop.size).toContain("auto");
       await page.evaluate(() => window.scrollTo(0, 999999));
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
@@ -62,30 +62,19 @@ for (const width of widths) {
   }
 }
 
-test("short embedded browser builds category gutters from independent texture layers", async ({ page }) => {
+test("short embedded browser fills category gutters with the original wide folder layer", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto("/reports/inspection-projects");
   const stage = page.locator(".category-page-final");
   await expect(stage).toBeVisible();
   await page.waitForTimeout(350);
-  const edgeLayers = await stage.evaluate((node) => {
-    const before = getComputedStyle(node.querySelector(".category-page-surround-fill--left")!);
-    const after = getComputedStyle(node.querySelector(".category-page-surround-fill--right")!);
-    return {
-      source: node.querySelector(".category-page-surround")?.getAttribute("data-artwork-source"),
-      before: { width: before.width, top: before.top, image: before.backgroundImage, blend: before.backgroundBlendMode },
-      after: { width: after.width, top: after.top, image: after.backgroundImage, blend: after.backgroundBlendMode },
-    };
-  });
-  expect(edgeLayers.source).toBe("layered-texture");
-  expect(Number.parseFloat(edgeLayers.before.width)).toBeGreaterThan(0);
-  expect(edgeLayers.after.width).toBe(edgeLayers.before.width);
-  expect(Number.parseFloat(edgeLayers.before.top)).toBeCloseTo(667 * .1814, 0);
-  expect(Number.parseFloat(edgeLayers.after.top)).toBeCloseTo(667 * .1844, 0);
-  expect(edgeLayers.before.image).toContain("report-texture.webp");
-  expect(edgeLayers.after.image).toContain("report-texture.webp");
-  expect(edgeLayers.before.image).not.toContain("category-runtime");
-  expect(edgeLayers.after.image).not.toContain("category-runtime");
-  expect(edgeLayers.before.blend).toBe("multiply");
-  expect(edgeLayers.after.blend).toBe("multiply");
+  const viewport = page.locator(".category-page-viewport");
+  const folder = page.locator('[data-category-layer="folder"]');
+  const viewportBox = await viewport.boundingBox();
+  const folderBox = await folder.boundingBox();
+  expect(await viewport.getAttribute("data-artwork-source")).toBe("layered-components");
+  expect(folderBox?.x).toBeLessThan(viewportBox?.x ?? 0);
+  expect((folderBox?.x ?? 0) + (folderBox?.width ?? 0)).toBeGreaterThan((viewportBox?.x ?? 0) + (viewportBox?.width ?? 0));
+  expect((folderBox?.width ?? 0) / (viewportBox?.width ?? 1)).toBeCloseTo(2502 / 2000, 3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
 });

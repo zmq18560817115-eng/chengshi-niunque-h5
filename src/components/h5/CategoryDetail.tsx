@@ -38,10 +38,9 @@ type CategoryDetailProps = { module: PublicModule; preview?: boolean };
 
 export function CategoryDetail(props: CategoryDetailProps) {
   const theme = getCategoryTheme(props.module.slug);
-  if (props.preview || !theme.artwork) return <CategoryDetailReady {...props}/>;
+  if (props.preview || !theme.artworkLayers) return <CategoryDetailReady {...props}/>;
   const requests = [
-    { src: `/design/final-v1/${theme.artwork}`, priority: "high" as const },
-    { src: "/design/final-v1/report-texture.webp", priority: "high" as const },
+    ...theme.artworkLayers.map((layer) => ({ src: layer.src, priority: "high" as const })),
     ...theme.cardLayouts.map((layout) => ({ src: layout.backplate.src, priority: "high" as const })),
   ];
   return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets">
@@ -55,10 +54,9 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const [leaving, setLeaving] = useState(false);
   const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
   const [pendingRouteEntrySource, setPendingRouteEntrySource] = useState<string | null>(null);
-  const [artworkReady, setArtworkReady] = useState(false);
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
-  const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
+  const slots = useMemo(() => theme.artworkLayers ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
   useLayoutEffect(() => {
     if (preview) return;
     const root = document.documentElement;
@@ -79,24 +77,30 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     }
   }, [module.slug, motionEnabled, preview]);
   useEffect(() => {
-    if (!readinessReady || !pendingRouteEntrySource || !artworkReady) return;
+    if (!readinessReady || !pendingRouteEntrySource) return;
     setRouteEntrySource(pendingRouteEntrySource);
     setPendingRouteEntrySource(null);
-  }, [artworkReady, pendingRouteEntrySource, readinessReady]);
+  }, [pendingRouteEntrySource, readinessReady]);
   useLayoutEffect(() => {
     if (!readinessReady || !routeEntrySource) return;
     announceCategoryRouteReady();
   }, [readinessReady, routeEntrySource]);
 
-  if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
+  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
   return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-preview={preview || undefined}>
-    <div className="category-page-surround" data-artwork-source="layered-texture" aria-hidden="true">
-      <span className="category-page-surround-fill category-page-surround-fill--left" />
-      <span className="category-page-surround-fill category-page-surround-fill--right" />
-    </div>
-    <div className="category-page-viewport">
-      <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px" onLoad={() => setArtworkReady(true)}/>
+    <div className="category-page-viewport" data-artwork-source="layered-components">
+      <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
+      {theme.artworkLayers.map((layer) => {
+        const style = {
+          left: `${layer.x / 2000 * 100}%`,
+          top: `${layer.y / 4333 * 100}%`,
+          width: `${layer.width / 2000 * 100}%`,
+          height: `${layer.height / 4333 * 100}%`,
+        } as CSSProperties;
+        return <Image key={layer.id} className="category-page-artwork-layer" src={layer.src} alt="" width={layer.width} height={layer.height} style={style} priority unoptimized sizes="(max-width: 750px) 126vw, 945px" data-category-layer={layer.id}/>;
+      })}
+      </div>
       <div className="category-card-backplates" aria-hidden="true">
       {theme.cardLayouts.map((layout, index) => {
         const style = {

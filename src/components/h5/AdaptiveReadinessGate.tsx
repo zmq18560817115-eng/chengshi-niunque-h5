@@ -23,7 +23,7 @@ async function settleRenderedContent(selector: string, frameCount: number) {
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
   const images = [...root.querySelectorAll<HTMLImageElement>("img")].filter((image) => {
     const rect = image.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.bottom >= -viewportHeight * .25 && rect.top <= viewportHeight * 1.5;
+    return rect.width > 0 && rect.height > 0 && rect.bottom >= -viewportHeight * .25 && rect.top <= viewportHeight * 1.08;
   });
   await Promise.all(images.map(async (image) => {
     if (!image.complete) {

@@ -2,8 +2,17 @@ export const defaultCategoryTheme = {
   theme: "default",
   backgroundClass: "report-page--default",
   label: "报告资料",
-  artwork: null,
+  artworkLayers: null,
 } as const;
+
+export type CategoryArtworkLayer = {
+  id: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 export type CategoryCardLayout = {
   x: number;
@@ -28,6 +37,56 @@ export type CategoryCardFallback = {
 const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈只看报告结论是否\"符合/通过\",不用自己算公式。";
 
 const runtimeAsset = (name: string) => `/design/final-v1/category-runtime/${name}`;
+
+const categoryPaperLayer = {
+  id: "paper",
+  src: runtimeAsset("category-paper-base.jpg"),
+  x: 0,
+  y: -76,
+  width: 2000,
+  height: 4333,
+} as const;
+
+const categoryFooterLayer = (y: number) => ({
+  id: "footer-note",
+  src: runtimeAsset("category-footer-note.png"),
+  x: 316,
+  y,
+  width: 1371,
+  height: 318,
+}) as const;
+
+// These are the approved independent source parts positioned on the current
+// 2000 × 4333 runtime artboard (the approved composition is shifted 75px up
+// from the original export). The 2502px folder layers deliberately extend
+// beyond the central canvas, which supplies the real painted folder texture on
+// wider embedded-browser viewports without stretching it.
+export const categoryArtworkLayers = {
+  "inspection-projects": [
+    categoryPaperLayer,
+    { id: "folder", src: runtimeAsset("inspection-folder-layer.png"), x: -199, y: 136, width: 2502, height: 4334 },
+    { id: "title-ring", src: runtimeAsset("inspection-title-ring.png"), x: 139, y: 598, width: 162, height: 169 },
+    { id: "title-digit", src: runtimeAsset("inspection-title-digit.png"), x: 185, y: 625, width: 51, height: 114 },
+    { id: "title", src: runtimeAsset("inspection-title.png"), x: 335, y: 592, width: 718, height: 206 },
+    categoryFooterLayer(3814),
+  ],
+  "review-assurance": [
+    categoryPaperLayer,
+    { id: "folder", src: runtimeAsset("review-folder-layer.png"), x: -199, y: 136, width: 2502, height: 4334 },
+    { id: "title-ring", src: runtimeAsset("review-title-ring.png"), x: 132, y: 603, width: 161, height: 170 },
+    { id: "title-digit", src: runtimeAsset("review-title-digit.png"), x: 175, y: 630, width: 86, height: 111 },
+    { id: "title", src: runtimeAsset("review-title.png"), x: 319, y: 593, width: 718, height: 204 },
+    categoryFooterLayer(3814),
+  ],
+  "production-traceability": [
+    categoryPaperLayer,
+    { id: "folder", src: runtimeAsset("traceability-folder-layer.png"), x: -183, y: 130, width: 2502, height: 4334 },
+    { id: "title-ring", src: runtimeAsset("traceability-title-ring.png"), x: 144, y: 589, width: 161, height: 170 },
+    { id: "title-digit", src: runtimeAsset("traceability-title-digit.png"), x: 183, y: 617, width: 81, height: 118 },
+    { id: "title", src: runtimeAsset("traceability-title.png"), x: 298, y: 581, width: 718, height: 206 },
+    categoryFooterLayer(2895),
+  ],
+} satisfies Record<string, readonly CategoryArtworkLayer[]>;
 
 // Coordinates use the 1000 x 2166.5 half-scale of the supplied 2000 x 4333
 // references. Each blank backplate covers only the baked card copy so the
@@ -71,9 +130,9 @@ export const categoryCardFallbacks: Record<
 };
 
 export const categoryThemes = {
-  "inspection-projects": { theme: "inspection", backgroundClass: "report-page--inspection", label: "检测项目", artwork: "category-runtime/inspection-source.jpg", cardSlots: 3 },
-  "review-assurance": { theme: "review", backgroundClass: "report-page--review", label: "复核保障", artwork: "category-runtime/review-source.jpg", cardSlots: 3 },
-  "production-traceability": { theme: "traceability", backgroundClass: "report-page--traceability", label: "生产溯源", artwork: "category-runtime/traceability-source.jpg", cardSlots: 2 },
+  "inspection-projects": { theme: "inspection", backgroundClass: "report-page--inspection", label: "检测项目", artworkLayers: categoryArtworkLayers["inspection-projects"], cardSlots: 3 },
+  "review-assurance": { theme: "review", backgroundClass: "report-page--review", label: "复核保障", artworkLayers: categoryArtworkLayers["review-assurance"], cardSlots: 3 },
+  "production-traceability": { theme: "traceability", backgroundClass: "report-page--traceability", label: "生产溯源", artworkLayers: categoryArtworkLayers["production-traceability"], cardSlots: 2 },
 } as const;
 
 export const placeholderCardId = (index: number) => `placeholder-slot-${index + 1}`;
@@ -81,7 +140,7 @@ export const placeholderCardId = (index: number) => `placeholder-slot-${index + 
 export function getPlaceholderSlot(slug: string, cardId: string) {
   const theme = getCategoryTheme(slug);
   const match = /^placeholder-slot-(\d+)$/.exec(cardId);
-  if (!theme.artwork || !match) return null;
+  if (!theme.artworkLayers || !match) return null;
   const index = Number(match[1]) - 1;
   return Number.isInteger(index) && index >= 0 && index < theme.cardSlots ? index : null;
 }

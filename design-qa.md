@@ -1,5 +1,57 @@
 # Design QA
 
+## Latest pass — Independent four-page layers, smoother titles, and non-blocking warm-up
+
+### Comparison Target
+
+- Detail-page visual truth: `public/design/final-v1/category-runtime/inspection-source.jpg`, `review-source.jpg`, and `traceability-source.jpg` (2000 x 4333 approved references).
+- Guide visual truth: `docs/input/design/final-v1/references-最终效果/guide-final-reference.jpg.jpg`; its old bottom hint is a documented earlier product decision and is not reintroduced.
+- Homepage module visual truth: `docs/input/design/final-v1/references-最终效果/完整长图-共三个模块.jpg` (2000 x 10682).
+- Browser captures: `test-results/design-qa/2026-08-26-layered-runtime/*-full.jpg`.
+- Required source-and-implementation comparison inputs:
+  - `compare-inspection.jpg`
+  - `compare-review.jpg`
+  - `compare-trace.jpg`
+  - `compare-guide.jpg`
+  - `compare-reports-modules.jpg`
+  in `test-results/design-qa/2026-08-26-layered-runtime/`.
+- Browser state: page-entry animations and adaptive loader settled, all relevant images decoded, and homepage scrolled to the shared title region.
+- Browser surface: Codex in-app browser at 2560 x 1440. The 750px H5 root and height-constrained 665px category/guide canvas were cropped without additional browser-chrome pixels; each 2000 x 4333 reference was normalized to the same 665 x 1440 canvas.
+
+### Required Fidelity Surfaces
+
+- Layer construction: none of the three category routes mounts its completed reference JPG. Each page is built from the independent common paper, wide folder/mascot, title ring, title digit, title text, footer note, blank cards, status assets, and live HTML copy. The 2502px folder layers retain their measured asymmetric offsets and paint through short-viewport gutters before the root clips them.
+- Background continuity: the common paper repeats at the same `-76px` source phase behind the fixed safe-area root. Green, yellow, and brown folder texture reaches both page edges with no flat grey, theme-colour strip, repeated completed-page slice, or exposed document background.
+- Typography and data: supplied title/status raster lettering remains unchanged. Card titles, descriptions, and report counts remain backend-managed, so differences from the static design sample are expected live-data differences rather than visual replacement.
+- Layout: the source/implementation pairs preserve the folder lip, mascot, title, card edges, status fish, footer note, and long-page section boundaries. The homepage comparison intentionally retains the previously approved removal of the green plant decoration, the click cue, and the three replacement title assets.
+- Responsive behavior: the component canvas retains one 2000 x 4333 coordinate system and scales uniformly inside dynamic safe-area height. Tests cover 320 x 568 through 430 x 932 without deformation or system-bar overlap.
+
+### Motion And Loading Evidence
+
+- The three title posters are permanently mounted and animate only compositor `transform`. One phase is 1217ms, exactly 30% slower than the previous 936ms; the full ① → ② → ③ cycle is 3651ms with 1217ms offsets.
+- A 4-second in-app-browser sample observed the repeating `0 → 1 → 2 → 0` order, a maximum of one transformed title at once, and minimum scales of 0.9000 / 0.9011 / 0.9003. The shared timeline changes only `animation-play-state`, so viewport-entry changes do not recreate the animation or restart title one.
+- Guide, homepage critical parts, and deferred homepage parts now share one priority queue capped at four image requests. Guide assets run first; homepage first-screen requests can be promoted when navigation starts; direct `/reports` also warms every lower-page part at low priority after first paint.
+- The 11.58MB loading GIF is not requested for short waits. The poster paints immediately, and the GIF mounts only after a real 900ms wait at low priority.
+- Direct `/reports` verification reported all 21 archive artwork layers complete with non-zero natural widths before scrolling; the browser then reported zero broken images. Guide-to-home settled at `/reports` with `data-guide-entry="reference-staged"`, zero loading overlays, and zero incomplete images.
+
+### Comparison History
+
+1. The prior runtime supplemented narrow canvases with sampled flat strips and mounted completed category-page artwork. On embedded mobile widths this produced visibly different side backgrounds and could expose a paper/colour boundary.
+2. The completed category images were removed from runtime rendering and replaced with independently positioned source parts. The first homepage screen was converted to exact-dimension WebP derivatives of its existing component layers, and readiness was split into critical and deferred groups.
+3. The first browser capture of the review and homepage comparison occurred before the screenshot surface had repainted after route settlement. Both were recaptured only after loader count and incomplete-image count reached zero; the final combined comparisons show the expected layers and are the evidence listed above.
+
+### Findings
+
+No actionable P0, P1, or P2 visual mismatch remains for the requested background supplementation, title cadence, or guide-to-home asset continuity. Existing category clicks, leftward third-level handoff, swipe-back, public-content data, Prisma, storage, and admin behavior are unchanged.
+
+### Follow-up Polish
+
+- P3: repeat one smoke check on a deployed physical iOS WeChat device because its live toolbar can change `safe-area-inset-top` while the page is already visible.
+
+final result: passed
+
+---
+
 ## Latest pass — Layered page surrounds and smoother title cadence
 
 ### Evidence

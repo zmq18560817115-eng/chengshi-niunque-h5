@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { CategoryDetail } from "@/components/h5/CategoryDetail";
 import type { PublicModule } from "@/server/services/public-content-service";
 
@@ -52,7 +52,10 @@ describe("CategoryDetail dynamic card copy", () => {
         status.querySelector(".category-card-status-text-art"),
       ),
     ).toBe(true);
-    expect(container.querySelector(".category-page-art")).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-source.jpg"));
+    expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.png"));
+    expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(6);
+    expect(container.querySelector(".category-page-viewport")).toHaveAttribute("data-artwork-source", "layered-components");
+    expect(container.innerHTML).not.toContain("inspection-source.jpg");
     expect(container.querySelectorAll(".category-card-backplate")).toHaveLength(3);
     expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-card-1.png"));
     expect(container.querySelector(".category-inspection-batch-bubble")).not.toBeInTheDocument();
@@ -70,7 +73,6 @@ describe("CategoryDetail dynamic card copy", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     expect(container.querySelector(".category-page-final")).not.toHaveAttribute("data-route-entry");
-    fireEvent.load(container.querySelector(".category-page-art") as HTMLImageElement);
     await waitFor(() => expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive"));
     expect(document.documentElement).not.toHaveAttribute("data-category-route-entry");
   });

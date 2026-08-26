@@ -1,4 +1,4 @@
-import { categoryCardFallbacks, categoryCardLayouts, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
+import { categoryArtworkLayers, categoryCardFallbacks, categoryCardLayouts, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
 
 describe("H5 category report themes", () => {
   it.each([
@@ -14,11 +14,25 @@ describe("H5 category report themes", () => {
   });
 
   it.each([
-    ["inspection-projects", "category-runtime/inspection-source.jpg"],
-    ["review-assurance", "category-runtime/review-source.jpg"],
-    ["production-traceability", "category-runtime/traceability-source.jpg"],
-  ])("uses an artwork with blank business-content cards for %s", (slug, artwork) => {
-    expect(getCategoryTheme(slug)).toMatchObject({ artwork });
+    ["inspection-projects", "inspection-folder-layer.png"],
+    ["review-assurance", "review-folder-layer.png"],
+    ["production-traceability", "traceability-folder-layer.png"],
+  ])("assembles %s from independent design layers", (slug, folder) => {
+    const theme = getCategoryTheme(slug);
+    expect(theme.artworkLayers?.map((layer) => layer.id)).toEqual(["paper", "folder", "title-ring", "title-digit", "title", "footer-note"]);
+    expect(theme.artworkLayers?.find((layer) => layer.id === "folder")?.src).toContain(folder);
+    expect(theme.artworkLayers?.find((layer) => layer.id === "folder")).toMatchObject({ width: 2502, height: 4334 });
+    expect(theme.artworkLayers?.some((layer) => layer.src.endsWith("-source.jpg"))).toBe(false);
+  });
+
+  it("keeps every category composition on the supplied 2000 × 4333 master", () => {
+    expect(Object.values(categoryArtworkLayers).every((layers) => layers[0].width === 2000 && layers[0].height === 4333 && layers[0].y === -76)).toBe(true);
+    expect(categoryArtworkLayers["inspection-projects"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 136 });
+    expect(categoryArtworkLayers["review-assurance"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 136 });
+    expect(categoryArtworkLayers["production-traceability"].find((layer) => layer.id === "folder")).toMatchObject({ x: -183, y: 130 });
+    expect(categoryArtworkLayers["inspection-projects"].at(-1)?.y).toBe(3814);
+    expect(categoryArtworkLayers["review-assurance"].at(-1)?.y).toBe(3814);
+    expect(categoryArtworkLayers["production-traceability"].at(-1)?.y).toBe(2895);
   });
 
   it("uses the reference-aligned copy origin for each card artwork", () => {
