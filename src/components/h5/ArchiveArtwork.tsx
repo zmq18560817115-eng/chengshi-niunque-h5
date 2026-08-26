@@ -13,6 +13,9 @@ const moduleThreeOutput = `${archiveRuntimeRoot}/module-3-output.webp`;
 
 const layerModule = {
   "module-2-inspection-folder": "inspection-projects",
+  // The approved mascot/card artwork belongs to the green inspection module,
+  // even though its lower edge visually crosses the yellow folder boundary.
+  "module-2-resource-09": "inspection-projects",
   "module-2-review-folder": "review-assurance",
   "module-2-production-folder": "production-traceability",
 } as const;
@@ -145,11 +148,11 @@ export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug
       {baseLayers.map(renderLayer)}
       <div className="reports-archive-entry-group reports-archive-entry-book" data-guide-entry-group="archive-book">
         {bookLayers.map(renderLayer)}
+        <ArchiveUnlockTabMotion preview={preview} />
       </div>
       <div className="reports-archive-entry-group reports-archive-entry-batch" data-guide-entry-group="latest-batch">
         {batchLayers.map(renderLayer)}
       </div>
-      <ArchiveUnlockTabMotion preview={preview} />
     </div>
   );
 }

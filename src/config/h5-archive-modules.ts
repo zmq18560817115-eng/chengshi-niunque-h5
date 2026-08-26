@@ -14,6 +14,15 @@ export const archiveClickCueLayout = {
   height: "3.707036%",
 } as const;
 
+// “资源 9”里的检测人物从绿色文件夹伸入黄色背景。该窄命中区只覆盖
+// 人物左侧轮廓，不扩大绿色色块，也不会遮住黄色标题的正常入口。
+export const archiveInspectionMascotLayout = {
+  left: "41%",
+  top: "52.843261%",
+  width: "27%",
+  height: "5.758503%",
+} as const;
+
 export function getArchiveModuleLayout(slug: string) {
   return archiveModuleLayout[slug as keyof typeof archiveModuleLayout];
 }

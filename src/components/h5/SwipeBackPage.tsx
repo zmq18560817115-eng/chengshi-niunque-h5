@@ -10,12 +10,14 @@ export function SwipeBackPage({
   className,
   fallbackHref,
   preview = false,
+  showBackControl = true,
   ...props
 }: {
   children: ReactNode;
   className: string;
   fallbackHref: string;
   preview?: boolean;
+  showBackControl?: boolean;
 } & Omit<React.ComponentPropsWithoutRef<"main">, "children" | "className">) {
   const router = useRouter();
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -43,7 +45,7 @@ export function SwipeBackPage({
   };
 
   return <main {...props} className={`${className} ${leavingBack ? "is-swipe-back" : ""}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-    {!preview && <button className="swipe-back-control" type="button" onClick={goBack} disabled={leavingBack}>返回上一页</button>}
+    {!preview && showBackControl ? <button className="swipe-back-control" type="button" onClick={goBack} disabled={leavingBack}>返回上一页</button> : null}
     {children}
   </main>;
 }

@@ -35,4 +35,5 @@ These are not blockers for the skeleton.
 17. Confirm the final artwork, font, illustration, copy, and easing curves for the guide, archive, category, and report pages; the current implementation intentionally uses structural placeholders.
 18. Confirm whether `/go` should remain a temporary 307 redirect to `/`, become permanent, or preserve channel tracking parameters.
 19. Confirm whether report images require pinch-to-zoom, drag boundaries, and landscape rules beyond the current 1–3x controls.
-20. Provide an approved branded artwork asset for the visible “返回上一页” control if the current neutral safe-area text button should be replaced; no existing category arrow is semantically suitable for reuse.
+20. Provide an approved branded artwork asset if category pages must gain a visible “返回上一页” control; the source artwork contains none, so runtime categories currently preserve only right-swipe return while tertiary report pages retain the neutral semantic control.
+21. Confirm the final guide gesture acceptance distance and travel curve. The supplied 30fps reference proves touch-move feedback begins within one frame, but it does not expose finger coordinates; the current mobile-first acceptance uses 24 CSS px and a 5dvh buffered rise so early swipes are no longer dropped.

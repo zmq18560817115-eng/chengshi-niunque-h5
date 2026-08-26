@@ -24,7 +24,7 @@ for (const width of widths) {
       expect(stageBox?.width).toBe(clientWidth);
       expect(stageBox?.height).toBe(896);
       expect(viewportBox?.width).toBeLessThanOrEqual(clientWidth);
-      expect(viewportBox?.height).toBeLessThanOrEqual(896);
+      expect((viewportBox?.width ?? 0) * 4100 / 2000).toBeLessThanOrEqual(896);
       expect((viewportBox?.width ?? 0) / (viewportBox?.height ?? 1)).toBeCloseTo(2000 / 4333, 3);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(clientWidth);
       expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(896);

@@ -2,8 +2,20 @@ export const guideRouteEntryAttribute = "data-guide-route-entry";
 export const guideRouteReadyEvent = "h5-guide-route-ready";
 export const guideRouteBufferHostId = "h5-guide-route-buffer-host";
 export const guideRouteNavigationDelayMs = 40;
-export const guideRouteBufferReleaseDurationMs = 220;
-export const guideRouteStageDurationMs = 680;
+export const guideRouteBufferReleaseDurationMs = 720;
+
+export const guideArchiveEntryTiming = {
+  bookDelayMs: 70,
+  bookDurationMs: 720,
+  batchOverlapProgress: 0.8,
+  batchDurationMs: 560,
+} as const;
+
+export const guideArchiveBatchDelayMs = guideArchiveEntryTiming.bookDelayMs
+  + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress;
+export const guideRouteStageDurationMs = guideArchiveBatchDelayMs
+  + guideArchiveEntryTiming.batchDurationMs
+  + 80;
 
 let bufferCleanupTimer: number | undefined;
 let stageCleanupTimer: number | undefined;
@@ -45,7 +57,13 @@ function revealGuideDestination() {
   root.setAttribute(guideRouteEntryAttribute, "revealing");
   window.requestAnimationFrame(() => window.requestAnimationFrame(() => buffer?.classList.add("is-releasing")));
   bufferCleanupTimer = window.setTimeout(() => buffer?.remove(), guideRouteBufferReleaseDurationMs + 80);
-  stageCleanupTimer = window.setTimeout(() => root.removeAttribute(guideRouteEntryAttribute), guideRouteStageDurationMs);
+  stageCleanupTimer = window.setTimeout(() => {
+    root.removeAttribute(guideRouteEntryAttribute);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    window.requestAnimationFrame(() => window.scrollTo(0, 0));
+  }, guideRouteStageDurationMs);
 }
 
 export function navigateWithGuideContinuity(navigate: () => void) {

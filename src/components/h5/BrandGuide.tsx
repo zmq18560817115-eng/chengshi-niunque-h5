@@ -10,6 +10,13 @@ import { guideRouteNavigationDelayMs, navigateWithGuideContinuity, prepareGuideR
 
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 type GuideMotionPreference = "unknown" | "allowed" | "reduced";
+const GUIDE_SWIPE_DISTANCE_PX = 24;
+
+const isUpwardGuideSwipe = (start: { x: number; y: number }, current: { x: number; y: number }) => {
+  const deltaX = current.x - start.x;
+  const deltaY = current.y - start.y;
+  return deltaY <= -GUIDE_SWIPE_DISTANCE_PX && Math.abs(deltaY) > Math.abs(deltaX);
+};
 
 const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp",
@@ -68,6 +75,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const [fallbackUnavailable, setFallbackUnavailable] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
+  const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const entering = useRef(false);
 
@@ -80,6 +88,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       setAssetStatus(nextPreference === "reduced" ? "reduced" : "loading");
       setAnimationStarted(false);
       setSwipeReady(nextPreference === "reduced");
+      setGestureReady(nextPreference === "reduced");
     };
     sync();
     if (!media) return;
@@ -101,8 +110,9 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     return () => window.clearTimeout(timer);
   }, [animationStarted]);
 
-  const enter = useCallback(() => {
-    if (entering.current || leaving || preview || !swipeReady) return;
+  const enter = useCallback((source: "gesture" | "control") => {
+    const ready = source === "gesture" ? gestureReady : swipeReady;
+    if (entering.current || leaving || preview || !ready) return;
     entering.current = true;
     if (!onEnter) prepareGuideRouteContinuity();
     setLeaving(true);
@@ -111,30 +121,40 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       if (onEnter) onEnter();
       else navigateWithGuideContinuity(() => router.push("/reports"));
     }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
-  }, [leaving, onEnter, preview, router, swipeReady]);
+  }, [gestureReady, leaving, onEnter, preview, router, swipeReady]);
 
   const handleLayerError = useCallback((name: string) => {
     console.error(`[BrandGuide] asset failed: ${name}`);
     setAssetStatus("failed");
     setAnimationStarted(false);
     setSwipeReady(true);
+    setGestureReady(true);
   }, []);
   const handleFallbackError = useCallback(() => {
     console.error("[BrandGuide] asset failed: guide-final-fallback-v3.webp");
     setFallbackUnavailable(true);
     setSwipeReady(true);
+    setGestureReady(true);
   }, []);
   const handleMotionBoundaryError = useCallback(() => {
     setAssetStatus("failed");
     setAnimationStarted(false);
     setSwipeReady(true);
+    setGestureReady(true);
   }, []);
   const handleMotionState = useCallback((state: AssetStatus) => {
     setAssetStatus(state);
     if (state === "loading" || state === "failed" || state === "reduced" || state === "disabled") setAnimationStarted(false);
-    if (state === "failed" || state === "reduced" || state === "disabled") setSwipeReady(true);
+    if (state === "ready") setGestureReady(true);
+    if (state === "failed" || state === "reduced" || state === "disabled") {
+      setSwipeReady(true);
+      setGestureReady(true);
+    }
   }, []);
-  const startAnimation = useCallback(() => setAnimationStarted(true), []);
+  const startAnimation = useCallback(() => {
+    setAnimationStarted(true);
+    setGestureReady(true);
+  }, []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
   const bootstrapFrame = <GuideBootstrapFrame onLayerError={handleLayerError} onFinalFallbackError={handleFallbackError}/>;
   const firstFrame = <GuideLayers animated={false} onError={handleLayerError}/>;
@@ -148,19 +168,32 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
 
   return <main data-motion-module="guide" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""}`}
     onTouchStart={(event) => {
+      if (event.touches.length !== 1) {
+        touchStart.current = null;
+        return;
+      }
       const touch = event.touches[0];
       touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    }}
+    onTouchMove={(event) => {
+      const start = touchStart.current;
+      const touch = event.touches.length === 1 ? event.touches[0] : null;
+      if (!start || !touch || !gestureReady) return;
+      if (!isUpwardGuideSwipe(start, { x: touch.clientX, y: touch.clientY })) return;
+      touchStart.current = null;
+      enter("gesture");
     }}
     onTouchEnd={(event) => {
       const start = touchStart.current;
       const touch = event.changedTouches[0];
       touchStart.current = null;
-      if (!start || !touch || !swipeReady) return;
-      const deltaX = touch.clientX - start.x;
-      const deltaY = touch.clientY - start.y;
-      if (deltaY <= -50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) enter();
+      if (!start || !touch || !gestureReady) return;
+      if (isUpwardGuideSwipe(start, { x: touch.clientX, y: touch.clientY })) enter("gesture");
+    }}
+    onTouchCancel={() => {
+      touchStart.current = null;
     }}>
-    <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
+    <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-gesture-state={gestureReady ? "ready" : "locked"} data-swipe-distance-px={GUIDE_SWIPE_DISTANCE_PX} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
         <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
           <GuideLayers animated onError={handleLayerError}/>
@@ -169,7 +202,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       <GuideEntryHint onError={handleLayerError}/>
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
       <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
-      <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview || !swipeReady}>进入档案</button>
+      <button className="brand-guide-enter-action" type="button" onClick={() => enter("control")} disabled={leaving || preview || !swipeReady}>进入档案</button>
     </section>
   </main>;
 }

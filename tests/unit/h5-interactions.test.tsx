@@ -95,7 +95,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
     expect(container.querySelector('[data-slug="review-assurance"]')).toHaveClass("is-pressed");
     expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-pressed-layer");
-    act(() => vi.advanceTimersByTime(40));
+    act(() => vi.advanceTimersByTime(16));
     expect(container.querySelector(".reports-archive")).toHaveClass("is-leaving");
     expect(container.querySelector(".reports-archive")).toHaveAttribute("data-exit-slug", "review-assurance");
     expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-exit-layer");
@@ -115,6 +115,25 @@ describe("multi-page H5 interactions", () => {
     expect(production).toHaveStyle({ top: "62.668706%", height: "16.051827%" });
   });
 
+  it("keeps the inspection mascot mapped to green while preserving the yellow folder boundary", () => {
+    vi.useFakeTimers();
+    const modules = [
+      { id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] },
+      { id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] },
+    ];
+    const { container } = render(<ReportsArchive modules={modules}/>);
+    const mascot = screen.getByRole("button", { name: "检测项目人物，点击进入检测项目" });
+    const review = container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!;
+
+    expect(mascot).toHaveAttribute("data-mascot-slug", "inspection-projects");
+    expect(mascot).toHaveClass("archive-inspection-mascot-hotspot");
+    expect(mascot).toHaveStyle({ left: "41%", top: "52.843261%", width: "27%", height: "5.758503%" });
+    expect(review).toHaveStyle({ top: "56.253374%" });
+    fireEvent.click(mascot);
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", "inspection-projects");
+    expect(container.querySelector('[data-source-part="module-2-resource-09"]')).toHaveClass("archive-module-pressed-layer");
+  });
+
   it("assembles the archive from original layers and preserves navigation hotspots", () => {
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
@@ -123,8 +142,24 @@ describe("multi-page H5 interactions", () => {
     expect(artwork).toHaveClass("reports-archive-art", "reports-archive-source-art");
     expect(container.querySelector('[src*="archive-reference.webp"]')).not.toBeInTheDocument();
     expect(container.querySelectorAll(".reports-archive-source-layer").length).toBeGreaterThan(0);
-    expect(container.querySelector('[data-guide-entry-group="archive-book"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-guide-entry-group="latest-batch"]')).toBeInTheDocument();
+    const entryGroups = [...container.querySelectorAll<HTMLElement>("[data-guide-entry-group]")];
+    expect(entryGroups.map((group) => group.dataset.guideEntryGroup)).toEqual(["archive-book", "latest-batch"]);
+    const bookGroup = entryGroups[0]!;
+    const batchGroup = entryGroups[1]!;
+    expect(bookGroup).toContainElement(container.querySelector(".archive-unlock-tab-motion"));
+    expect([...bookGroup.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
+      "module-1-folder-back",
+      "module-1-folder-front",
+      "module-1-logo",
+      "module-1-title",
+      "module-1-badge",
+    ]);
+    expect([...batchGroup.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
+      "module-1-batch-coil",
+      "module-1-batch",
+      "module-1-passed-panel",
+      "module-1-passed-copy",
+    ]);
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -327,7 +362,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
   });
 
-  it("enters on a deliberate upward swipe after guide assets are ready", async () => {
+  it("responds on touch-move as soon as guide assets are ready without waiting for the visual hint timer", async () => {
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
@@ -335,31 +370,33 @@ describe("multi-page H5 interactions", () => {
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready", "is-motion-enabled"));
     expect(stage).toHaveAttribute("data-swipe-state", "locked");
+    expect(stage).toHaveAttribute("data-gesture-state", "ready");
+    expect(stage).toHaveAttribute("data-swipe-distance-px", "24");
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
     fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
-    expect(onEnter).not.toHaveBeenCalled();
-    await waitFor(() => expect(stage).toHaveAttribute("data-swipe-state", "ready"), { timeout: 3000 });
-    expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
-    fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
+    fireEvent.touchMove(page, { touches: [{ clientX: 198, clientY: 276 }] });
     await waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
+    expect(page).toHaveClass("is-leaving");
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
+    expect(onEnter).toHaveBeenCalledOnce();
   });
 
   it.each([
     ["downward", { x: 200, y: 220 }, { x: 196, y: 300 }],
     ["rightward", { x: 180, y: 260 }, { x: 250, y: 255 }],
     ["leftward", { x: 260, y: 300 }, { x: 190, y: 310 }],
-    ["short upward", { x: 200, y: 260 }, { x: 196, y: 215 }],
+    ["short upward", { x: 200, y: 260 }, { x: 198, y: 237 }],
     ["mostly horizontal diagonal", { x: 260, y: 320 }, { x: 165, y: 255 }],
   ])("does not enter after a %s gesture", async (_label, start, end) => {
-    vi.useFakeTimers();
     const onEnter = vi.fn();
-    render(<BrandGuide onEnter={onEnter} />);
+    const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
+    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
+    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
     fireEvent.touchStart(page, { touches: [{ clientX: start.x, clientY: start.y }] });
+    fireEvent.touchMove(page, { touches: [{ clientX: end.x, clientY: end.y }] });
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: end.x, clientY: end.y }] });
-    act(() => vi.advanceTimersByTime(500));
+    await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 60)); });
     expect(onEnter).not.toHaveBeenCalled();
   });
 

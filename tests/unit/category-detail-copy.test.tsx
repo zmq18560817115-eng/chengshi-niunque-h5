@@ -1,6 +1,18 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CategoryDetail } from "@/components/h5/CategoryDetail";
+import { preloadHomepageAssets } from "@/components/h5/homepage-preload";
+import { categoryReadinessAssets } from "@/config/h5-category-themes";
 import type { PublicModule } from "@/server/services/public-content-service";
+
+const navigation = vi.hoisted(() => ({
+  push: vi.fn(),
+  prefetch: vi.fn(),
+  back: vi.fn(),
+  replace: vi.fn(),
+  refresh: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 
 vi.mock("@/components/h5/homepage-preload", () => ({
   preloadHomepageAssets: vi.fn().mockResolvedValue({ total: 4, failed: [] }),
@@ -34,7 +46,10 @@ const traceabilityModuleFixture: PublicModule = {
 
 describe("CategoryDetail dynamic card copy", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(preloadHomepageAssets).mockResolvedValue({ total: 4, failed: [] });
     document.documentElement.removeAttribute("data-category-route-entry");
+    document.documentElement.removeAttribute("data-category-route-buffer");
   });
 
   it("renders card copy as HTML sourced from public content", () => {
@@ -68,13 +83,28 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("安全底线")).toBeInTheDocument();
   });
 
-  it("uses the archive-only upward-fade entry marker after the matching category artwork is ready", async () => {
+  it("marks the archive entry on the first layout frame and announces only after artwork readiness", async () => {
+    let resolveReadiness!: (value: { total: number; failed: string[] }) => void;
+    vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise((resolve) => { resolveReadiness = resolve; }));
+    const onReady = vi.fn();
+    window.addEventListener("h5-category-route-ready", onReady);
     document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
-    expect(container.querySelector(".category-page-final")).not.toHaveAttribute("data-route-entry");
-    await waitFor(() => expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive"));
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive");
+    expect(onReady).not.toHaveBeenCalled();
     expect(document.documentElement).not.toHaveAttribute("data-category-route-entry");
+    await act(async () => { resolveReadiness({ total: categoryReadinessAssets["inspection-projects"].length, failed: [] }); });
+    await waitFor(() => expect(onReady).toHaveBeenCalledTimes(1));
+    window.removeEventListener("h5-category-route-ready", onReady);
+  });
+
+  it("uses the buffered entry marker immediately when archive continuity is active", () => {
+    document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    document.documentElement.setAttribute("data-category-route-buffer", "active");
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-buffer");
   });
 
   it("keeps direct category loads on their existing transition", async () => {
@@ -88,7 +118,7 @@ describe("CategoryDetail dynamic card copy", () => {
     const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
 
     expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("60");
-    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("488.5");
+    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("526.5");
     expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("65");
     expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("80");
     expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("742");
@@ -116,5 +146,20 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(statusLabels.every((label) => label.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/"))).toBe(true);
     expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
+  });
+
+  it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    await waitFor(() => expect(preloadHomepageAssets).toHaveBeenCalled());
+    expect(vi.mocked(preloadHomepageAssets).mock.calls[0]?.[0]).toEqual(
+      categoryReadinessAssets["inspection-projects"].map((src) => ({ src, priority: "high" })),
+    );
+    expect(screen.queryByRole("button", { name: "返回上一页" })).not.toBeInTheDocument();
+
+    const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
+    expect(firstCard).not.toBeNull();
+    fireEvent.click(firstCard!);
+    expect(navigation.push).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
   });
 });

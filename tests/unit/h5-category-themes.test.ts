@@ -1,4 +1,4 @@
-import { categoryArtworkLayers, categoryCardFallbacks, categoryCardLayouts, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
+import { categoryArtworkLayers, categoryCardFallbacks, categoryCardLayouts, categoryControlAssets, categoryReadinessAssets, categoryRouteWarmAssets, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
 
 describe("H5 category report themes", () => {
   it.each([
@@ -26,20 +26,37 @@ describe("H5 category report themes", () => {
   });
 
   it("keeps every category composition on the supplied 2000 × 4333 master", () => {
-    expect(Object.values(categoryArtworkLayers).every((layers) => layers[0].width === 2000 && layers[0].height === 4333 && layers[0].y === -76)).toBe(true);
-    expect(categoryArtworkLayers["inspection-projects"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 136 });
-    expect(categoryArtworkLayers["review-assurance"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 136 });
-    expect(categoryArtworkLayers["production-traceability"].find((layer) => layer.id === "folder")).toMatchObject({ x: -183, y: 130 });
-    expect(categoryArtworkLayers["inspection-projects"].at(-1)?.y).toBe(3814);
-    expect(categoryArtworkLayers["review-assurance"].at(-1)?.y).toBe(3814);
-    expect(categoryArtworkLayers["production-traceability"].at(-1)?.y).toBe(2895);
+    expect(Object.values(categoryArtworkLayers).every((layers) => layers[0].width === 2000 && layers[0].height === 4333 && layers[0].y === 0)).toBe(true);
+    expect(categoryArtworkLayers["inspection-projects"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 212 });
+    expect(categoryArtworkLayers["review-assurance"].find((layer) => layer.id === "folder")).toMatchObject({ x: -199, y: 212 });
+    expect(categoryArtworkLayers["production-traceability"].find((layer) => layer.id === "folder")).toMatchObject({ x: -183, y: 206 });
+    expect(categoryArtworkLayers["inspection-projects"].at(-1)?.y).toBe(3890);
+    expect(categoryArtworkLayers["review-assurance"].at(-1)?.y).toBe(3890);
+    expect(categoryArtworkLayers["production-traceability"].at(-1)?.y).toBe(2971);
   });
 
   it("uses the reference-aligned copy origin for each card artwork", () => {
-    expect(categoryCardLayouts["inspection-projects"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60, 488.5, 65, 80], [65.5, 963, 59.5, 81.5], [60, 1448, 65, 81.5]]);
-    expect(categoryCardLayouts["review-assurance"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60, 520, 64, 49], [65.5, 1002.5, 58.5, 42], [60, 1480, 64, 49.5]]);
-    expect(categoryCardLayouts["production-traceability"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60.5, 521, 58.5, 47.5], [65.5, 1002.5, 57.5, 42]]);
+    expect(categoryCardLayouts["inspection-projects"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60, 526.5, 65, 80], [65.5, 1001, 59.5, 81.5], [60, 1486, 65, 81.5]]);
+    expect(categoryCardLayouts["review-assurance"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60, 558, 64, 49], [65.5, 1040.5, 58.5, 42], [60, 1518, 64, 49.5]]);
+    expect(categoryCardLayouts["production-traceability"].map((card) => [card.x, card.y, card.contentX, card.contentY])).toEqual([[60.5, 559, 58.5, 47.5], [65.5, 1040.5, 57.5, 42]]);
     expect(Object.values(categoryCardLayouts).flat().every((card) => card.backplate.src.startsWith("/design/final-v1/category-runtime/"))).toBe(true);
+  });
+
+  it("awaits every independent category layer, card, status and CSS control asset", () => {
+    const slugs = Object.keys(categoryArtworkLayers) as Array<keyof typeof categoryArtworkLayers>;
+    const warmed = new Set(categoryRouteWarmAssets);
+
+    for (const slug of slugs) {
+      const expected = [
+        ...categoryArtworkLayers[slug].map((layer) => layer.src),
+        ...categoryCardLayouts[slug].map((card) => card.backplate.src),
+        ...categoryCardFallbacks[slug].flatMap((card) => [card.statusArtwork.src, card.statusBaseArtwork?.src]).filter((src): src is string => Boolean(src)),
+        ...categoryControlAssets[slug],
+      ];
+      expect(new Set(categoryReadinessAssets[slug])).toEqual(new Set(expected));
+      expect(categoryReadinessAssets[slug]).toHaveLength(new Set(expected).size);
+      expect(categoryReadinessAssets[slug].every((src) => warmed.has(src))).toBe(true);
+    }
   });
 
   it("keeps the artwork status labels aligned with each official category", () => {

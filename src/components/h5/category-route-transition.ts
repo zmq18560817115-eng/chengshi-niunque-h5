@@ -4,10 +4,10 @@ export const categoryRouteBufferedEntrySource = "reports-archive-buffer";
 export const categoryRouteBufferAttribute = "data-category-route-buffer";
 export const categoryRouteReadyEvent = "h5-category-route-ready";
 export const categoryRouteBufferHostId = "h5-category-route-buffer-host";
-export const archiveModuleExitDelayMs = 40;
+export const archiveModuleExitDelayMs = 16;
 export const archiveModuleExitDurationMs = 520;
 export const archiveModuleNavigationDelayMs = 0;
-export const categoryRouteBufferReleaseDurationMs = 1600;
+export const categoryRouteBufferReleaseDurationMs = 820;
 
 let bufferCleanupTimer: number | undefined;
 

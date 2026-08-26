@@ -105,7 +105,7 @@ test("375x812 user can open every category and a published report", async ({ pag
   for (const slug of ["inspection-projects", "review-assurance", "production-traceability"] as const) {
     await page.goto(`/reports/${slug}`);
     await expect(page.locator(".category-page-final")).toBeVisible();
-    await expect(page.getByRole("button", { name: "返回上一页" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
     await expect(page.locator(".category-card-hotspot")).not.toHaveCount(0);
     await expectNoHorizontalOverflow(page, 375);
     await page.screenshot({ path: `${evidenceRoot}/flow-${slug}-375x812.png` });

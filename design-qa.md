@@ -1,5 +1,118 @@
 # Design QA
 
+## Latest pass — Guide-to-home whole-book and 80% batch overlap (2026-08-26)
+
+### Source and rendered evidence
+
+- Source visual truth: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-844fc83d-95d1-481d-9a02-fdf3a1045b19.png` (828 × 1792 px). The red annotation identifies the complete “最新公开批次 / 批次号 / 检测日期 / 四项结果” region as the second entrance group.
+- Browser-rendered settled implementation: `C:/Users/bu/AppData/Local/Temp/guide-home-entry-final.png` (1500 × 3248 px).
+- Browser-rendered overlap frame: `C:/Users/bu/AppData/Local/Temp/guide-home-entry-overlap.png` (1500 × 3248 px).
+- Implementation URL/state: `http://127.0.0.1:3003/go` → `/reports`, normal-motion mode, first scroll position, with the readiness buffer exercised rather than bypassed.
+
+### Viewport and normalization
+
+- Motion verification used the in-app browser's 375 × 812 mobile surface. The browser bridge exposed the equivalent 750 × 1624 CSS viewport and returned a 1500 × 3248 bitmap; both implementation captures therefore represent a 2× capture of that bridge surface.
+- The source contains iOS browser chrome and a red QA rectangle, while the implementation captures contain only the web surface. The source content region and implementation H5 region were compared together in one visual input; browser chrome, red annotation, capture-density differences, and the in-app browser's unused outer canvas were excluded from fidelity findings.
+- Full-view comparison covered the complete book cover, archive tabs, ID card, batch block, result panel and the start of the following long-page section. Focused comparison used the marked latest-public-batch region and the live 80% overlap frame because the requested change is a temporal layer relationship rather than a new static layout.
+
+### Required fidelity surfaces
+
+- Fonts and typography: all decorative headings, batch labels, dates, result copy and logo typography remain the supplied raster layers; no live-font substitute or reflow was introduced.
+- Spacing and layout rhythm: the book and batch layers return to their original master-canvas coordinates after animation. The batch group remains registered directly below the ID card and above the following section, matching the source.
+- Colors and visual tokens: yellow paper, brown book edge, colored tabs, cream result panel and green/red result copy continue to come from the approved repository assets with no recoloring.
+- Image quality and asset fidelity: the first group is the existing folder back/front, logo, title, badge and unlock ribbon; the second group is the existing batch coil, batch copy, result panel and result copy. No screenshot crop, replacement drawing, SVG, emoji, or recompression was introduced.
+- Copy and content: “最新公开批次”, HN250601A, 2026.06.08 and the four result rows remain unchanged.
+
+### Comparison history
+
+1. **P1 — guide clone ended before the destination reveal.** The continuity buffer previously released in 220ms, while the homepage groups continued for roughly one second, producing a visible handoff seam on slower loads. Fix: the ready-state guide buffer now moves one viewport upward while fading linearly for 720ms, and it is removed only after that compositor transition finishes.
+2. **P2 — second group entered before the requested overlap point.** The old batch delay was 250ms and both groups stayed fully opaque, so the red-box region did not represent an 80%-complete fade handoff. Fix: book fade is a dedicated linear 720ms animation after a 70ms delay; batch starts at 646ms (`70 + 720 × 0.8`) and fades/rises as one wrapper. Browser sampling caught the first observable batch frame at 7.7% opacity while the book was 86.0% visible; the polling interval passed the exact start, consistent with an 80% boundary.
+3. **P2 — stale scroll position could displace the fixed entrance.** A prior `reports-scroll-y` value could be restored during a guide entry. Fix: guide-origin navigation clears the saved value, pins document/body/window to y=0 during staging, and releases the page lock only after both groups settle.
+4. **Post-fix evidence.** At settle, both wrappers were `opacity: 1` with no transform or retained `data-guide-entry`; root overflow returned to `auto`, the page stayed at y=0, and a subsequent programmatic scroll reached y=480 on a 4006px document. Console warning/error log was empty.
+
+### Findings
+
+- No actionable P0, P1 or P2 mismatch remains for the requested guide fade/up exit, whole-book first entrance, marked batch second entrance, 80% overlap, fixed landing position or subsequent long-page scrolling.
+- The source includes real browser chrome while the in-app QA capture does not; this is an expected framing difference and does not change the H5 layer coordinates.
+
+### Open questions
+
+- None.
+
+### Implementation checklist
+
+- [x] Keep the complete archive book and unlock ribbon in one entry wrapper.
+- [x] Keep the complete marked latest-public-batch region in one second wrapper.
+- [x] Start the second wrapper at exactly 80% of the first wrapper's linear fade duration.
+- [x] Fade and move the guide buffer upward only after homepage readiness is announced.
+- [x] Release transforms, `will-change`, page lock and guide staging attributes after settle.
+- [x] Restore ordinary long-page scrolling from y=0.
+
+### Follow-up polish
+
+- P3: repeat once on a physical iOS WeChat WebView because its collapsing toolbar can alter the visible content height during an upward gesture.
+
+final result: passed
+
+---
+
+## Latest pass — Report sizing, click continuity, and staged archive entry (2026-08-26)
+
+### Source and rendered evidence
+
+- Category visual truth (read-only): `docs/input/design/final-v1/references-最终效果/报告点击页-02.jpg` (2000 x 4333 px), cross-checked against the supplied embedded-browser captures `dca91d2b099c4f4c40b21e7948d2009f.jpg`, `1df3d668787442b64089611aa8a8537d.jpg`, and `20ba5fd9ab4d0cd4eab203a0dc83a267.jpg`.
+- Homepage archive visual truth: the supplied `codex-clipboard-cd9b2ae1-95b2-447c-b410-bd1e33622d50.png` and the existing approved layered archive assets.
+- Browser-rendered implementation screenshot: `C:/Users/bu/AppData/Local/Temp/chengshi-niunque-h5-review-assurance-qa.png`.
+- Implementation URL/state: `http://127.0.0.1:3002/reports/review-assurance`, settled review page with no transition or loader visible; `/go` → `/reports` and `/reports` → each category were also sampled during their live transitions.
+
+### Viewport and normalization
+
+- Mobile verification surface: 480 x 798 CSS px with DPR .5. The fixed category root measured 480 x 798; the 2000-unit artwork canvas measured 389.27 x 843.34 and was centered at x=45.36.
+- The source's useful visual bottom is y=4100. At the measured mobile scale, y=4100 lands at 798px exactly; the final 233 source pixels contain only continuation texture and remain below the safe visible frame. This keeps the complete title, mascot, cards, statuses, and footer visible without shrinking the useful composition.
+- Saved high-detail screenshot: 2560 x 1440 px at DPR 1, with a 750 x 1440 fixed H5 root and a 702.44px-wide proportional artwork canvas. The same y=4100 boundary lands at the viewport bottom.
+- Full-view comparison used the source and browser render in the same visual inspection input. Focused inspection was required for the folder lip/title registration, first-card top edge, card text baselines, status fish, footer, and outer paper gutters.
+
+### Required fidelity surfaces
+
+- Fonts and typography: all decorative category titles/status labels remain the supplied raster artwork. Live card copy, report counts, weights, wrapping, and line heights remain connected to the existing backend content and project tokens.
+- Spacing and layout rhythm: the previous 76-source-pixel upward drift was removed. Folder, title, mascot, cards, statuses, and footer now use the official source coordinates; no extra visible back-button pill displaces the composition. Right-swipe back remains available.
+- Colors and visual tokens: paper, yellow/green/brown folder textures, cream cards, and status colors come from the existing repository assets. The exposed page background matches the approved paper texture; no grey or flat-color gap is introduced.
+- Image quality and asset fidelity: the page remains assembled from independent approved layers and card parts. No completed-page screenshot, CSS drawing, SVG substitute, crop, recompression, or stretched raster was introduced.
+- Copy and content: differences from static mock report counts or descriptions are expected live-data differences. Routes, public-content data, Prisma, storage, and admin contracts are unchanged.
+
+### Comparison history
+
+1. **P1 — report page offset and scale mismatch.** The runtime shifted all official category layers up by 76 source pixels and used `46.1574cqh`, which tried to fit the full 4333px texture tail into short WebViews. The result was a visibly small, high composition. Fix: restore official y coordinates and size to the y=4100 useful-content boundary with `48.780488cqh`. Post-fix mobile geometry places that boundary at 798px and preserves uniform scaling.
+2. **P1 — click flash and visual seam.** The category page could first run the generic page animation, remount behind the adaptive loader, then start a second route animation; the old page also moved before the destination was ready. Fix: freeze a full old-page continuity clone, keep the destination offscreen until every category layer/card/status asset is decoded and settled, hide the runtime loader behind the clone, then move old and new pages as one paired 820ms leftward handoff. The destination no longer paints a generic first animation or white pressed overlay.
+3. **P2 — homepage entry hierarchy.** The archive book and latest-batch region previously appeared together after readiness. Fix: both existing layer groups now begin below the viewport without opacity changes; the full archive book rises first for 720ms after 70ms, and the latest-public-batch group follows for 680ms after 250ms. The guide continuity buffer remains until the homepage readiness gate announces the staged reveal.
+4. **Post-fix evidence.** In-app-browser sampling showed the category parked at x=480 while its assets prepared, with the old archive clone covering x=0–480 and the loader hidden. After readiness the paired transition completed at x=0 with no uncovered interval. Guide sampling reported `archive-guide-entry-rise` on both existing groups with delays `.07s` and `.25s`. All three semantic category buttons still target their matching routes.
+
+### Findings
+
+- No actionable P0, P1, or P2 visual mismatch remains for the requested report sizing, click continuity, or staged homepage entrance.
+- The only console errors in retained tab history were transient Next development hot-reload ENOENT entries recorded while the route bundle was being rebuilt; no new error was emitted during the final settled route and transition checks. The optimized build and all required repository gates pass.
+
+### Open questions
+
+- None.
+
+### Implementation checklist
+
+- [x] Restore report-page source coordinates and mobile-safe proportional size.
+- [x] Remove the visible composition-shifting back pill while retaining swipe-back.
+- [x] Gate the leftward category entry on decoded, settled destination assets.
+- [x] Keep a frozen old-page clone over all loader/rebuild frames and release both pages together.
+- [x] Stage archive book first and latest-public-batch immediately after it from below the viewport.
+- [x] Preserve supplied assets, existing data linkage, routes, and unrelated motion.
+
+### Follow-up polish
+
+- P3: repeat the transition once on a deployed physical iOS WeChat device because its toolbar can alter the safe-area height while already visible.
+
+final result: passed
+
+---
+
 ## Latest pass — PDF issue-node repair walk-through (2026-08-26)
 
 ### Source and comparison evidence

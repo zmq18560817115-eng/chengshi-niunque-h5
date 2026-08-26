@@ -39,11 +39,8 @@ type CategoryDetailProps = { module: PublicModule; preview?: boolean };
 export function CategoryDetail(props: CategoryDetailProps) {
   const theme = getCategoryTheme(props.module.slug);
   if (props.preview || !theme.artworkLayers) return <CategoryDetailReady {...props}/>;
-  const requests = [
-    ...theme.artworkLayers.map((layer) => ({ src: layer.src, priority: "high" as const })),
-    ...theme.cardLayouts.map((layout) => ({ src: layout.backplate.src, priority: "high" as const })),
-  ];
-  return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets">
+  const requests = theme.readinessAssets.map((src) => ({ src, priority: "high" as const }));
+  return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets" settleSelector={`.category-page-final[data-category="${props.module.slug}"]`} settleFrames={3}>
     <CategoryDetailReady {...props}/>
   </AdaptiveReadinessGate>;
 }
@@ -53,7 +50,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const readinessReady = useAdaptiveReadiness();
   const [leaving, setLeaving] = useState(false);
   const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
-  const [pendingRouteEntrySource, setPendingRouteEntrySource] = useState<string | null>(null);
+  const [routeReady, setRouteReady] = useState(false);
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artworkLayers ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
@@ -73,22 +70,21 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
     root.removeAttribute(categoryRouteEntryAttribute);
     if (motionEnabled) {
-      setPendingRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
+      setRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
     }
   }, [module.slug, motionEnabled, preview]);
-  useEffect(() => {
-    if (!readinessReady || !pendingRouteEntrySource) return;
-    setRouteEntrySource(pendingRouteEntrySource);
-    setPendingRouteEntrySource(null);
-  }, [pendingRouteEntrySource, readinessReady]);
   useLayoutEffect(() => {
     if (!readinessReady || !routeEntrySource) return;
-    announceCategoryRouteReady();
+    setRouteReady(true);
   }, [readinessReady, routeEntrySource]);
+  useLayoutEffect(() => {
+    if (!routeReady) return;
+    announceCategoryRouteReady();
+  }, [routeReady]);
 
-  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
+  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-preview={preview || undefined}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {
@@ -136,8 +132,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
             if (leaving) return;
             setLeaving(true);
             const destination = `/reports/${module.slug}/items/${cardId}/reports`;
-            if (!motionEnabled) { router.push(destination); return; }
-            window.setTimeout(() => router.push(destination), 220);
+            router.push(destination);
           }}>{copy}</button>;
       })}
       </section>
