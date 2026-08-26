@@ -14,10 +14,10 @@ describe("brand guide", () => {
     expect(redirect).toHaveBeenCalledWith("/go");
   });
 
-  it("renders the supplied loading buffer before the brand guide at /go", () => {
+  it("renders the supplied loading buffer only while the guide assets are pending", () => {
     render(<GoPage/>);
-    expect(screen.getByRole("main", { name: "营养信息加载" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "正在公开你的营养信息" })).toHaveAttribute("src", expect.stringContaining("data-loading-buffer.gif"));
+    expect(screen.getByRole("main", { name: "页面加载缓冲" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "正在准备品牌引导" })).toHaveAttribute("src", expect.stringContaining("data-loading-buffer.gif"));
     expect(screen.queryByRole("heading", { name: "Honest Nutri 品牌引导" })).not.toBeInTheDocument();
   });
 });

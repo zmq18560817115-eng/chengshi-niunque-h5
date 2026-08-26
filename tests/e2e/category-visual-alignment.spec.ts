@@ -12,14 +12,20 @@ for (const width of widths) {
       await page.setViewportSize({ width, height: 896 });
       await page.goto(`/reports/${slug}`);
       const stage = page.locator(".category-page-final");
+      const viewport = page.locator(".category-page-viewport");
       await expect(stage).toBeVisible();
       // Measure after the 280 ms page-enter transform has settled; otherwise
       // boundingBox() includes the transient 7 px animation offset.
       await page.waitForTimeout(350);
 
       const stageBox = await stage.boundingBox();
+      const viewportBox = await viewport.boundingBox();
       const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
       expect(stageBox?.width).toBe(clientWidth);
+      expect(stageBox?.height).toBe(896);
+      expect(viewportBox?.width).toBeLessThanOrEqual(clientWidth);
+      expect(viewportBox?.height).toBeLessThanOrEqual(896);
+      expect((viewportBox?.width ?? 0) / (viewportBox?.height ?? 1)).toBeCloseTo(2000 / 4333, 3);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(clientWidth);
 
       const layouts = categoryCardLayouts[slug];
@@ -29,11 +35,11 @@ for (const width of widths) {
       for (let index = 0; index < layouts.length; index += 1) {
         const cardBox = await cards.nth(index).boundingBox();
         const copyBox = await cards.nth(index).locator(".category-card-copy").boundingBox();
-        const scale = width / 1000;
-        expect(cardBox?.x).toBeCloseTo(layouts[index].x * scale, 0);
-        expect(cardBox?.y).toBeCloseTo(layouts[index].y * scale, 0);
-        expect(copyBox?.x).toBeCloseTo((layouts[index].x + layouts[index].contentX) * scale, 0);
-        expect(copyBox?.y).toBeCloseTo((layouts[index].y + layouts[index].contentY) * scale, 0);
+        const scale = (viewportBox?.width ?? width) / 1000;
+        expect(cardBox?.x).toBeCloseTo((viewportBox?.x ?? 0) + layouts[index].x * scale, 0);
+        expect(cardBox?.y).toBeCloseTo((viewportBox?.y ?? 0) + layouts[index].y * scale, 0);
+        expect(copyBox?.x).toBeCloseTo((viewportBox?.x ?? 0) + (layouts[index].x + layouts[index].contentX) * scale, 0);
+        expect(copyBox?.y).toBeCloseTo((viewportBox?.y ?? 0) + (layouts[index].y + layouts[index].contentY) * scale, 0);
       }
 
       await stage.screenshot({

@@ -7,5 +7,5 @@ export const metadata: Metadata = {
   icons: { icon: "/design/final-v1/archive/module-1/archive-logo.webp" },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body>{children}<div id="h5-category-route-buffer-host" aria-hidden="true" /></body></html>;
+  return <html lang="zh-CN"><body>{children}<div id="h5-guide-route-buffer-host" aria-hidden="true" /><div id="h5-category-route-buffer-host" aria-hidden="true" /></body></html>;
 }

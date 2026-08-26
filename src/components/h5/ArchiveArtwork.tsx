@@ -85,6 +85,14 @@ const layerStack = (id: string) => {
   return 40;
 };
 
+const layerEntryStage = (id: string) => {
+  if (id === "paper-texture") return 0;
+  if (id === "module-1-folder-back" || id === "module-1-folder-front") return 1;
+  if (id === "module-1-logo" || id === "module-1-title" || id === "module-1-badge") return 2;
+  if (id.startsWith("module-1-batch") || id.startsWith("module-1-passed")) return 3;
+  return 4;
+};
+
 export function ArchiveArtwork({ preview = false, exitingSlug = null }: { preview?: boolean; exitingSlug?: string | null }) {
   return (
     <div className="reports-archive-art reports-archive-source-art" role="img" aria-label="诚实透明档案" data-artwork-source="layered-originals">
@@ -107,6 +115,7 @@ export function ArchiveArtwork({ preview = false, exitingSlug = null }: { previe
           unoptimized={layer.unoptimized}
           data-source-part={layer.id}
           data-archive-module={moduleSlug}
+          data-guide-entry-stage={layerEntryStage(layer.id)}
         />
         );
       })}

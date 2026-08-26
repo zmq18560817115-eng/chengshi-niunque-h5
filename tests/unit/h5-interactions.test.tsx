@@ -6,6 +6,7 @@ import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveSectionTitleMotion, archiveTitleSequenceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
+import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 type PendingImage = { src: string; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
@@ -30,6 +31,7 @@ class PreloadImageMock {
 
 describe("multi-page H5 interactions", () => {
   beforeEach(() => {
+    releaseHomepagePreloadedAssets();
     pendingImages = [];
     sessionStorage.clear();
     document.documentElement.removeAttribute("data-category-route-entry");
@@ -139,8 +141,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
   });
 
-  it("plays only one archive title at a time in a repeating 1-2-3 sequence", async () => {
-    vi.useFakeTimers();
+  it("runs the archive title posters on a stable compositor-backed 1-2-3 loop", async () => {
     vi.stubGlobal("IntersectionObserver", class {
       callback: IntersectionObserverCallback;
       constructor(callback: IntersectionObserverCallback) { this.callback = callback; }
@@ -158,27 +159,18 @@ describe("multi-page H5 interactions", () => {
     await act(async () => { await Promise.resolve(); });
 
     const sequence = container.querySelector("[data-motion-module='archiveSectionTitle']");
-    const activeGroups = () => [...container.querySelectorAll("[data-title-sequence-active='true']")].map((group) => group.getAttribute("data-title-group"));
-    expect(sequence).toHaveAttribute("data-title-sequence-active", "inspection-projects");
-    expect(activeGroups()).toEqual(["inspection-projects"]);
-
-    act(() => vi.advanceTimersByTime(archiveTitleSequenceDurationMs));
-    expect(sequence).toHaveAttribute("data-title-sequence-active", "review-assurance");
-    expect(activeGroups()).toEqual(["review-assurance"]);
-
-    act(() => vi.advanceTimersByTime(archiveTitleSequenceDurationMs));
-    expect(sequence).toHaveAttribute("data-title-sequence-active", "production-traceability");
-    expect(activeGroups()).toEqual(["production-traceability"]);
-
-    act(() => vi.advanceTimersByTime(archiveTitleSequenceDurationMs));
-    expect(sequence).toHaveAttribute("data-title-sequence-active", "inspection-projects");
-    expect(activeGroups()).toEqual(["inspection-projects"]);
+    expect(archiveTitleSequenceDurationMs).toBe(720);
+    expect(sequence).toHaveAttribute("data-title-sequence-running", "true");
+    expect(sequence).toHaveAttribute("data-title-sequence-mode", "css-compositor-loop");
+    expect([...container.querySelectorAll("[data-title-sequence-order]")].map((group) => group.getAttribute("data-title-sequence-order"))).toEqual(["1", "2", "3"]);
+    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
+    expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
   });
 
   it("keeps the approved archive artwork stable for reduced motion", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const { container } = render(<ReportsArchive modules={[]}/>);
-    expect(pendingImages).toHaveLength(0);
+    expect(pendingImages.length).toBeGreaterThan(0);
     expect(container.querySelector(".archive-fish-float")).toBeInTheDocument();
     expect(container.querySelector(".archive-fish-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-fish-motion-gif")).not.toBeInTheDocument();
@@ -204,7 +196,7 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it("warms public data, guide artwork, and homepage artwork before revealing the guide", async () => {
+  it("warms homepage artwork in the background and reveals the guide as soon as its own artwork is ready", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) });
     vi.stubGlobal("fetch", fetchMock);
@@ -215,14 +207,9 @@ describe("multi-page H5 interactions", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/public/content", expect.objectContaining({ cache: "no-store" }));
     expect(pendingImages.some(({ src }) => src.includes("底图纹理.png"))).toBe(true);
     expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(true);
-    fireEvent.load(screen.getByRole("img", { name: "正在公开你的营养信息" }));
     await act(async () => {
-      pendingImages.forEach(({ resolve }) => resolve());
+      pendingImages.filter(({ src }) => src.includes("/design/guide/")).forEach(({ resolve }) => resolve());
       for (let step = 0; step < 12; step += 1) await Promise.resolve();
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(3600);
-      await Promise.resolve();
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
     await act(async () => {
@@ -230,28 +217,25 @@ describe("multi-page H5 interactions", () => {
     });
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
+    expect(pendingImages.some(({ src }) => src.includes("底图纹理.png"))).toBe(true);
   });
 
-  it("keeps the loading buffer visible after the data timeout until every homepage image has decoded", async () => {
+  it("keeps the loading buffer only until the current guide artwork has decoded", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ version: "ready" }) }));
     const { container } = render(<GuideExperience />);
-    const buffer = container.querySelector(".guide-loading-buffer");
-
-    expect(Number(buffer?.getAttribute("data-buffer-assets-total"))).toBeGreaterThan(0);
-    fireEvent.load(screen.getByRole("img", { name: "正在公开你的营养信息" }));
     await act(async () => {
       vi.advanceTimersByTime(15000);
       await Promise.resolve();
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
-    expect(container.querySelector(".guide-loading-buffer")).toHaveAttribute("data-buffer-warmup-state", "loading");
     expect(container.querySelector(".brand-guide")).not.toBeInTheDocument();
 
     await act(async () => {
-      pendingImages.forEach(({ resolve }) => resolve());
+      pendingImages.filter(({ src }) => src.includes("/design/guide/")).forEach(({ resolve }) => resolve());
       for (let step = 0; step < 12; step += 1) await Promise.resolve();
     });
+    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
   });
 
   it("enters on a deliberate upward swipe after guide assets are ready", async () => {

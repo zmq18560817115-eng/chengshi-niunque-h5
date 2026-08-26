@@ -1,6 +1,89 @@
 # Design QA
 
-## Latest pass — Guide-to-homepage asset continuity
+## Latest pass — Homepage title scale-bounce loop
+
+### Comparison Target
+
+- Motion source: `C:/Users/bu/Desktop/H5设计开发/飞书20260825-180324.qt`, treated only as a visual reference.
+- Source extraction: `D:/chengshi-niunque-h5/design-qa-evidence/title-bounce-video/source-bounce-second-icon-frames.jpg`.
+- Browser-rendered sequence: `D:/chengshi-niunque-h5/design-qa-evidence/title-bounce-video/final-css-sequence-contact-sheet.jpg`.
+- Required same-input comparison: `D:/chengshi-niunque-h5/design-qa-evidence/title-bounce-video/reference-vs-implementation-combined.jpg`.
+- Route/state: `/reports`, 375 x 812 mobile viewport, title region intersecting, motion allowed.
+
+### Motion Measurements
+
+- The source recording is 720 x 1558, 30fps, 167 frames, and 5.57 seconds long.
+- A complete source component bounce occupies approximately 22 frames / 0.72 seconds. The component scales from 1.00 to approximately 0.82 around the midpoint, returns through a short 1.025 overshoot, and settles at 1.00.
+- The implementation uses a 720ms bounce slot and one 2160ms pure-CSS compositor timeline. The three supplied title posters use delays of 0ms, 720ms, and 1440ms, producing a repeating ①→②→③ order.
+- Browser sampling across 54 frames at 50ms intervals reported `css-compositor-loop` throughout. The maximum number of simultaneously transformed titles was one; sampled minima were 0.8201–0.8227.
+
+### Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- The visual rhythm matches the reference's center-origin shrink and rebound. There is no title translation, baseline drift, or number-part movement.
+- All three title posters remain permanently mounted while the animation runs. The previous title GIF mount/unmount path and React interval are absent, eliminating decoded-frame restart, duplicate raster layers, timer drift, and visible ghosting.
+- Only `transform: scale3d(...)` is animated. `translate3d(0,0,0)`, `backface-visibility: hidden`, and `will-change: transform` keep the title raster on the compositor path.
+- The supplied title letterforms, colors, dimensions, master coordinates, independent number rings/digits, click cue, folder artwork, hotspots, routes, backend data, and all unrelated animations remain unchanged.
+- Reduced-motion mode keeps all three titles at their settled 1.00 scale with no title animation.
+
+### Interaction And Console Verification
+
+- The 375 x 812 in-app browser capture kept all three titles inside their existing green, yellow, and brown folder regions through the full loop.
+- The title sequence DOM contained three poster layers and zero title GIF layers. Sampling confirmed one active transform at most and the repeating 1→2→3 order.
+- Browser console errors and warnings: none. Only React development information and expected Fast Refresh logs were present.
+- Full verification passed: lint, TypeScript, 22 test files / 124 tests, Prisma schema validation, and the optimized production build.
+
+### Open Questions
+
+- None.
+
+final result: passed
+
+---
+
+## Previous pass — Leftward homepage handoff and fixed detail-page fitting
+
+### Scope And Behavior
+
+- Clicking any homepage module now keeps the ready destination paired with the frozen homepage and moves both pages horizontally to the left: the homepage exits toward `-100dvw` while the detail page enters from `100dvw`.
+- The existing destination-readiness signal remains authoritative, so the horizontal motion starts only after the category artwork and card backplates are decoded.
+- Each category root occupies one stable small viewport. A centered inner canvas preserves the source `2000 / 4333` ratio and uses the smaller of available width or height, keeping every supplied raster layer and every managed HTML overlay in the same coordinate system.
+- Admin preview remains a proportional full-width canvas and is not forced into the runtime viewport height.
+
+### Browser Verification
+
+- The review detail page was inspected at 320 × 568, 375 × 812, and 430 × 932 representative frames. Every frame showed the complete source page; loaders settled to zero, incomplete images settled to zero, and the inner canvas retained the 2000 / 4333 ratio.
+- Measured inner canvases were approximately 261.25 × 565.98, 373 × 808.09, and 428 × 927.25 respectively. The short phone centered the complete narrow artwork with equal side space; the reference and large phones centered the complete artwork with sub-pixel vertical space.
+- A live homepage click reached `/reports/review-assurance`. Motion samples showed the old buffer's X translation progressing from 0 through negative values to approximately `-100dvw`, while the detail page's X translation progressed from approximately `100dvw` to 0. Y translation stayed 0 throughout the paired motion.
+- After settlement, the route buffer count, adaptive loader count, and incomplete-image count were all zero.
+- Full verification passed: lint, TypeScript, 22 test files / 124 tests, Prisma schema validation, and optimized production build.
+
+final result: passed
+
+---
+
+## Latest pass — Adaptive runtime loading buffer
+
+### Scope And Behavior
+
+- The supplied loading artwork is now shared by the root route boundary and page-specific asset readiness gates instead of being permanently inserted before the guide.
+- `/go` blocks only on guide-critical artwork. Homepage data and artwork continue warming in the background and are awaited by `/reports` only if they are still pending when needed.
+- `/reports` and the three category pages independently await their own required raster layers. Server-side route preparation is covered by the root `loading.tsx` boundary.
+- The former 3600ms GIF playback minimum and 12000ms guide warm-up minimum are removed. Runtime duration is the actual request/decode duration plus only the existing 260ms visual release on an unbuffered direct entry.
+- Existing guide-to-home and archive-to-category frozen route buffers remain above the loader, so their established transition form does not change.
+
+### Browser Verification
+
+- A cached `/go` visit reached the guide immediately without a forced loading interval.
+- Guide entry reached `/reports` with no loading overlay left behind and zero incomplete or zero-width images.
+- Opening the review category reached `/reports/review-assurance` with no loading overlay left behind and zero incomplete or zero-width images.
+- Full verification passed: lint, TypeScript, 22 test files / 116 tests, Prisma schema validation, and optimized production build.
+
+final result: passed
+
+---
+
+## Historical pass — Guide-to-homepage asset continuity
 
 ### Scope And Evidence
 
@@ -23,6 +106,55 @@
 - Regression coverage confirms that advancing beyond the 12-second data timeout does not remove the loading buffer while homepage image decodes remain pending.
 - Existing warm-up coverage confirms that completing every image decode and the supplied loading playback still hands off to the unchanged guide page.
 - Full verification passed: lint, TypeScript, 22 test files / 116 tests, Prisma schema validation, optimized production build, and the fresh-browser transition check.
+
+final result: passed
+
+---
+
+## Latest pass — Guide to homepage reference transition
+
+## Comparison Target
+
+- Motion source: `C:/Users/bu/Desktop/H5设计开发/飞书20260825-180314.qt` (read only).
+- Decoded source facts: H.264 QuickTime, 720 × 1558 pixels, 30fps, 10.3 seconds.
+- Relevant reference interval: 0.10–0.70s, where the old loading view clears, the destination shell appears, upper content overlaps in, and the destination settles.
+- Source overview: `D:/chengshi-niunque-h5/design-qa-evidence/guide-transition-video/reference-guide-home-dense.png`.
+- Source/implementation combined evidence: `D:/chengshi-niunque-h5/design-qa-evidence/guide-transition-video/reference-vs-implementation-motion.png`.
+- Implementation route: `/go` → `/reports`, triggered by the existing upward swipe or lower entry hotspot.
+
+## Viewport And Normalization
+
+- The source is 720 × 1558. The implementation was captured inside a same-origin 375 × 812 mobile viewport, matching the project's 375px reference width and source aspect ratio.
+- Both rows in the combined evidence were normalized to 240 × 519 cells. The source row shows old view, destination shell, content reveal, and settled state. The implementation row shows the same four semantic phases rather than comparing unrelated absolute timestamps.
+- The implementation timing is a 220ms old-view buffer crossfade with 420ms reveal animations staggered by 70ms; the final stage completes by 680ms.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain in the requested transition form.
+- Continuity: the guide clone stays above the destination until `/reports` announces that it has mounted. The homepage paper base is already painted under it, so route latency cannot expose a white, black, or empty frame.
+- Layer order: the homepage base is continuous, then the folder shell enters, then title/identity artwork, then batch/result information, then below-fold motion layers. The stages overlap instead of waiting for a full previous-stage completion, matching the reference cadence.
+- Visual fidelity: all existing guide and homepage source assets, coordinates, texture, typography, title loops, and module hotspots are unchanged. No substitute asset, CSS illustration, or generated visual was added.
+- Motion isolation: direct `/reports` loads retain their prior entry behavior. Archive-to-category extraction, category detail entry, scroll restoration, data linkage, and admin preview behavior are unchanged.
+- Reduced motion: the handoff becomes a short opacity-only release and immediately exposes complete homepage layers.
+
+## Interaction And Console Verification
+
+- A true `/go` run completed at `/reports` with the persistent marker `data-guide-entry="reference-staged"`, no second reports-root animation, and the route marker cleaned after the staged reveal.
+- All homepage images reported `complete=true` with non-zero natural dimensions in the first settled state; incomplete image count was 0.
+- The in-app browser reported no warning or error log entries during the full guide-to-home run.
+- Full verification passed: lint, TypeScript, 22 test files / 116 tests, Prisma schema validation, and optimized production build.
+
+## Open Questions
+
+- None.
+
+## Implementation Checklist
+
+- [x] Keep the old guide visible until the homepage route has actually mounted.
+- [x] Crossfade on the already-painted homepage base with no route gap.
+- [x] Reveal homepage artwork in overlapping shell → upper content → lower content stages.
+- [x] Preserve current assets, positions, interactions, backend integration, and unrelated page transitions.
+- [x] Verify at the 375 × 812 mobile reference viewport with combined source/implementation evidence.
 
 final result: passed
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
+import { guideRouteNavigationDelayMs, navigateWithGuideContinuity, prepareGuideRouteContinuity } from "./guide-route-transition";
 
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 type GuideMotionPreference = "unknown" | "allowed" | "reduced";
@@ -103,9 +104,13 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const enter = useCallback(() => {
     if (entering.current || leaving || preview || !swipeReady) return;
     entering.current = true;
+    if (!onEnter) prepareGuideRouteContinuity();
     setLeaving(true);
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => onEnter ? onEnter() : router.push("/reports"), reducedMotion ? 150 : 460);
+    window.setTimeout(() => {
+      if (onEnter) onEnter();
+      else navigateWithGuideContinuity(() => router.push("/reports"));
+    }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
   }, [leaving, onEnter, preview, router, swipeReady]);
 
   const handleLayerError = useCallback((name: string) => {

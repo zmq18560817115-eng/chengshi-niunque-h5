@@ -6,16 +6,38 @@ import type { CSSProperties } from "react";
 import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
-import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
-import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
-import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
-import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
+import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
+import { ArchiveArtwork, archiveArtworkWarmAssets } from "@/components/h5/ArchiveArtwork";
+import { ArchiveFishFloatMotion, archiveFishWarmAssets } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
+import { ArchiveSectionTitleMotion, archiveSectionTitleWarmAssets } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
+import { ArchiveStoryCopyMotion, archiveStoryWarmAssets } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
+import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity, prepareCategoryRouteContinuity } from "@/components/h5/category-route-transition";
+import { announceGuideRouteReady, guideRouteEntryAttribute } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
-export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
+const reportsReadinessRequests = [
+  ...archiveArtworkWarmAssets.map((src) => ({ src, priority: "high" as const })),
+  ...archiveUnlockWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveFishWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveStoryWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+  ...archiveSectionTitleWarmAssets.map((src) => ({ src, priority: "auto" as const })),
+] as const;
+
+type ReportsArchiveProps = { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig };
+
+export function ReportsArchive(props: ReportsArchiveProps) {
+  if (props.preview) return <ReportsArchiveReady {...props}/>;
+  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets">
+    <ReportsArchiveReady {...props}/>
+  </AdaptiveReadinessGate>;
+}
+
+function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteConfig }: ReportsArchiveProps) {
   const router = useRouter();
+  const readinessReady = useAdaptiveReadiness();
   const [leaving, setLeaving] = useState(false);
+  const [guideEntry, setGuideEntry] = useState(false);
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
   const visibleModules = useMemo(() => [...modules].filter((module) => getArchiveModuleLayout(module.slug)).sort((a, b) => getArchiveModuleLayout(a.slug)!.order - getArchiveModuleLayout(b.slug)!.order), [modules]);
 
@@ -29,6 +51,12 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   }, [preview]);
 
   useEffect(() => { if (!preview) visibleModules.forEach((module) => router.prefetch(`/reports/${module.slug}`)); }, [preview, router, visibleModules]);
+
+  useEffect(() => {
+    if (preview || !readinessReady) return;
+    if (document.documentElement.hasAttribute(guideRouteEntryAttribute)) setGuideEntry(true);
+    announceGuideRouteReady();
+  }, [preview, readinessReady]);
 
   useEffect(() => {
     if (preview) return;
@@ -49,7 +77,7 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
 
   const exitingSlug = leaving ? pressedSlug : null;
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} data-exit-slug={exitingSlug ?? undefined}>
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} data-exit-slug={exitingSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined}>
     <div className="reports-archive-canvas">
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their

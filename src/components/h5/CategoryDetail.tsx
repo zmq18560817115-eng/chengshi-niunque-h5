@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
+import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
@@ -33,8 +34,23 @@ function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback
   };
 }
 
-export function CategoryDetail({ module, preview = false }: { module: PublicModule; preview?: boolean }) {
+type CategoryDetailProps = { module: PublicModule; preview?: boolean };
+
+export function CategoryDetail(props: CategoryDetailProps) {
+  const theme = getCategoryTheme(props.module.slug);
+  if (props.preview || !theme.artwork) return <CategoryDetailReady {...props}/>;
+  const requests = [
+    { src: `/design/final-v1/${theme.artwork}`, priority: "high" as const },
+    ...theme.cardLayouts.map((layout) => ({ src: layout.backplate.src, priority: "high" as const })),
+  ];
+  return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets">
+    <CategoryDetailReady {...props}/>
+  </AdaptiveReadinessGate>;
+}
+
+function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const router = useRouter();
+  const readinessReady = useAdaptiveReadiness();
   const [leaving, setLeaving] = useState(false);
   const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
   const [pendingRouteEntrySource, setPendingRouteEntrySource] = useState<string | null>(null);
@@ -53,20 +69,21 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
     }
   }, [module.slug, motionEnabled, preview]);
   useEffect(() => {
-    if (!pendingRouteEntrySource || !artworkReady) return;
+    if (!readinessReady || !pendingRouteEntrySource || !artworkReady) return;
     setRouteEntrySource(pendingRouteEntrySource);
     setPendingRouteEntrySource(null);
-  }, [artworkReady, pendingRouteEntrySource]);
+  }, [artworkReady, pendingRouteEntrySource, readinessReady]);
   useLayoutEffect(() => {
-    if (!routeEntrySource) return;
+    if (!readinessReady || !routeEntrySource) return;
     announceCategoryRouteReady();
-  }, [routeEntrySource]);
+  }, [readinessReady, routeEntrySource]);
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined}>
-    <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px" onLoad={() => setArtworkReady(true)}/>
-    <div className="category-card-backplates" aria-hidden="true">
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-preview={preview || undefined}>
+    <div className="category-page-viewport">
+      <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px" onLoad={() => setArtworkReady(true)}/>
+      <div className="category-card-backplates" aria-hidden="true">
       {theme.cardLayouts.map((layout, index) => {
         const style = {
           "--category-card-x": layout.x,
@@ -76,8 +93,8 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
         } as CSSProperties;
         return <Image key={layout.backplate.src} className="category-card-backplate" src={layout.backplate.src} alt="" width={layout.backplate.width} height={layout.backplate.height} style={style} priority unoptimized data-index={index}/>;
       })}
-    </div>
-    <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
+      </div>
+      <section className="category-card-hotspots" aria-label={`${module.title}报告资料`}>
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
         const fallback = theme.cardFallbacks[index];
@@ -105,6 +122,7 @@ export function CategoryDetail({ module, preview = false }: { module: PublicModu
             window.setTimeout(() => router.push(destination), 220);
           }}>{copy}</button>;
       })}
-    </section>
+      </section>
+    </div>
   </SwipeBackPage>;
 }

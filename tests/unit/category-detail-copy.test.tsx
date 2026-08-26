@@ -1,6 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CategoryDetail } from "@/components/h5/CategoryDetail";
 import type { PublicModule } from "@/server/services/public-content-service";
+
+vi.mock("@/components/h5/homepage-preload", () => ({
+  preloadHomepageAssets: vi.fn().mockResolvedValue({ total: 4, failed: [] }),
+}));
 
 const moduleFixture: PublicModule = {
   id: "inspection",
@@ -71,8 +75,9 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(document.documentElement).not.toHaveAttribute("data-category-route-entry");
   });
 
-  it("keeps direct category loads on their existing transition", () => {
+  it("keeps direct category loads on their existing transition", async () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
+    await act(async () => { await Promise.resolve(); });
 
     expect(container.querySelector(".category-page-final")).not.toHaveAttribute("data-route-entry");
   });
