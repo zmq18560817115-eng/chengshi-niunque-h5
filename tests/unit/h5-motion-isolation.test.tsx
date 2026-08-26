@@ -85,11 +85,14 @@ describe("H5 motion isolation", () => {
     expect(guide).not.toContain('window.location.assign("/reports")');
   });
 
-  it("covers the viewport with every guide layer on the same undistorted canvas", () => {
+  it("contains every guide layer inside the safe viewport on the same undistorted canvas", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
+    const layout = readFileSync("src/app/layout.tsx", "utf8");
     expect(css).toContain("overflow: hidden; align-items: center;");
-    expect(css).toContain(".brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%;");
-    expect(css).toContain("object-fit: cover; object-position: center;");
+    expect(css).toContain(".brand-guide-stage { position: relative; isolation: isolate; width: auto; max-width: 100%; height: min(100%, 216.6667vw); aspect-ratio: 750 / 1625;");
+    expect(css).toContain("object-fit: contain; object-position: center;");
+    expect(css).toContain("padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+    expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
     expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
@@ -109,13 +112,13 @@ describe("H5 motion isolation", () => {
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("scales the guide proportionally to cover a %ix%i phone viewport", (width, height) => {
-    const masterRatio = 750 / 1625;
-    const stageWidth = Math.max(width, height * masterRatio);
-    const stageHeight = stageWidth / masterRatio;
-    expect(stageWidth).toBeGreaterThanOrEqual(width);
-    expect(stageHeight).toBeGreaterThanOrEqual(height - Number.EPSILON);
-    expect(stageWidth / stageHeight).toBeCloseTo(masterRatio, 8);
+  ])("scales the complete guide proportionally inside a %ix%i phone viewport", (width, height) => {
+    const scale = Math.min(width / 750, height / 1625);
+    const stageWidth = 750 * scale;
+    const stageHeight = 1625 * scale;
+    expect(stageWidth).toBeLessThanOrEqual(width + Number.EPSILON);
+    expect(stageHeight).toBeLessThanOrEqual(height + Number.EPSILON);
+    expect(stageWidth / stageHeight).toBeCloseTo(750 / 1625, 8);
   });
 
   it("keeps the new guide hint static while unlocking entry after the papers", () => {
@@ -201,8 +204,13 @@ describe("H5 motion isolation", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
     expect(css).toContain(".category-page-viewport { position: relative;");
+    expect(css).toContain("inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+    expect(css).toContain("height: min(100%, 216.65vw);");
+    expect(css).toContain('html[data-h5-page-lock="category"]');
     expect(css).toContain("aspect-ratio: 2000 / 4333;");
     expect(css).toContain("container-type: inline-size;");
+    expect(category).toContain('root.setAttribute("data-h5-page-lock", "category")');
+    expect(category).toContain("window.scrollTo(0, 0)");
     expect(category).toContain('className="category-page-viewport"');
   });
 
@@ -233,6 +241,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".runtime-loading-layer { position: fixed;");
     expect(css).toContain("z-index: 2147483600;");
     expect(css).toContain(".guide-loading-buffer.is-leaving");
+    expect(css).toContain(".guide-loading-buffer-stage { position: relative; width: auto; max-width: 100%; height: min(100%, 216.7vw); aspect-ratio: 2000 / 4334;");
     expect(css).toContain(".guide-loading-buffer-poster { visibility: visible; }");
   });
 
@@ -369,7 +378,8 @@ describe("H5 motion isolation", () => {
     expect(component).not.toContain("window.setInterval");
     expect(component).toContain('data-title-sequence-mode={running ? "css-compositor-loop" : "paused"}');
     expect(component).toContain("data-title-sequence-order={sequenceIndex + 1}");
-    expect(component).toContain("const renderAssets = nearby || visible");
+    expect(component).not.toContain("const renderAssets = nearby || visible");
+    expect(component).toContain('data-title-ready="true"');
     expect(component).toContain('data-title-render-layer="poster"');
     expect(component).not.toContain("sequenceCycle}`");
     expect(component.match(/section-number-(inspection|review|production)-(ring|digit)\.png/g)).toHaveLength(6);
@@ -413,8 +423,9 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("@keyframes archive-section-title-bounce");
     expect(css).toContain('data-title-sequence-running="true"');
     expect(css).toContain("calc(var(--archive-title-sequence-index) * var(--archive-title-bounce-duration)) infinite both");
-    expect(css).toContain("translate3d(0,6.5%,0) scale3d(.72,.72,1)");
-    expect(css).toContain("translate3d(0,-9%,0) scale3d(.94,.94,1)");
+    expect(css).toContain("8.333% { transform: translate3d(0,6.5%,0) scale3d(.72,.72,1)");
+    expect(css).toContain("16.204% { transform: translate3d(0,-9%,0) scale3d(.94,.94,1)");
+    expect(css).toContain("animation-timing-function: cubic-bezier(.16,.78,.22,1)");
     expect(css).toContain("transform-origin: 50% 72%");
     expect(css).toContain("contain: paint");
     expect(css).toContain("backface-visibility: hidden");

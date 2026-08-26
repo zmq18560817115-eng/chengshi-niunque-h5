@@ -27,6 +27,10 @@ for (const width of widths) {
       expect(viewportBox?.height).toBeLessThanOrEqual(896);
       expect((viewportBox?.width ?? 0) / (viewportBox?.height ?? 1)).toBeCloseTo(2000 / 4333, 3);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(clientWidth);
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(896);
+      expect(await page.evaluate(() => document.documentElement.getAttribute("data-h5-page-lock"))).toBe("category");
+      await page.evaluate(() => window.scrollTo(0, 999999));
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
       const layouts = categoryCardLayouts[slug];
       const cards = page.locator(".category-card-hotspot");

@@ -58,6 +58,15 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
+  useLayoutEffect(() => {
+    if (preview) return;
+    const root = document.documentElement;
+    root.setAttribute("data-h5-page-lock", "category");
+    window.scrollTo(0, 0);
+    return () => {
+      if (root.getAttribute("data-h5-page-lock") === "category") root.removeAttribute("data-h5-page-lock");
+    };
+  }, [preview]);
   useEffect(() => { if (!preview) slots.forEach((card, index) => router.prefetch(`/reports/${module.slug}/items/${card?.id ?? placeholderCardId(index)}/reports`)); }, [module.slug, preview, router, slots]);
   useLayoutEffect(() => {
     if (preview) return;

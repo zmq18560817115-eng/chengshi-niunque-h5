@@ -33,8 +33,15 @@ for (const device of devices) {
     await page.goto("/go");
     await expect(page.getByRole("region", { name: "品牌引导页" })).toBeVisible();
     await expect(page.getByRole("button", { name: "进入档案" })).toBeVisible();
+    const guideStageBox = await page.locator(".brand-guide-stage").boundingBox();
+    expect(guideStageBox).not.toBeNull();
+    expect(guideStageBox!.x).toBeGreaterThanOrEqual(0);
+    expect(guideStageBox!.y).toBeGreaterThanOrEqual(0);
+    expect(guideStageBox!.x + guideStageBox!.width).toBeLessThanOrEqual(device.width + 0.5);
+    expect(guideStageBox!.y + guideStageBox!.height).toBeLessThanOrEqual(device.height + 0.5);
+    expect(guideStageBox!.width / guideStageBox!.height).toBeCloseTo(750 / 1625, 3);
     await expectNoHorizontalOverflow(page, device.width);
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(2300);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-guide.png` });
 
     await page.getByRole("button", { name: "进入档案" }).click();

@@ -196,16 +196,13 @@ function ArchiveSectionClickCue({ enabled }: { enabled: boolean }) {
   );
 }
 
-function ArchiveSectionTitleGroup({ group, enabled, exiting, sequenceIndex }: { group: TitleGroup; enabled: boolean; exiting: boolean; sequenceIndex: number }) {
-  const { trigger, nearby, visible } = useViewportPresence(enabled);
-  const renderAssets = nearby || visible;
+function ArchiveSectionTitleGroup({ group, exiting, sequenceIndex }: { group: TitleGroup; exiting: boolean; sequenceIndex: number }) {
   const groupStyle = { ...position(group), "--archive-title-sequence-index": sequenceIndex } as CSSProperties;
 
   return (
-    <div className={`archive-section-title-group ${exiting ? "archive-module-exit-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-nearby={nearby} data-title-visible={visible} data-title-ready={renderAssets} data-title-sequence-order={sequenceIndex + 1} data-title-render-layer="poster" style={groupStyle}>
-      <div ref={trigger} className="archive-section-title-trigger" />
-      {renderAssets && <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />}
-      {renderAssets && group.numberParts.map((part) => (
+    <div className={`archive-section-title-group ${exiting ? "archive-module-exit-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-ready="true" data-title-sequence-order={sequenceIndex + 1} data-title-render-layer="poster" style={groupStyle}>
+      <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />
+      {group.numberParts.map((part) => (
         <Image
           key={part.src}
           className="archive-section-number-part"
@@ -231,7 +228,7 @@ export function ArchiveSectionTitleMotion({ preview = false, exitingSlug = null 
     <div className="archive-section-title-motion" data-motion-module="archiveSectionTitle" data-title-sequence-running={running} data-title-sequence-mode={running ? "css-compositor-loop" : "paused"} aria-hidden="true">
       <div ref={trigger} className="archive-section-title-sequence-trigger" />
       <ArchiveSectionClickCue enabled={enabled} />
-      {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} enabled={enabled} exiting={group.slug === exitingSlug} sequenceIndex={index} />)}
+      {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} exiting={group.slug === exitingSlug} sequenceIndex={index} />)}
     </div>
   );
 }

@@ -63,8 +63,9 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ReportsArchive modules={modules}/>);
     const links = [...container.querySelectorAll<HTMLButtonElement>(".archive-category-hotspot")];
     expect(links.map((link) => link.dataset.slug)).toEqual(["inspection-projects", "review-assurance", "production-traceability"]);
-    expect(links.map((link) => link.style.top)).toEqual(["48.4%", "58.2%", "62%"]);
-    expect(links.map((link) => link.style.left)).toEqual(["43%", "4%", "43%"]);
+    expect(links.map((link) => link.style.top)).toEqual(["49.4%", "56.25%", "62.67%"]);
+    expect(links.map((link) => link.style.left)).toEqual(["0%", "0%", "0%"]);
+    expect(links.map((link) => link.style.width)).toEqual(["100%", "100%", "100%"]);
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
@@ -136,7 +137,8 @@ describe("multi-page H5 interactions", () => {
       "production-traceability",
     ]);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-section-number-part")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
+    expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
     expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
   });
@@ -177,7 +179,8 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-section-title-group")).toHaveLength(3);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-section-number-part")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
+    expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
     expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");

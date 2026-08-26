@@ -77,7 +77,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
 
   const exitingSlug = leaving ? pressedSlug : null;
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} data-exit-slug={exitingSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined}>
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} data-exit-slug={exitingSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-preview={preview || undefined}>
     <div className="reports-archive-canvas">
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their

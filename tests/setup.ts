@@ -20,6 +20,8 @@ vi.mock("next/image", () => ({
   },
 }));
 
+Object.defineProperty(window, "scrollTo", { configurable: true, value: vi.fn() });
+
 for (const line of readFileSync(".env", "utf8").split(/\r?\n/)) {
   const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
   if (!match || process.env[match[1]]) continue;
