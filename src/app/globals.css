@@ -25,8 +25,8 @@
   --font-display: ui-rounded, "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-body: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --h5-content-width: 750px;
-  --guide-entry-hint-width: min(52.6vw, 24.65rem);
-  --guide-entry-hint-bottom: max(2.7dvh, env(safe-area-inset-bottom));
+  --guide-entry-hint-width: 43.4%;
+  --guide-entry-hint-bottom: 2.7%;
   --h5-route-transition-duration: 460ms;
   --h5-route-transition-easing: cubic-bezier(.22,1,.36,1);
   --guide-route-buffer-release-duration: 220ms;

@@ -15,7 +15,7 @@ const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp",
   "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-foreground-top.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
-  "swipe-up-hint.png",
+  "swipe-up-hint-v2.png",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const guideAssets = guideAssetNames.map(assetUrl);
@@ -49,7 +49,7 @@ function GuideLayers({ animated, onError }: { animated: boolean; onError: (name:
 }
 
 function GuideEntryHint({ onError }: { onError: (name: string) => void }) {
-  return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint.png")} alt="" aria-hidden="true" width={1052} height={126} sizes="(max-width: 750px) 52.6vw, 395px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint.png")}/>;
+  return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(max-width: 750px) 43.4vw, 326px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>;
 }
 
 function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerError: (name: string) => void; onFinalFallbackError: () => void }) {

@@ -103,9 +103,13 @@ describe("H5 motion isolation", () => {
 
   it("anchors the static upward-swipe hint at the lower center", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain("--guide-entry-hint-width: min(52.6vw, 24.65rem);");
-    expect(css).toContain("--guide-entry-hint-bottom: max(2.7dvh, env(safe-area-inset-bottom));");
+    const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
+    expect(css).toContain("--guide-entry-hint-width: 43.4%;");
+    expect(css).toContain("--guide-entry-hint-bottom: 2.7%;");
     expect(css).toContain(".brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom);");
+    expect(guide).toContain('src={assetUrl("swipe-up-hint-v2.png")}');
+    expect(guide).toContain("width={868} height={260}");
+    expect(guide).not.toContain('assetUrl("swipe-up-hint.png")');
     expect(css).not.toContain("guide-hint-float");
   });
 
