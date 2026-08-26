@@ -161,7 +161,7 @@ describe("multi-page H5 interactions", () => {
     await act(async () => { await Promise.resolve(); });
 
     const sequence = container.querySelector("[data-motion-module='archiveSectionTitle']");
-    expect(archiveTitleBounceDurationMs).toBe(720);
+    expect(archiveTitleBounceDurationMs).toBe(936);
     expect(sequence).toHaveAttribute("data-title-sequence-running", "true");
     expect(sequence).toHaveAttribute("data-title-sequence-mode", "css-compositor-loop");
     expect([...container.querySelectorAll("[data-title-sequence-order]")].map((group) => group.getAttribute("data-title-sequence-order"))).toEqual(["1", "2", "3"]);

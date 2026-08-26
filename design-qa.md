@@ -1,5 +1,71 @@
 # Design QA
 
+## Latest pass — Layered page surrounds and smoother title cadence
+
+### Evidence
+
+- Source visual truth:
+  - `public/design/final-v1/category-runtime/inspection-source.jpg` (2000 x 4333)
+  - `public/design/final-v1/category-runtime/review-source.jpg` (2000 x 4333)
+  - `public/design/final-v1/category-runtime/traceability-source.jpg` (2000 x 4333)
+  - `docs/input/design/final-v1/references-最终效果/guide-final-reference.jpg.jpg` (2000 x 4333, read-only)
+- Browser-rendered implementation captures:
+  - `test-results/design-qa/inspection-projects-480x972.png`
+  - `test-results/design-qa/review-assurance-480x972.png`
+  - `test-results/design-qa/production-traceability-480x972.png`
+  - `test-results/design-qa/guide-480x972-v2.png`
+- Side-by-side comparison inputs:
+  - `test-results/design-qa/compare-inspection-projects.png`
+  - `test-results/design-qa/compare-review-assurance.png`
+  - `test-results/design-qa/compare-production-traceability.png`
+  - `test-results/design-qa/compare-guide.png`
+- State: settled guide frame and settled category pages, no route transition in progress.
+- Viewport: 480 x 972 CSS px in the Codex in-app browser, matching the supplied embedded-browser content aspect ratio.
+- Density normalization: the in-app capture surface returned 960 x 1944 pixels while reporting a 480 x 972 CSS viewport and device scale 0.5. The visible app quadrant was normalized to 480 x 972. Each 2000 x 4333 source was proportionally reduced to 449 x 972 and centered on the same 480 x 972 comparison canvas.
+
+### Required Fidelity Surfaces
+
+- Fonts and typography: supplied title/status raster artwork remains unchanged; managed card copy keeps the existing project font tokens, weights and wrapping. Dynamic report counts intentionally follow backend data.
+- Spacing and layout rhythm: the 2000 / 4333 central canvases remain proportional and centered. Cards, title art, mascot, footer and hotspots retain their shared 1000-unit coordinates.
+- Colors and visual tokens: category surrounds use the independent repository paper texture plus source-sampled green, yellow or brown theme color. The guide surround uses the independent guide texture. No flat document background is exposed.
+- Image quality and asset fidelity: central design artwork and all supplied component assets remain untouched. Surrounds no longer sample, crop, enlarge or repeat a completed page image.
+- Copy and content: application-managed text and report counts remain connected to the existing public-content service; no frontend/backend contract changed.
+
+### Comparison History
+
+#### Iteration 1 — blocked
+
+- [P1] Category side gutters enlarged a narrow edge from the completed page artwork, producing spikes and mismatched folder boundaries on short embedded-browser viewports.
+- [P2] The guide surround used `cover`, so its texture registration differed from the contained guide stage.
+- [P2] Homepage title posters completed each bounce in 720ms and used a larger compression/travel range, which appeared abrupt on mobile.
+
+Fixes applied:
+
+- Replaced completed-page edge sampling with explicit `category-page-surround` layers built from `report-texture.webp` and calibrated theme colors.
+- Registered left/right folder fills at the measured source-edge heights (18.14% and 18.44%).
+- Added explicit mirrored guide texture surround layers; guide character, paper, mask, arch, foreground and hint layers were not changed.
+- Increased each title phase to 936ms (30% longer), reduced minimum scale to 0.88 and peak upward travel to 4%, while preserving the 1 → 2 → 3 loop.
+
+#### Iteration 2 — passed
+
+- Full-view comparison: all four central compositions retain the source hierarchy and proportions; the former category spikes and hard flat bands are absent.
+- Focused edge comparison: the left/right surround widths meet the central canvas exactly, use only independent texture assets, and do not duplicate titles, cards, characters or folder silhouettes.
+- Motion evidence: computed duration is 2.808s with 0s / 0.936s / 1.872s offsets. Runtime sampling observed a maximum of one active title at a time and the sequence `0 → 1 → 2 → 0`, with no GIF title reload.
+- Primary interactions checked: category pages remained mounted with active report buttons; homepage remained scrollable and the title sequence activated only in its shared module region.
+- Console: no new application errors caused by these changes were observed.
+
+### Findings
+
+No actionable P0, P1 or P2 visual mismatches remain for the requested background supplementation and title-motion adjustment. Differences in report counts/copy are expected live-data differences. The guide hint differs from the older source reference by explicit prior product direction.
+
+### Follow-up Polish
+
+- P3: recheck the same edge treatment on one physical iOS WeChat device after deployment because its browser chrome can change the live safe-area height while the page is visible.
+
+final result: passed
+
+---
+
 ## Latest pass — Homepage title scale-bounce loop
 
 ### Comparison Target

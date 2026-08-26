@@ -160,6 +160,10 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       const deltaY = touch.clientY - start.y;
       if (deltaY <= -50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) enter();
     }}>
+    <div className="brand-guide-surround" data-artwork-source="layered-guide-texture" aria-hidden="true">
+      <span className="brand-guide-surround-fill brand-guide-surround-fill--left" />
+      <span className="brand-guide-surround-fill brand-guide-surround-fill--right" />
+    </div>
     <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
         <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>

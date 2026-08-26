@@ -35,7 +35,7 @@ type PositionedAsset = {
 const masterWidth = 1000;
 const masterHeight = 5557;
 const archiveMotionRoot = "/design/final-v1/motion/archive-runtime";
-export const archiveTitleBounceDurationMs = 720;
+export const archiveTitleBounceDurationMs = 936;
 
 const clickCue: PositionedGif = {
   gif: `${archiveMotionRoot}/section-click-cue.gif`,
