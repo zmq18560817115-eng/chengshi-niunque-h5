@@ -151,6 +151,8 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("prepareGuideRouteContinuity();");
     expect(guide).toContain("navigateWithGuideContinuity(() => router.push");
     expect(reports).toContain("announceGuideRouteReady();");
+    expect(reports).toContain('settleSelector=".reports-archive-final"');
+    expect(reports).toContain("revealDelayMs={160}");
     expect(reports).toContain('data-guide-entry={guideEntry ? "reference-staged" : undefined}');
     expect(artwork).toContain("data-guide-entry-stage={layerEntryStage(layer.id)}");
     expect(routeTransition).toContain("guideRouteBufferReleaseDurationMs = 220");
@@ -213,6 +215,10 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('html[data-h5-page-lock="category"]');
     expect(css).toContain("aspect-ratio: 2000 / 4333;");
     expect(css).toContain("container-type: inline-size;");
+    expect(css).toContain("background-position: center bottom; background-size: 100% auto; background-repeat: no-repeat;");
+    expect(css).toContain("width: max(0px, calc((100cqw - min(100cqw, 46.1574cqh)) / 2));");
+    expect(css).toContain("background-size: 4000% 100%;");
+    expect(category).toContain('"--category-page-background-image"');
     expect(category).toContain('root.setAttribute("data-h5-page-lock", "category")');
     expect(category).toContain("window.scrollTo(0, 0)");
     expect(category).toContain('className="category-page-viewport"');
@@ -238,6 +244,9 @@ describe("H5 motion isolation", () => {
     expect(experience).not.toContain("loadingGifDurationMs");
     expect(experience).not.toContain("publicDataWarmupTimeoutMs");
     expect(adaptiveGate).toContain("preloadHomepageAssets(requests)");
+    expect(adaptiveGate).toContain("settleRenderedContent(settleSelector, settleFrames)");
+    expect(adaptiveGate).toContain('root.querySelectorAll<HTMLImageElement>("img")');
+    expect(adaptiveGate).toContain("document.fonts?.ready");
     expect(adaptiveGate).toContain('setPhase(loadingVisible.current ? "leaving" : "ready")');
     expect(adaptiveGate).toContain('setPhase("waiting")');
     expect(runtimeBuffer).toContain('src="/design/guide/data-loading-buffer.gif"');
@@ -427,8 +436,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("@keyframes archive-section-title-bounce");
     expect(css).toContain('data-title-sequence-running="true"');
     expect(css).toContain("calc(var(--archive-title-sequence-index) * var(--archive-title-bounce-duration)) infinite both");
-    expect(css).toContain("8.333% { transform: translate3d(0,6.5%,0) scale3d(.72,.72,1)");
-    expect(css).toContain("16.204% { transform: translate3d(0,-9%,0) scale3d(.94,.94,1)");
+    expect(css).toContain("8.333% { transform: translate3d(0,4.2%,0) scale3d(.84,.84,1)");
+    expect(css).toContain("16.204% { transform: translate3d(0,-5.5%,0) scale3d(.97,.97,1)");
     expect(css).toContain("animation-timing-function: cubic-bezier(.16,.78,.22,1)");
     expect(css).toContain("transform-origin: 50% 72%");
     expect(css).toContain("contain: paint");

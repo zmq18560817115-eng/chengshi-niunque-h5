@@ -28,7 +28,7 @@ type ReportsArchiveProps = { modules: PublicModule[]; preview?: boolean; config?
 
 export function ReportsArchive(props: ReportsArchiveProps) {
   if (props.preview) return <ReportsArchiveReady {...props}/>;
-  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets">
+  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets" revealDelayMs={160} settleSelector=".reports-archive-final" settleFrames={3}>
     <ReportsArchiveReady {...props}/>
   </AdaptiveReadinessGate>;
 }

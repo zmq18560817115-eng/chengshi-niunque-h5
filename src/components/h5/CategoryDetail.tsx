@@ -58,6 +58,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
   const slots = useMemo(() => theme.artwork ? Array.from({ length: theme.cardSlots }, (_, index) => module.cards[index] ?? null) : [], [module.cards, theme]);
+  const pageStyle = theme.artwork ? { "--category-page-background-image": `url("/design/final-v1/${theme.artwork}")` } as CSSProperties : undefined;
   useLayoutEffect(() => {
     if (preview) return;
     const root = document.documentElement;
@@ -89,7 +90,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
 
   if (!theme.artwork) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-preview={preview || undefined}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass} ${motionEnabled && leaving ? "is-leaving" : ""}`} fallbackHref="/reports" preview={preview} style={pageStyle} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-preview={preview || undefined}>
     <div className="category-page-viewport">
       <Image className="category-page-art" src={`/design/final-v1/${theme.artwork}`} alt={module.title} width={2000} height={4333} priority unoptimized sizes="(max-width: 750px) 100vw, 750px" onLoad={() => setArtworkReady(true)}/>
       <div className="category-card-backplates" aria-hidden="true">

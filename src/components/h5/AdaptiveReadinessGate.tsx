@@ -10,6 +10,36 @@ const loadingExitDurationMs = 260;
 export const adaptiveLoadingRevealDelayMs = 220;
 const AdaptiveReadinessContext = createContext(true);
 
+const nextPaintFrame = () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+
+async function settleRenderedContent(selector: string, frameCount: number) {
+  let root: Element | null = null;
+  for (let frame = 0; frame < 120 && !root; frame += 1) {
+    root = document.querySelector(selector);
+    if (!root) await nextPaintFrame();
+  }
+  if (!root) return;
+
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const images = [...root.querySelectorAll<HTMLImageElement>("img")].filter((image) => {
+    const rect = image.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom >= -viewportHeight * .25 && rect.top <= viewportHeight * 1.5;
+  });
+  await Promise.all(images.map(async (image) => {
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        const finish = () => resolve();
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+        if (image.complete) resolve();
+      });
+    }
+    if (image.naturalWidth > 0 && typeof image.decode === "function") await image.decode().catch(() => undefined);
+  }));
+  await document.fonts?.ready?.catch(() => undefined);
+  for (let frame = 0; frame < frameCount; frame += 1) await nextPaintFrame();
+}
+
 export function useAdaptiveReadiness() {
   return useContext(AdaptiveReadinessContext);
 }
@@ -21,6 +51,8 @@ export function AdaptiveReadinessGate({
   reason = "assets",
   mountChildrenWhileLoading = true,
   revealDelayMs = adaptiveLoadingRevealDelayMs,
+  settleSelector,
+  settleFrames = 3,
 }: {
   requests: readonly HomepageAssetRequest[];
   children: ReactNode;
@@ -28,6 +60,8 @@ export function AdaptiveReadinessGate({
   reason?: string;
   mountChildrenWhileLoading?: boolean;
   revealDelayMs?: number;
+  settleSelector?: string;
+  settleFrames?: number;
 }) {
   const [phase, setPhase] = useState<ReadinessPhase>("waiting");
   const loadingVisible = useRef(false);
@@ -42,8 +76,10 @@ export function AdaptiveReadinessGate({
       loadingVisible.current = true;
       setPhase("loading");
     }, revealDelayMs);
-    void preloadHomepageAssets(requests).then((result) => {
+    void preloadHomepageAssets(requests).then(async (result) => {
       if (result.failed.length > 0) console.error(`[AdaptiveReadinessGate] assets failed: ${result.failed.join(", ")}`);
+      if (cancelled) return;
+      if (settleSelector) await settleRenderedContent(settleSelector, settleFrames);
       if (cancelled) return;
       window.clearTimeout(revealTimer);
       setPhase(loadingVisible.current ? "leaving" : "ready");
@@ -52,7 +88,7 @@ export function AdaptiveReadinessGate({
       cancelled = true;
       window.clearTimeout(revealTimer);
     };
-  }, [requestKey, requests, revealDelayMs]);
+  }, [requestKey, requests, revealDelayMs, settleFrames, settleSelector]);
 
   useEffect(() => {
     if (phase !== "leaving") return;

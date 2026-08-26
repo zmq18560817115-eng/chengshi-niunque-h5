@@ -73,3 +73,20 @@ test("375x812 user can open every category and a published report", async ({ pag
   await page.screenshot({ path: `${evidenceRoot}/flow-published-report-375x812.png` });
   expect(runtimeErrors).toEqual([]);
 });
+
+test("guide handoff shows the adaptive buffer until slow homepage artwork is painted", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.route("**/design/final-v1/**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 4200));
+    await route.continue();
+  });
+  await page.goto("/go");
+  const enter = page.getByRole("button", { name: "进入档案" });
+  await expect(enter).toBeEnabled({ timeout: 5000 });
+  await enter.click();
+  await page.waitForURL(/\/reports$/);
+  const reportsBuffer = page.locator('[data-loading-reason="reports-assets"]');
+  await expect(reportsBuffer).toBeVisible({ timeout: 3000 });
+  await expect(reportsBuffer).toHaveCount(0, { timeout: 10000 });
+  await expect(page.locator(".reports-archive-final")).toBeVisible();
+});

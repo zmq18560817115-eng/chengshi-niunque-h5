@@ -29,6 +29,14 @@ for (const width of widths) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(clientWidth);
       expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(896);
       expect(await page.evaluate(() => document.documentElement.getAttribute("data-h5-page-lock"))).toBe("category");
+      const backdrop = await stage.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { image: style.backgroundImage, position: style.backgroundPosition, repeat: style.backgroundRepeat, size: style.backgroundSize };
+      });
+      expect(backdrop.image).not.toBe("none");
+      expect(backdrop.position).toBe("50% 100%");
+      expect(backdrop.repeat).toBe("no-repeat");
+      expect(backdrop.size).toBe("100%");
       await page.evaluate(() => window.scrollTo(0, 999999));
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
@@ -52,3 +60,25 @@ for (const width of widths) {
     });
   }
 }
+
+test("short embedded browser extends only category edge texture into side gutters", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/reports/inspection-projects");
+  const stage = page.locator(".category-page-final");
+  await expect(stage).toBeVisible();
+  await page.waitForTimeout(350);
+  const edgeLayers = await stage.evaluate((node) => {
+    const before = getComputedStyle(node, "::before");
+    const after = getComputedStyle(node, "::after");
+    return {
+      before: { width: before.width, position: before.backgroundPosition, size: before.backgroundSize },
+      after: { width: after.width, position: after.backgroundPosition, size: after.backgroundSize },
+    };
+  });
+  expect(Number.parseFloat(edgeLayers.before.width)).toBeGreaterThan(0);
+  expect(edgeLayers.before.size).toBe("4000% 100%");
+  expect(edgeLayers.before.position).toBe("0% 0%");
+  expect(edgeLayers.after.width).toBe(edgeLayers.before.width);
+  expect(edgeLayers.after.size).toBe("4000% 100%");
+  expect(edgeLayers.after.position).toBe("0% 0%");
+});
