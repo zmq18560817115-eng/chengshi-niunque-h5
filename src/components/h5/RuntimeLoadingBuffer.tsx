@@ -1,6 +1,30 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export type RuntimeLoadingPhase = "loading" | "leaving";
+
+export const routeLoadingRevealDelayMs = 220;
+
+export function DeferredRuntimeLoadingBuffer({
+  delayMs = routeLoadingRevealDelayMs,
+  label = "正在准备当前页面",
+  reason = "route-data",
+}: {
+  delayMs?: number;
+  label?: string;
+  reason?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs]);
+
+  return visible ? <RuntimeLoadingBuffer label={label} reason={reason}/> : null;
+}
 
 export function RuntimeLoadingBuffer({
   phase = "loading",

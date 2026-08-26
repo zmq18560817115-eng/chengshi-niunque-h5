@@ -14,10 +14,9 @@ describe("brand guide", () => {
     expect(redirect).toHaveBeenCalledWith("/go");
   });
 
-  it("renders the supplied loading buffer only while the guide assets are pending", () => {
+  it("renders the guide immediately instead of fixing the loading buffer before it", () => {
     render(<GoPage/>);
-    expect(screen.getByRole("main", { name: "页面加载缓冲" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "正在准备品牌引导" })).toHaveAttribute("src", expect.stringContaining("data-loading-buffer.gif"));
-    expect(screen.queryByRole("heading", { name: "Honest Nutri 品牌引导" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("main", { name: "页面加载缓冲" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Honest Nutri 品牌引导" })).toBeInTheDocument();
   });
 });

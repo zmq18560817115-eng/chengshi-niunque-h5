@@ -138,7 +138,7 @@ describe("H5 motion isolation", () => {
     const routeTransition = readFileSync("src/components/h5/guide-route-transition.ts", "utf8");
     expect(css).toContain(".brand-guide.is-leaving { opacity: 0; transform: translate3d(0,0,0);");
     expect(css).toContain('.reports-archive.reports-entry-transition[data-guide-entry="reference-staged"] { animation: none; }');
-    expect(css).toContain("@keyframes guide-route-layer-reveal");
+    expect(css).not.toContain("@keyframes guide-route-layer-reveal");
     expect(css).toContain("#h5-guide-route-buffer-host");
     expect(layout).toContain('id="h5-guide-route-buffer-host"');
     expect(guide).toContain("prepareGuideRouteContinuity();");
@@ -226,10 +226,12 @@ describe("H5 motion isolation", () => {
     expect(experience).not.toContain("loadingGifDurationMs");
     expect(experience).not.toContain("publicDataWarmupTimeoutMs");
     expect(adaptiveGate).toContain("preloadHomepageAssets(requests)");
-    expect(adaptiveGate).toContain('setPhase(routeBuffered.current ? "ready" : "leaving")');
+    expect(adaptiveGate).toContain('setPhase(loadingVisible.current ? "leaving" : "ready")');
+    expect(adaptiveGate).toContain('setPhase("waiting")');
     expect(runtimeBuffer).toContain('src="/design/guide/data-loading-buffer.gif"');
-    expect(globalLoading).toContain("<RuntimeLoadingBuffer");
+    expect(globalLoading).toContain("<DeferredRuntimeLoadingBuffer");
     expect(css).toContain(".runtime-loading-layer { position: fixed;");
+    expect(css).toContain("z-index: 2147483600;");
     expect(css).toContain(".guide-loading-buffer.is-leaving");
     expect(css).toContain(".guide-loading-buffer-poster { visibility: visible; }");
   });
@@ -363,7 +365,7 @@ describe("H5 motion isolation", () => {
     expect(component).not.toContain("section-title-review.gif");
     expect(component).not.toContain("section-title-production.gif");
     expect(component.match(/section-title-(inspection|review|production)-poster\.webp/g)).toHaveLength(3);
-    expect(component).toContain("archiveTitleSequenceDurationMs = 720");
+    expect(component).toContain("archiveTitleBounceDurationMs = 720");
     expect(component).not.toContain("window.setInterval");
     expect(component).toContain('data-title-sequence-mode={running ? "css-compositor-loop" : "paused"}');
     expect(component).toContain("data-title-sequence-order={sequenceIndex + 1}");
@@ -371,14 +373,8 @@ describe("H5 motion isolation", () => {
     expect(component).toContain('data-title-render-layer="poster"');
     expect(component).not.toContain("sequenceCycle}`");
     expect(component.match(/section-number-(inspection|review|production)-(ring|digit)\.png/g)).toHaveLength(6);
-    const gifDimensions = (name: string) => {
-      const gif = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
-      return [gif.readUInt16LE(6), gif.readUInt16LE(8)];
-    };
-    expect(gifDimensions("section-click-cue.gif")).toEqual([840, 412]);
-    expect(gifDimensions("section-title-inspection.gif")).toEqual([758, 229]);
-    expect(gifDimensions("section-title-review.gif")).toEqual([757, 228]);
-    expect(gifDimensions("section-title-production.gif")).toEqual([758, 230]);
+    const clickCue = readFileSync("public/design/final-v1/motion/archive-runtime/section-click-cue.gif");
+    expect([clickCue.readUInt16LE(6), clickCue.readUInt16LE(8)]).toEqual([840, 412]);
     const pngDimensions = (name: string) => {
       const png = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
       return [png.readUInt32BE(16), png.readUInt32BE(20)];
@@ -417,7 +413,10 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("@keyframes archive-section-title-bounce");
     expect(css).toContain('data-title-sequence-running="true"');
     expect(css).toContain("calc(var(--archive-title-sequence-index) * var(--archive-title-bounce-duration)) infinite both");
-    expect(css).toContain("scale3d(.82,.82,1)");
+    expect(css).toContain("translate3d(0,6.5%,0) scale3d(.72,.72,1)");
+    expect(css).toContain("translate3d(0,-9%,0) scale3d(.94,.94,1)");
+    expect(css).toContain("transform-origin: 50% 72%");
+    expect(css).toContain("contain: paint");
     expect(css).toContain("backface-visibility: hidden");
     expect(css).toContain("will-change: transform");
     expect(css).not.toContain(".archive-section-title-gif");

@@ -4,10 +4,10 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { preloadHomepageAssets, type HomepageAssetRequest } from "@/components/h5/homepage-preload";
 import { RuntimeLoadingBuffer, type RuntimeLoadingPhase } from "@/components/h5/RuntimeLoadingBuffer";
 
-type ReadinessPhase = RuntimeLoadingPhase | "ready";
+type ReadinessPhase = RuntimeLoadingPhase | "waiting" | "ready";
 
 const loadingExitDurationMs = 260;
-const routeBufferAttributes = ["data-guide-route-entry", "data-category-route-buffer"] as const;
+export const adaptiveLoadingRevealDelayMs = 220;
 const AdaptiveReadinessContext = createContext(true);
 
 export function useAdaptiveReadiness() {
@@ -20,27 +20,39 @@ export function AdaptiveReadinessGate({
   label = "正在准备页面内容",
   reason = "assets",
   mountChildrenWhileLoading = true,
+  revealDelayMs = adaptiveLoadingRevealDelayMs,
 }: {
   requests: readonly HomepageAssetRequest[];
   children: ReactNode;
   label?: string;
   reason?: string;
   mountChildrenWhileLoading?: boolean;
+  revealDelayMs?: number;
 }) {
-  const [phase, setPhase] = useState<ReadinessPhase>("loading");
-  const routeBuffered = useRef(false);
+  const [phase, setPhase] = useState<ReadinessPhase>("waiting");
+  const loadingVisible = useRef(false);
   const requestKey = useMemo(() => requests.map(({ src, priority = "auto" }) => `${priority}:${src}`).join("|"), [requests]);
 
   useEffect(() => {
     let cancelled = false;
-    routeBuffered.current = routeBufferAttributes.some((attribute) => document.documentElement.hasAttribute(attribute));
-    setPhase("loading");
+    loadingVisible.current = false;
+    setPhase("waiting");
+    const revealTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      loadingVisible.current = true;
+      setPhase("loading");
+    }, revealDelayMs);
     void preloadHomepageAssets(requests).then((result) => {
       if (result.failed.length > 0) console.error(`[AdaptiveReadinessGate] assets failed: ${result.failed.join(", ")}`);
-      if (!cancelled) setPhase(routeBuffered.current ? "ready" : "leaving");
+      if (cancelled) return;
+      window.clearTimeout(revealTimer);
+      setPhase(loadingVisible.current ? "leaving" : "ready");
     });
-    return () => { cancelled = true; };
-  }, [requestKey, requests]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(revealTimer);
+    };
+  }, [requestKey, requests, revealDelayMs]);
 
   useEffect(() => {
     if (phase !== "leaving") return;
@@ -48,10 +60,10 @@ export function AdaptiveReadinessGate({
     return () => window.clearTimeout(timer);
   }, [phase]);
 
-  const contentReady = phase !== "loading";
+  const contentReady = phase === "leaving" || phase === "ready";
   if (phase === "ready") return <AdaptiveReadinessContext.Provider value>{children}</AdaptiveReadinessContext.Provider>;
   return <>
     {mountChildrenWhileLoading || contentReady ? <AdaptiveReadinessContext.Provider value={contentReady}>{children}</AdaptiveReadinessContext.Provider> : null}
-    <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/>
+    {phase === "loading" || phase === "leaving" ? <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/> : null}
   </>;
 }

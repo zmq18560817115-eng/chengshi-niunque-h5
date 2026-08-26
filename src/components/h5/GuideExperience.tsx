@@ -45,7 +45,7 @@ export function GuideExperience() {
     };
   }, [router]);
 
-  return <AdaptiveReadinessGate requests={guideReadinessRequests} label="正在准备品牌引导" reason="guide-assets" mountChildrenWhileLoading={false}>
+  return <AdaptiveReadinessGate requests={guideReadinessRequests} label="正在准备品牌引导" reason="guide-assets" revealDelayMs={600}>
     <BrandGuide/>
   </AdaptiveReadinessGate>;
 }
