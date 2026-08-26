@@ -433,12 +433,13 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("top: 2545.5");
     expect(component).toContain("left: 556");
     expect(component).toContain("top: 2779.5");
-    expect(component).toContain("left: 102");
+    expect(component).toContain("left: 94");
     expect(component).toContain("top: 3155.5");
     expect(component).toContain("left: 542.5");
     expect(component).toContain("top: 3518");
     expect(component).toContain("left: 475, top: 2787.5");
-    expect(component).toContain("left: 18.5, top: 3168");
+    expect(component).toContain("left: 10.5, top: 3168");
+    expect(component).toContain("left: 28, top: 3181.5");
     expect(component).toContain("left: 468.5, top: 3532.5");
     expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
     expect(component).not.toContain("aspectRatio:");

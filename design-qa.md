@@ -1,5 +1,16 @@
 # Design QA
 
+## Latest pass — Review-title optical centering
+
+- Scope: only the homepage ②“复核保障” title lockup; other artwork, module hotspots, routes, and animation timing remain unchanged.
+- The title poster, ring, and digit moved together by 8 master units: title x `102 → 94`, ring x `18.5 → 10.5`, and digit x `36 → 28`.
+- At the 375px reference width this is a 3px leftward correction. The complete lockup remains inside the yellow tab with a master-space visible range of x=10.5–453.5 and no clipping.
+- Browser verification used the live `/reports` page after asset settlement. The supplied raster title, number-part spacing, baseline, yellow texture, character, and white paper remain unchanged.
+
+final result: passed
+
+---
+
 ## Latest pass — Independent four-page layers, smoother titles, and non-blocking warm-up
 
 ### Comparison Target
