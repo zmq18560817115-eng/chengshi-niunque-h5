@@ -1,5 +1,35 @@
 # Design QA
 
+## Latest pass — Guide width adaptation in embedded mobile browsers
+
+### Comparison target and evidence
+
+- Visual truth: `docs/input/design/final-v1/references-最终效果/guide-final-reference.jpg.jpg` (2000 x 4333, read-only). Its former bottom prompt is an older product decision; the current supplied `swipe-up-hint-v2.png` remains intentional.
+- Reported device capture: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-ae58fb59-1740-4270-b20b-230f67c7d466.png` (1224 x 2700 device pixels, with a measured 1224 x 2414 web-content area below browser chrome).
+- Before comparison: `test-results/design-qa/2026-08-26-guide-width/comparison-before.png`.
+- Verified implementation capture: `test-results/design-qa/2026-08-26-guide-width/implementation-full.png`, captured from the live `/go` route in the Codex in-app browser after the guide animation settled.
+- Final same-input comparison: `test-results/design-qa/2026-08-26-guide-width/comparison-after.png`; both sides are normalized to the same 750 x 1440 visible stage and use the same centered cover crop.
+
+### Measurements and fixes
+
+- The reported layout rendered its 750 / 1625 stage by available height. The actual artwork occupied x=55–1168, approximately 1114px or 91.01% of the 1224px content width, leaving about 55px / 4.49% on both sides.
+- The guide stage and adaptive loading stage now fill the complete safe-area content box. Their full-canvas layers use one `object-fit: cover` and centered registration, so short embedded-browser viewports crop equal source portions vertically instead of narrowing the whole composition.
+- All character, mask, frame, paper, foreground, bootstrap and fallback layers share the same transform and remain registered. No raster is stretched.
+- The obsolete mirrored surround DOM and CSS were removed, eliminating the two visible vertical seams. The independent bottom prompt remains anchored to the live stage rather than the covered source canvas.
+- The loading poster and delayed loading animation use the same geometry as the guide, preventing a width jump when the readiness buffer appears or exits.
+
+### Verification
+
+- Live browser geometry: root 2560 x 1440; capped H5 stage 750 x 1440 at x=905; full-canvas computed style `object-fit: cover`, `object-position: 50% 50%`; surround count 0; document overflow unchanged.
+- Responsive assertions cover 320 x 568 through 430 x 932, including a short 393 x 797 embedded-browser case. Tablet-width math also honors the existing 750px H5 content cap.
+- The final visual comparison preserves the Logo, character, window, envelope, paper, bottom prompt, colors, asset quality and hierarchy. No unrelated homepage, category, report, data, route, or animation behavior changed.
+
+No actionable P0, P1, or P2 visual mismatch remains for the reported width adaptation.
+
+final result: passed
+
+---
+
 ## Latest pass — Review-title optical centering
 
 - Scope: only the homepage ②“复核保障” title lockup; other artwork, module hotspots, routes, and animation timing remain unchanged.

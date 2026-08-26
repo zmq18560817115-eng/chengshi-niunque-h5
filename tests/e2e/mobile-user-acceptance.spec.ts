@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 
 const devices = [
   { name: "iphone-se", width: 375, height: 667 },
   { name: "iphone-x-13-mini", width: 375, height: 812 },
   { name: "iphone-12-13-14", width: 390, height: 844 },
+  { name: "embedded-browser-short", width: 393, height: 797 },
   { name: "iphone-14-15-pro", width: 393, height: 852 },
   { name: "iphone-plus-pro-max", width: 414, height: 896 },
   { name: "large-android-pro-max", width: 430, height: 932 },
@@ -25,6 +27,29 @@ async function expectNoHorizontalOverflow(
   expect(metrics.scrollWidth).toBeLessThanOrEqual(width);
 }
 
+async function expectStageFillsSafeContentBox(root: Locator, stage: Locator) {
+  const [rootBox, stageBox, padding] = await Promise.all([
+    root.boundingBox(),
+    stage.boundingBox(),
+    root.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        top: Number.parseFloat(style.paddingTop) || 0,
+        right: Number.parseFloat(style.paddingRight) || 0,
+        bottom: Number.parseFloat(style.paddingBottom) || 0,
+        left: Number.parseFloat(style.paddingLeft) || 0,
+      };
+    }),
+  ]);
+  expect(rootBox).not.toBeNull();
+  expect(stageBox).not.toBeNull();
+  if (!rootBox || !stageBox) throw new Error("viewport stage has no layout box");
+  expect(stageBox.x).toBeCloseTo(rootBox.x + padding.left, 0);
+  expect(stageBox.y).toBeCloseTo(rootBox.y + padding.top, 0);
+  expect(stageBox.width).toBeCloseTo(rootBox.width - padding.left - padding.right, 0);
+  expect(stageBox.height).toBeCloseTo(rootBox.height - padding.top - padding.bottom, 0);
+}
+
 for (const device of devices) {
   test(`${device.name} completes guide to archive at ${device.width}x${device.height}`, async ({ page }) => {
     const runtimeErrors: string[] = [];
@@ -33,13 +58,29 @@ for (const device of devices) {
     await page.goto("/go");
     await expect(page.getByRole("region", { name: "品牌引导页" })).toBeVisible();
     await expect(page.getByRole("button", { name: "进入档案" })).toBeVisible();
-    const guideStageBox = await page.locator(".brand-guide-stage").boundingBox();
-    expect(guideStageBox).not.toBeNull();
-    expect(guideStageBox!.x).toBeGreaterThanOrEqual(0);
-    expect(guideStageBox!.y).toBeGreaterThanOrEqual(0);
-    expect(guideStageBox!.x + guideStageBox!.width).toBeLessThanOrEqual(device.width + 0.5);
-    expect(guideStageBox!.y + guideStageBox!.height).toBeLessThanOrEqual(device.height + 0.5);
-    expect(guideStageBox!.width / guideStageBox!.height).toBeCloseTo(750 / 1625, 3);
+    const guideRoot = page.locator(".brand-guide");
+    const guideStage = page.locator(".brand-guide-stage");
+    await expectStageFillsSafeContentBox(guideRoot, guideStage);
+    await expect(guideStage).toHaveCSS("aspect-ratio", "auto");
+    await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
+    const fullCanvasLayerStyles = await page.locator([
+      ".brand-guide-base",
+      ".brand-guide-arch",
+      ".brand-guide-paper",
+      ".brand-guide-character",
+      ".brand-guide-window-mask",
+      ".brand-guide-foreground-top",
+      ".brand-guide-fallback",
+      ".brand-guide-bootstrap-reduced",
+    ].join(", ")).evaluateAll((elements) => elements.map((element) => {
+      const style = window.getComputedStyle(element);
+      return { objectFit: style.objectFit, objectPosition: style.objectPosition };
+    }));
+    expect(fullCanvasLayerStyles.length).toBeGreaterThan(0);
+    for (const style of fullCanvasLayerStyles) {
+      expect(style.objectFit).toBe("cover");
+      expect(style.objectPosition).toBe("50% 50%");
+    }
     await expectNoHorizontalOverflow(page, device.width);
     await page.waitForTimeout(2300);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-guide.png` });
@@ -87,6 +128,12 @@ test("guide handoff shows the adaptive buffer until slow homepage artwork is pai
   await page.waitForURL(/\/reports$/);
   const reportsBuffer = page.locator('[data-loading-reason="reports-assets"]');
   await expect(reportsBuffer).toBeVisible({ timeout: 3000 });
+  const bufferRoot = reportsBuffer.locator(".guide-loading-buffer");
+  const bufferStage = reportsBuffer.locator(".guide-loading-buffer-stage");
+  await expectStageFillsSafeContentBox(bufferRoot, bufferStage);
+  await expect(bufferStage).toHaveCSS("aspect-ratio", "auto");
+  await expect(reportsBuffer.locator(".guide-loading-buffer-poster")).toHaveCSS("object-fit", "cover");
+  await expect(reportsBuffer.locator(".guide-loading-buffer-poster")).toHaveCSS("object-position", "50% 50%");
   await expect(reportsBuffer).toHaveCount(0, { timeout: 10000 });
   await expect(page.locator(".reports-archive-final")).toBeVisible();
 });

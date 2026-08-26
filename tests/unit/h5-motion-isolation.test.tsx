@@ -85,22 +85,22 @@ describe("H5 motion isolation", () => {
     expect(guide).not.toContain('window.location.assign("/reports")');
   });
 
-  it("contains every guide layer inside the safe viewport on the same undistorted canvas", () => {
+  it("covers the safe guide viewport with every full-canvas layer on the same undistorted canvas", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
+    const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     expect(css).toContain("overflow: hidden; align-items: center;");
-    expect(css).toContain(".brand-guide-stage { position: relative; z-index: 1; isolation: isolate; width: auto; max-width: 100%; height: min(100%, 216.6667vw); aspect-ratio: 750 / 1625;");
-    expect(css).toContain("object-fit: contain; object-position: center;");
-    expect(css).toContain("padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+    expect(css).toMatch(/\.brand-guide-stage\s*\{[^}]*width:\s*min\(100%,\s*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*hidden;/);
+    expect(css).toMatch(/\.brand-guide-base,\s*\.brand-guide-arch,[^{]+\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
+    expect(css).toMatch(/\.brand-guide\s*\{[^}]*padding:\s*env\(safe-area-inset-top\) env\(safe-area-inset-right\) env\(safe-area-inset-bottom\) env\(safe-area-inset-left\);/);
     expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
     expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
-    expect(css).toContain("--guide-stage-gutter: max(0px, calc((100cqw - min(100cqw, 46.1538cqh)) / 2));");
-    expect(css).toContain('.brand-guide-surround-fill { position: absolute; top: 0; bottom: 0; display: block; width: var(--guide-stage-gutter); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp")');
-    expect(css).toContain("background-size: auto 100cqh; background-repeat: no-repeat;");
-    expect(css).toContain("transform: scaleX(-1);");
-    expect(readFileSync("src/components/h5/BrandGuide.tsx", "utf8")).toContain('data-artwork-source="layered-guide-texture"');
+    expect(css).not.toContain("--guide-stage-gutter");
+    expect(css).not.toContain(".brand-guide-surround");
+    expect(guide).not.toContain("brand-guide-surround");
+    expect(guide).not.toContain('data-artwork-source="layered-guide-texture"');
     expect(css).not.toContain("guide-initial-frame-out");
     expect(css).not.toContain("guide-final-frame-in");
   });
@@ -119,14 +119,16 @@ describe("H5 motion isolation", () => {
 
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
-    [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("scales the complete guide proportionally inside a %ix%i phone viewport", (width, height) => {
-    const scale = Math.min(width / 750, height / 1625);
-    const stageWidth = 750 * scale;
-    const stageHeight = 1625 * scale;
-    expect(stageWidth).toBeLessThanOrEqual(width + Number.EPSILON);
-    expect(stageHeight).toBeLessThanOrEqual(height + Number.EPSILON);
-    expect(stageWidth / stageHeight).toBeCloseTo(750 / 1625, 8);
+    [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
+  ])("covers a %ix%i guide safe-content stage without distorting the 750x1625 canvas", (width, height) => {
+    const stageWidth = Math.min(width, 750);
+    const scale = Math.max(stageWidth / 750, height / 1625);
+    const layerWidth = 750 * scale;
+    const layerHeight = 1625 * scale;
+    expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
+    expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
+    expect(Math.min(layerWidth - stageWidth, layerHeight - height)).toBeCloseTo(0, 8);
+    expect(layerWidth / layerHeight).toBeCloseTo(750 / 1625, 8);
   });
 
   it("keeps the new guide hint static while unlocking entry after the papers", () => {
@@ -265,7 +267,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".runtime-loading-layer { position: fixed;");
     expect(css).toContain("z-index: 2147483600;");
     expect(css).toContain(".guide-loading-buffer.is-leaving");
-    expect(css).toContain(".guide-loading-buffer-stage { position: relative; width: auto; max-width: 100%; height: min(100%, 216.7vw); aspect-ratio: 2000 / 4334;");
+    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*width:\s*min\(100%,\s*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;/);
+    expect(css).toMatch(/\.guide-loading-buffer-gif,\s*\.guide-loading-buffer-poster\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
     expect(css).toContain(".guide-loading-buffer-poster { visibility: visible; }");
   });
 
