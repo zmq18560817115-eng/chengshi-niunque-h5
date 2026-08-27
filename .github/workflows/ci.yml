@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一分支的并发提交只保留最新一次运行，节省额度。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Build · Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 占位环境变量：Prisma generate 只读 schema、不连库；tests/setup 与 next build
+      # 需要读取 .env，用示例值即可（不含真实密钥）。
+      - name: Prepare env
+        run: cp .env.example .env
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      # 仅跑不依赖数据库/对象存储的单元测试；集成用例与 health 检查需要实盘 Postgres/MinIO，
+      # 不在无状态 CI 中运行。
+      - name: Unit tests
+        run: pnpm exec vitest run tests/unit --exclude '**/health.test.ts'
