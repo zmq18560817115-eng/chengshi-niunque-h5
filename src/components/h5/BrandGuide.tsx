@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
@@ -49,6 +50,7 @@ function GuideLayers({ onError }: { onError: (name: string) => void }) {
 }
 
 export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; onEnter?: () => void }) {
+  const router = useRouter();
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
   const [assetStatus, setAssetStatus] = useState<AssetStatus>(motionEnabled ? "loading" : "disabled");
@@ -64,13 +66,18 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     return () => window.clearTimeout(timer);
   }, [animationStarted]);
 
+  // 预取首页，进入时用客户端软导航替代整页刷新，消除切换卡帧/白屏断档。
+  useEffect(() => {
+    if (!preview) router.prefetch("/reports");
+  }, [preview, router]);
+
   const enter = useCallback(() => {
     if (entering.current || leaving || preview) return;
     entering.current = true;
     setLeaving(true);
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => onEnter ? onEnter() : window.location.assign("/reports"), reducedMotion ? 150 : 460);
-  }, [leaving, onEnter, preview]);
+    window.setTimeout(() => onEnter ? onEnter() : router.push("/reports"), reducedMotion ? 150 : 460);
+  }, [leaving, onEnter, preview, router]);
 
   const handleLayerError = useCallback((name: string) => {
     console.error(`[BrandGuide] asset failed: ${name}`);
@@ -111,7 +118,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       if (!start || !touch || !swipeReady) return;
       const deltaX = touch.clientX - start.x;
       const deltaY = touch.clientY - start.y;
-      if (deltaX <= -50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) enter();
+      // 上滑进入首页：竖直位移为主且向上超过阈值。
+      if (deltaY <= -50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) enter();
     }}>
     <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={swipeReady ? "ready" : "locked"} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-hint-start-ms={h5MotionTiming.guide.hintStartMs} data-hint-duration-ms={h5MotionTiming.guide.hintDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
       <MotionBoundary fallback={fallback}>
@@ -120,7 +128,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
         </MotionStage>
       </MotionBoundary>
       <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
-      <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向左滑动，或点击滑动提示进入档案"}</small>
+      <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击滑动提示进入档案"}</small>
       <button className="brand-guide-enter-action" type="button" onClick={enter} disabled={leaving || preview}>进入档案</button>
     </section>
   </main>;

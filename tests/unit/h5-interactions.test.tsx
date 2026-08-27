@@ -111,7 +111,7 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it("enters on a deliberate left swipe after guide assets are ready", async () => {
+  it("enters on a deliberate up swipe after guide assets are ready", async () => {
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
@@ -119,17 +119,17 @@ describe("multi-page H5 interactions", () => {
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(stage).toHaveAttribute("data-swipe-state", "ready"));
     expect(page).toHaveClass("is-ready", "is-motion-enabled");
-    fireEvent.touchStart(page, { touches: [{ clientX: 260, clientY: 300 }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 190, clientY: 310 }] });
+    fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 210 }] });
     await waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
   });
 
   it.each([
-    ["upward", { x: 200, y: 300 }, { x: 196, y: 220 }],
-    ["downward", { x: 200, y: 220 }, { x: 196, y: 300 }],
+    ["downward", { x: 200, y: 220 }, { x: 204, y: 300 }],
+    ["leftward", { x: 260, y: 260 }, { x: 190, y: 255 }],
     ["rightward", { x: 180, y: 260 }, { x: 250, y: 255 }],
-    ["short left", { x: 240, y: 260 }, { x: 195, y: 258 }],
-    ["mostly vertical diagonal", { x: 260, y: 320 }, { x: 195, y: 230 }],
+    ["short up", { x: 200, y: 260 }, { x: 204, y: 220 }],
+    ["mostly horizontal diagonal", { x: 260, y: 300 }, { x: 190, y: 250 }],
   ])("does not enter after a %s gesture", async (_label, start, end) => {
     vi.useFakeTimers();
     const onEnter = vi.fn();

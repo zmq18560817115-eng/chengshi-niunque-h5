@@ -251,8 +251,9 @@ button, a { font: inherit; }
 .standalone-preview-scroll { display: grid; justify-content: center; height: calc(100vh - 4.25rem); padding: var(--space-4); overflow: auto; }
 .standalone-preview-scroll > div { border: 1px solid #cfc7bd; background: var(--color-canvas); }
 .standalone-preview-scroll .h5-shell { max-width: none; min-width: 0; box-shadow: none; }
-.brand-guide { display: flex; width: 100%; max-width: var(--h5-content-width); height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; background-repeat: no-repeat; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: pan-y; }
-.brand-guide.is-leaving { opacity: .95; transform: translate3d(-100%,0,0); pointer-events: none; }
+.brand-guide { display: flex; width: 100%; max-width: var(--h5-content-width); height: 100vh; height: 100svh; height: 100dvh; margin-inline: auto; overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; background-repeat: no-repeat; opacity: 1; transform: translate3d(0,0,0); transition: opacity 460ms cubic-bezier(.22,1,.36,1), transform 460ms cubic-bezier(.22,1,.36,1); cursor: default; touch-action: none; will-change: opacity, transform; }
+/* 进入首页：引导页整体淡出并向上推离，与首页淡入衔接。 */
+.brand-guide.is-leaving { opacity: 0; transform: translate3d(0,-100%,0); pointer-events: none; }
 .brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 1 1 auto; overflow: hidden; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 0; }
@@ -300,14 +301,15 @@ button, a { font: inherit; }
 @keyframes guide-hint-in { 0% { transform: translate3d(0, 2.2%, 0); opacity: 0; } 38% { transform: translate3d(0, 1.2%, 0); opacity: .38; } 72% { transform: translate3d(0, .35%, 0); opacity: .82; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
 @keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.35rem, 0, 0); } }
 .reports-archive { animation: reports-enter .32s ease both; }
-.reports-archive.reports-entry-transition { animation: reports-slide-in 460ms cubic-bezier(.22,1,.36,1) both; }
+/* 首页作为一整本档案渐显进入（第一部分：整册画面）。 */
+.reports-archive.reports-entry-transition { animation: reports-book-in 520ms cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition { animation: h5-page-enter .28s cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition.is-leaving { pointer-events: none; animation: h5-page-leave .22s cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition.is-swipe-back { pointer-events: none; animation: h5-page-swipe-back .22s cubic-bezier(.22,1,.36,1) both; }
 @keyframes h5-page-enter { from { opacity: 0; transform: translate3d(0,7px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 @keyframes h5-page-leave { to { opacity: 0; transform: translate3d(0,-7px,0); } }
 @keyframes h5-page-swipe-back { to { opacity: 0; transform: translate3d(8px,0,0); } }
-@keyframes reports-slide-in { from { opacity: .95; transform: translate3d(100%,0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes reports-book-in { from { opacity: 0; transform: translate3d(0,16px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 .reports-archive-final, .category-page-final { position: relative; overflow: hidden; background: #f5f0e7; box-shadow: none; }
 .category-page-final { container-type: inline-size; }
 .reports-archive-art, .category-page-art { display: block; width: 100%; height: auto; }
@@ -469,9 +471,12 @@ button, a { font: inherit; }
 .archive-category-hotspot, .category-card-hotspot { position: absolute; z-index: 2; display: block; min-width: 44px; min-height: 44px; border-radius: 1rem; color: transparent; text-decoration: none; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
 .archive-category-hotspot span, .category-card-hotspot span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .archive-category-hotspot:focus-visible, .category-card-hotspot:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
-.archive-category-hotspot { padding: 0; border: 0; opacity: 0; background: transparent; transform: none; transition: filter .08s ease; }
-.archive-category-hotspot.is-visible { opacity: 1; transform: none; }
-.archive-category-hotspot.is-pressed { filter: brightness(.94); transform: none; }
+/* 交互层作为“第二部分”在整册画面渐显约 80%（≈420ms）后接力淡入；
+   动画结束后固定为可见，保证点击时的按压反馈可见。 */
+.archive-category-hotspot { padding: 0; border: 0; opacity: 0; background: transparent; transform: none; transition: background-color .1s ease, transform .1s ease; animation: archive-hotspot-in .32s ease .42s both; }
+.archive-category-hotspot.is-visible { opacity: 1; }
+.archive-category-hotspot.is-pressed { background: rgb(64 41 31 / .18); transform: scale(.968); }
+@keyframes archive-hotspot-in { from { opacity: 0; } to { opacity: 1; } }
 .archive-motion-layers { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 .archive-motion { position: absolute; display: block; width: auto; height: auto; opacity: 0; animation-play-state: paused; }
 .archive-motion.is-visible { animation-play-state: running; }
@@ -774,7 +779,8 @@ button, a { font: inherit; }
   display: none !important;
 }
 
-.reports-archive-final .archive-category-hotspot:active, .category-page-final .category-card-hotspot:active { background: rgb(255 255 255 / .12); }
+/* 点击即时反馈：按压时叠加半透明高亮并轻微内缩，让用户立刻感知“已点到”。 */
+.reports-archive-final .archive-category-hotspot:active, .reports-archive-final .archive-category-hotspot.is-pressed, .category-page-final .category-card-hotspot:active { background: rgb(64 41 31 / .18); transform: scale(.968); }
 .reports-archive-art { animation: archive-art-enter .65s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes archive-art-enter { from { opacity: .82; transform: scale(1.012); } to { opacity: 1; transform: scale(1); } }
 .reports-hero { min-height: 72svh; padding: var(--space-12) var(--space-6); background: var(--color-yellow); }
@@ -831,7 +837,7 @@ button, a { font: inherit; }
   .brand-guide { transition: opacity 150ms ease; }
   .brand-guide.is-leaving { opacity: 0; transform: none; }
   .reports-archive.reports-entry-transition { animation: reports-fade-in 150ms ease both; }
-  .archive-category-hotspot { opacity: 1; transform: none; transition: none; }
+  .archive-category-hotspot { opacity: 1; transform: none; transition: none; animation: none; }
   .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
   .brand-guide.is-ready .brand-guide-fallback, .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; transition: none; }
   .archive-module-one { opacity: 1; transform: none; transition: none; }

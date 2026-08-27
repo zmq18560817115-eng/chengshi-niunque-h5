@@ -45,7 +45,11 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
         const layout = getArchiveModuleLayout(module.slug)!;
         const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, "--archive-order": layout.order } as CSSProperties;
         return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
-          <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving} onClick={() => enter(module)}><span>{module.title}</span></button>;
+          <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving}
+            onPointerDown={() => { if (!leaving) setPressedSlug(module.slug); }}
+            onPointerLeave={() => setPressedSlug((current) => (leaving ? current : current === module.slug ? null : current))}
+            onPointerCancel={() => setPressedSlug((current) => (leaving ? current : current === module.slug ? null : current))}
+            onClick={() => enter(module)}><span>{module.title}</span></button>;
       })}
     </nav>
   </main>;
