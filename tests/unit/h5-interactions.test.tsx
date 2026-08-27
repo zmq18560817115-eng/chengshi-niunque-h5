@@ -48,6 +48,8 @@ async function resolvePendingImages(predicate: (image: PendingImage) => boolean)
   }
 }
 
+const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
+
 describe("multi-page H5 interactions", () => {
   beforeEach(() => {
     releaseHomepagePreloadedAssets();
@@ -297,13 +299,18 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");
   });
 
-  it("stays on the guide after five seconds and only enters once from the hint action", () => {
+  it("stays on the guide after five seconds and only enters once from the hint action", async () => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
     render(<BrandGuide onEnter={onEnter} />);
     act(() => vi.advanceTimersByTime(5000));
     expect(onEnter).not.toHaveBeenCalled();
+    await act(async () => {
+      await resolvePendingImages(() => true);
+      await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + h5MotionTiming.guide.swipeReadyMs + 32);
+    });
     const action = screen.getByRole("button", { name: "进入档案" });
+    expect(action).toBeEnabled();
     fireEvent.click(action);
     fireEvent.click(action);
     act(() => vi.advanceTimersByTime(460));
@@ -316,14 +323,14 @@ describe("multi-page H5 interactions", () => {
 
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    expect(pendingImages.every(({ src }) => src.includes("/design/guide/"))).toBe(true);
+    expect(pendingImages.every(isGuideReadinessAsset)).toBe(true);
     expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
     act(() => vi.advanceTimersByTime(599));
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
     await act(async () => {
-      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
+      await resolvePendingImages(isGuideReadinessAsset);
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
     await act(async () => {
@@ -372,7 +379,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
 
     await act(async () => {
-      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
+      await resolvePendingImages(isGuideReadinessAsset);
     });
     expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
   });
@@ -382,7 +389,7 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<GuideExperience />);
 
     await act(async () => {
-      await resolvePendingImages(({ src }) => src.includes("/design/guide/"));
+      await resolvePendingImages(isGuideReadinessAsset);
       await vi.advanceTimersByTimeAsync(1000);
     });
 
@@ -390,7 +397,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
   });
 
-  it("unlocks touch-move after the MotionStage crossfade without waiting for the visual hint timer", async () => {
+  it("tracks touch progress after the MotionStage crossfade and commits on release", async () => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
@@ -417,12 +424,19 @@ describe("multi-page H5 interactions", () => {
       await vi.advanceTimersByTimeAsync(16);
     });
     expect(stage).toHaveAttribute("data-gesture-state", "ready");
-    fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
-    fireEvent.touchMove(page, { touches: [{ clientX: 198, clientY: 276 }] });
+    fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 300 }] });
+    await act(async () => {
+      fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 276 }] });
+      await vi.advanceTimersByTimeAsync(16);
+    });
+    expect(page).toHaveClass("is-dragging");
+    expect(Number(page.getAttribute("data-swipe-progress"))).toBeGreaterThan(0);
+    expect(page).not.toHaveClass("is-leaving");
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 196, clientY: 220 }] });
     expect(page).toHaveClass("is-leaving");
     act(() => vi.advanceTimersByTime(guideRouteNavigationDelayMs));
     expect(onEnter).toHaveBeenCalledOnce();
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 196, clientY: 180 }] });
     expect(onEnter).toHaveBeenCalledOnce();
   });
 
@@ -438,10 +452,70 @@ describe("multi-page H5 interactions", () => {
     const page = screen.getByRole("main");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
-    fireEvent.touchStart(page, { touches: [{ clientX: start.x, clientY: start.y }] });
-    fireEvent.touchMove(page, { touches: [{ clientX: end.x, clientY: end.y }] });
-    fireEvent.touchEnd(page, { changedTouches: [{ clientX: end.x, clientY: end.y }] });
-    await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 60)); });
+    fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: start.x, clientY: start.y }] });
+    fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: end.x, clientY: end.y }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: end.x, clientY: end.y }] });
+    expect(page).toHaveAttribute("data-swipe-interaction", "settling");
+    await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 320)); });
+    expect(page).toHaveAttribute("data-swipe-interaction", "idle");
+    expect(page).toHaveAttribute("data-swipe-progress", "0.000");
+    expect(onEnter).not.toHaveBeenCalled();
+  });
+
+  it("does not finish the tracked touch when an unrelated finger ends", async () => {
+    const onEnter = vi.fn();
+    const { container } = render(<BrandGuide onEnter={onEnter} />);
+    const page = screen.getByRole("main");
+    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
+    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
+    fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 2, clientX: 240, clientY: 260 }] });
+    expect(page).toHaveClass("is-dragging");
+    expect(onEnter).not.toHaveBeenCalled();
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
+    expect(page).toHaveClass("is-leaving");
+  });
+
+  it("cancels a touch-only gesture when a second finger joins", async () => {
+    const onEnter = vi.fn();
+    const { container } = render(<BrandGuide onEnter={onEnter} />);
+    const page = screen.getByRole("main");
+    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
+    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
+    fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
+    expect(page).toHaveClass("is-dragging");
+    fireEvent.touchStart(page, { touches: [
+      { identifier: 1, clientX: 198, clientY: 210 },
+      { identifier: 2, clientX: 240, clientY: 260 },
+    ] });
+    expect(page).not.toHaveClass("is-dragging");
+    expect(page).toHaveAttribute("data-swipe-interaction", "settling");
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 198, clientY: 180 }] });
+    expect(page).not.toHaveClass("is-leaving");
+    expect(onEnter).not.toHaveBeenCalled();
+  });
+
+  it("cancels a primary pointer gesture when a second touch pointer joins", async () => {
+    const onEnter = vi.fn();
+    const { container } = render(<BrandGuide onEnter={onEnter} />);
+    const page = screen.getByRole("main");
+    const dispatchTouchPointer = (type: string, values: Record<string, string | number | boolean>) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.entries(values).forEach(([name, value]) => Object.defineProperty(event, name, { value }));
+      fireEvent(page, event);
+    };
+    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
+    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    dispatchTouchPointer("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 200, clientY: 320 });
+    dispatchTouchPointer("pointermove", { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 198, clientY: 210 });
+    expect(page).toHaveClass("is-dragging");
+    dispatchTouchPointer("pointerdown", { pointerId: 2, pointerType: "touch", isPrimary: false, button: 0, clientX: 240, clientY: 260 });
+    expect(page).not.toHaveClass("is-dragging");
+    expect(page).toHaveAttribute("data-swipe-interaction", "settling");
+    dispatchTouchPointer("pointerup", { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 198, clientY: 180 });
+    expect(page).not.toHaveClass("is-leaving");
     expect(onEnter).not.toHaveBeenCalled();
   });
 
@@ -557,12 +631,28 @@ describe("multi-page H5 interactions", () => {
     consoleError.mockRestore();
   });
 
+  it("keeps the textured destination fallback after a separate preload later succeeds", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { container } = render(<BrandGuide/>);
+    const page = screen.getByRole("main");
+    const stage = container.querySelector(".brand-guide-stage");
+    const destination = container.querySelector(".brand-guide-destination-image");
+    fireEvent.error(destination as Element);
+    expect(stage).toHaveAttribute("data-destination-state", "fallback");
+    expect(page).toHaveClass("has-destination-fallback");
+    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
+    expect(stage).toHaveAttribute("data-destination-state", "fallback");
+    expect(page).toHaveClass("has-destination-fallback");
+    consoleError.mockRestore();
+  });
+
   it("keeps the final static fallback when reduced motion is requested", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const { container } = render(<BrandGuide />);
     const page = screen.getByRole("main");
     await waitFor(() => expect(page).toHaveClass("is-reduced"));
-    expect(pendingImages).toHaveLength(0);
+    expect(pendingImages).toHaveLength(1);
+    expect(pendingImages[0]?.src).toContain("archive-reference.webp");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();

@@ -68,7 +68,7 @@ for (const device of devices) {
     await expectStageFillsSafeContentBox(guideRoot, guideStage);
     await expect(guideStage).toHaveCSS("aspect-ratio", "auto");
     await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
-    const fullCanvasLayerStyles = await page.locator([
+    const fullCanvasLayers = page.locator([
       ".brand-guide-base",
       ".brand-guide-arch",
       ".brand-guide-paper",
@@ -77,21 +77,33 @@ for (const device of devices) {
       ".brand-guide-foreground-top",
       ".brand-guide-fallback",
       ".brand-guide-bootstrap-reduced",
-    ].join(", ")).evaluateAll((elements) => elements.map((element) => {
-      const style = window.getComputedStyle(element);
-      return { objectFit: style.objectFit, objectPosition: style.objectPosition };
-    }));
-    expect(fullCanvasLayerStyles.length).toBeGreaterThan(0);
-    const expectedGuideFit = device.width / device.height >= 15 / 31 ? "contain" : "cover";
-    for (const style of fullCanvasLayerStyles) {
-      expect(style.objectFit).toBe(expectedGuideFit);
-      expect(style.objectPosition).toBe("50% 50%");
-    }
+    ].join(", "));
+    const useTopAlignedCover = device.width <= device.height && device.width / device.height >= 15 / 31;
+    const useLandscapeContain = device.width > device.height && device.height <= 500;
+    await expect.poll(async () => fullCanvasLayers.evaluateAll(
+      (elements, expected: { landscapeContain: boolean; topAligned: boolean }) => elements.length > 0 && elements.every((element) => {
+        const style = window.getComputedStyle(element);
+        const fit = expected.landscapeContain && !element.classList.contains("brand-guide-base") ? "contain" : "cover";
+        const position = expected.topAligned ? "50% 0%" : "50% 50%";
+        return element.isConnected && style.objectFit === fit && style.objectPosition === position;
+      }),
+      { landscapeContain: useLandscapeContain, topAligned: useTopAlignedCover },
+    )).toBe(true);
+    await expect.poll(async () => fullCanvasLayers.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
+      return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
+    }))).toBe(true);
+    await expect(guideStage).toHaveAttribute("data-destination-state", "ready");
+    const destinationImage = page.locator(".brand-guide-destination-image");
+    await expect.poll(async () => destinationImage.evaluate((element) => {
+      return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000 && element.naturalHeight === 5557;
+    })).toBe(true);
     await expectNoHorizontalOverflow(page, device.width);
     await page.waitForTimeout(2300);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-guide.png` });
 
-    await page.getByRole("button", { name: "进入档案" }).click();
+    const enter = page.getByRole("button", { name: "进入档案" });
+    await expect(enter).toBeEnabled({ timeout: 7000 });
+    await enter.click();
     await page.waitForURL(/\/reports$/);
     await expect(page.locator(".reports-archive-final")).toBeVisible();
     await expect(page.locator(".archive-category-hotspot")).toHaveCount(3);
@@ -100,6 +112,83 @@ for (const device of devices) {
     expect(runtimeErrors).toEqual([]);
   });
 }
+
+test("375x812 upward drag moves and crossfades the guide continuously before committing", async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/go", { waitUntil: "domcontentloaded" });
+
+  const root = page.locator(".brand-guide");
+  const stage = page.locator(".brand-guide-stage");
+  await expect(stage).toHaveAttribute("data-gesture-state", "ready", { timeout: 7000 });
+
+  // Start inside the transparent bottom action so tap and swipe paths cannot
+  // block each other on touch-first mobile browsers.
+  await page.mouse.move(188, 770);
+  await page.mouse.down();
+  await page.mouse.move(188, 590, { steps: 6 });
+  await expect.poll(async () => Number(await root.getAttribute("data-swipe-progress"))).toBeGreaterThan(0.2);
+
+  const dragState = await page.evaluate(() => {
+    const rootElement = document.querySelector<HTMLElement>(".brand-guide");
+    const trackElement = document.querySelector<HTMLElement>(".brand-guide-swipe-track");
+    const artworkElement = document.querySelector<HTMLElement>(".brand-guide-artwork");
+    const destinationElement = document.querySelector<HTMLElement>(".brand-guide-destination-image");
+    const stageElement = document.querySelector<HTMLElement>(".brand-guide-stage");
+    if (!rootElement || !trackElement || !artworkElement || !destinationElement || !stageElement) return null;
+    const trackMatrix = new DOMMatrixReadOnly(getComputedStyle(trackElement).transform);
+    return {
+      progress: Number(rootElement.dataset.swipeProgress),
+      offsetY: trackMatrix.m42,
+      stageTop: stageElement.getBoundingClientRect().top,
+      guideOpacity: Number(getComputedStyle(artworkElement).opacity),
+      destinationOpacity: Number(getComputedStyle(destinationElement).opacity),
+    };
+  });
+  expect(dragState).not.toBeNull();
+  if (!dragState) throw new Error("guide drag state is unavailable");
+  expect(dragState.offsetY).toBeLessThan(-160);
+  expect(dragState.guideOpacity).toBeLessThan(0.85);
+  expect(dragState.destinationOpacity).toBeGreaterThan(0.5);
+  await page.screenshot({ path: "artifacts/design-qa/guide-drag-progress-375x812.png" });
+
+  await page.evaluate(() => {
+    const heldWindow = window as typeof window & {
+      __guideRafHold?: { original: typeof window.requestAnimationFrame; callbacks: FrameRequestCallback[] };
+    };
+    const original = window.requestAnimationFrame.bind(window);
+    const callbacks: FrameRequestCallback[] = [];
+    heldWindow.__guideRafHold = { original, callbacks };
+    window.requestAnimationFrame = (callback) => {
+      callbacks.push(callback);
+      return 900000 + callbacks.length;
+    };
+  });
+  await page.mouse.up();
+  const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+  await expect(routeBuffer).toBeVisible();
+  const continuityTop = await routeBuffer.locator(".h5-guide-route-snapshot").evaluate((snapshot) => snapshot.getBoundingClientRect().top);
+  expect(Math.abs(continuityTop - dragState.stageTop)).toBeLessThanOrEqual(2);
+  await page.evaluate(() => {
+    const heldWindow = window as typeof window & {
+      __guideRafHold?: { original: typeof window.requestAnimationFrame; callbacks: FrameRequestCallback[] };
+    };
+    const hold = heldWindow.__guideRafHold;
+    if (!hold) return;
+    window.requestAnimationFrame = hold.original;
+    delete heldWindow.__guideRafHold;
+    hold.callbacks.forEach((callback) => hold.original(callback));
+  });
+  await page.waitForURL(/\/reports$/);
+  await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toBeVisible();
+  await expect.poll(async () => routeBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
+    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000;
+  })).toBe(true);
+  await page.screenshot({ path: "artifacts/design-qa/guide-drag-commit-375x812.png" });
+  await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
+  expect(runtimeErrors).toEqual([]);
+});
 
 test("375x812 user can open every category and a published report", async ({ page }) => {
   const runtimeErrors: string[] = [];
@@ -131,19 +220,39 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
   });
   await page.goto("/go");
   const enter = page.getByRole("button", { name: "进入档案" });
-  await expect(enter).toBeEnabled({ timeout: 5000 });
+  await expect(enter).toBeEnabled({ timeout: 8000 });
   await enter.click();
   await page.waitForURL(/\/reports$/);
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
   const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
   await expect(guideBuffer).toBeVisible({ timeout: 3000 });
   await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toHaveCount(1);
+  await expect(guideBuffer.locator(".h5-guide-route-destination-image")).toHaveCount(1);
+  await expect.poll(async () => guideBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
+    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000;
+  })).toBe(true);
   await expect(guideBuffer.locator(".brand-guide-paper, .brand-guide-character")).toHaveCount(0);
   await page.waitForTimeout(1000);
   await expect(runtimeLoadingLayer).toHaveCount(0);
   await expect(page.locator(".guide-loading-buffer-poster, .guide-loading-buffer-gif")).toHaveCount(0);
   await expect(guideBuffer).toHaveCount(0, { timeout: 15000 });
   await expect(page.locator(".reports-archive-final")).toBeVisible();
+});
+
+test("guide uses a textured transition fallback when the destination preview cannot decode", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.route("**/design/final-v1/archive-reference.webp", (route) => route.abort());
+  await page.goto("/go", { waitUntil: "domcontentloaded" });
+  const stage = page.locator(".brand-guide-stage");
+  const enter = page.getByRole("button", { name: "进入档案" });
+  await expect(stage).toHaveAttribute("data-destination-state", "fallback", { timeout: 10000 });
+  await expect(enter).toBeEnabled({ timeout: 10000 });
+  await enter.click();
+  const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+  await expect(guideBuffer).toHaveClass(/has-destination-fallback/);
+  await expect(guideBuffer.locator(".h5-guide-route-destination-panel")).toHaveCSS("background-image", /archive-paper-texture\.webp/);
+  await page.waitForURL(/\/reports$/);
+  await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
 });
 
 test("375x812 guide handoff exposes staged timing and restores archive scrolling", async ({ page }) => {
@@ -154,11 +263,15 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
     releaseHomepageAssets = resolve;
   });
   await page.route("**/design/final-v1/**", async (route) => {
+    if (route.request().url().endsWith("/archive-reference.webp")) {
+      await route.continue();
+      return;
+    }
     await homepageAssetsReleased;
     await route.continue();
   });
 
-  await page.goto("/go");
+  await page.goto("/go", { waitUntil: "domcontentloaded" });
   const enter = page.getByRole("button", { name: "进入档案" });
   await expect(enter).toBeEnabled({ timeout: 5000 });
 
@@ -170,7 +283,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   const batch = page.locator('[data-guide-entry-group="latest-batch"]');
 
   await enter.click();
-  await page.waitForURL(/\/reports$/);
+  await expect(page).toHaveURL(/\/reports$/);
   await expect(root).toHaveAttribute("data-guide-route-entry", "active");
   await expect(guideBuffer).toBeVisible();
   await page.waitForTimeout(300);
@@ -200,7 +313,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   expect(timing[0].delays).toEqual([0, 0]);
   expect(timing[1].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
   expect(timing[1].durations).toEqual([420, 420]);
-  expect(timing[1].delays).toEqual([374.4, 374.4]);
+  timing[1].delays.forEach((delay) => expect(delay).toBeCloseTo(374.4, 3));
   await page.screenshot({ path: "artifacts/design-qa/guide-to-archive-revealing-375x812.png" });
 
   await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });
