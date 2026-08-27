@@ -160,8 +160,12 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const pressModule = (slug: string) => {
     if (navigating.current || leaving || guideEntry || preview) return;
     setPressedSlug(slug);
-    const requests = getCategoryReadinessAssets(slug).map((src) => ({ src, priority: "high" as const }));
-    void preloadHomepageAssets(requests).catch(() => undefined);
+    // 让按压高亮先渲染,下一帧再发起分类素材预载,避免与点按同帧抢占主线程造成卡顿。
+    window.requestAnimationFrame(() => {
+      if (navigating.current || leaving || guideEntry) return;
+      const requests = getCategoryReadinessAssets(slug).map((src) => ({ src, priority: "high" as const }));
+      void preloadHomepageAssets(requests).catch(() => undefined);
+    });
   };
 
   const exitingSlug = leaving ? pressedSlug : null;
@@ -178,7 +182,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their
           supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
-      <ArchiveArtwork preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
+      <ArchiveArtwork preview={preview} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />}
