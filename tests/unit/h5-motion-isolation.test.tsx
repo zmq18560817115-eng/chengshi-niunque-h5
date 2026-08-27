@@ -91,18 +91,21 @@ describe("H5 motion isolation", () => {
     expect(guide).not.toContain('window.location.assign("/reports")');
   });
 
-  it("keeps every guide layer aligned while the textured backdrop covers embedded-view gaps", () => {
+  it("keeps the guide edge-to-edge while preserving its composition on short screens", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
-    expect(css).toContain("overflow: hidden; align-items: center;");
-    expect(css).toMatch(/\.brand-guide-stage\s*\{[^}]*width:\s*min\(100%,\s*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*hidden;/);
+    expect(css).toContain(".brand-guide-swipe-track { position: absolute;");
+    expect(css).toMatch(/\.brand-guide-stage\s*\{[^}]*width:\s*100%;[^}]*height:\s*50%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*hidden;/);
     expect(css).toMatch(/\.brand-guide-base,\s*\.brand-guide-arch,[^{]+\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
     expect(css).toContain("@media (orientation: portrait) and (min-aspect-ratio: 15 / 31)");
-    expect(css).toMatch(/min-aspect-ratio:\s*15 \/ 31[\s\S]*\.brand-guide-base,[^{]+\{\s*object-fit:\s*contain;/);
+    expect(css).toMatch(/@media \(orientation: portrait\) and \(min-aspect-ratio: 15 \/ 31\)[\s\S]*?\.brand-guide-base,[\s\S]*?object-position:\s*center top;/);
+    expect(css).toMatch(/@media \(orientation: landscape\) and \(max-height: 500px\)[\s\S]*?\.brand-guide-arch,[\s\S]*?object-fit:\s*contain;/);
+    expect(css).not.toContain("@container (min-aspect-ratio: 15 / 31)");
     expect(css).toContain('background-image: url("/design/guide/guide-background.webp")');
-    expect(css).toContain(".guide-loading-buffer-gif, .guide-loading-buffer-poster, .h5-guide-route-snapshot { object-fit: contain; }");
-    expect(css).toMatch(/\.brand-guide\s*\{[^}]*padding:\s*env\(safe-area-inset-top\) env\(safe-area-inset-right\) env\(safe-area-inset-bottom\) env\(safe-area-inset-left\);/);
+    expect(css).toMatch(/\.guide-loading-buffer-gif,\s*\.guide-loading-buffer-poster\s*\{[^}]*object-fit:\s*cover;/);
+    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*background-image:\s*url\("\/design\/guide\/guide-background\.webp"\);/);
+    expect(css).toMatch(/\.brand-guide\s*\{[^}]*width:\s*100%;[^}]*touch-action:\s*none;/);
     expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
@@ -131,19 +134,13 @@ describe("H5 motion isolation", () => {
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("fits a %ix%i guide safe-content stage without distorting the 750x1625 canvas", (width, height) => {
-    const stageWidth = Math.min(width, 750);
-    const shortEmbeddedViewport = width / height >= 15 / 31;
-    const scale = shortEmbeddedViewport ? Math.min(stageWidth / 750, height / 1625) : Math.max(stageWidth / 750, height / 1625);
+  ])("covers a %ix%i guide viewport without distorting the 750x1625 canvas", (width, height) => {
+    const stageWidth = width;
+    const scale = Math.max(stageWidth / 750, height / 1625);
     const layerWidth = 750 * scale;
     const layerHeight = 1625 * scale;
-    if (shortEmbeddedViewport) {
-      expect(layerWidth).toBeLessThanOrEqual(stageWidth + 1e-9);
-      expect(layerHeight).toBeLessThanOrEqual(height + 1e-9);
-    } else {
-      expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
-      expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
-    }
+    expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
+    expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
     expect(layerWidth / layerHeight).toBeCloseTo(750 / 1625, 8);
   });
 
@@ -166,11 +163,14 @@ describe("H5 motion isolation", () => {
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     const routeTransition = readFileSync("src/components/h5/guide-route-transition.ts", "utf8");
-    expect(css).toContain(".brand-guide.is-leaving { opacity: 0; transform: translate3d(0,-5dvh,0);");
+    expect(css).toContain(".brand-guide.is-leaving { pointer-events: none; }");
+    expect(css).toContain(".brand-guide.is-dragging .brand-guide-swipe-track { will-change: transform; }");
+    expect(css).toContain(".brand-guide.is-settling .brand-guide-swipe-track { transition: transform 240ms");
+    expect(css).toContain(".brand-guide-destination-image");
     expect(css).toContain('.reports-archive.reports-entry-transition[data-guide-entry="reference-staged"] { animation: none; }');
-    expect(css).toContain("@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-travel-distance),0); } to { transform: translate3d(0,0,0); } }");
+    expect(css).toContain("@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-remaining-distance),0); } to { transform: translate3d(0,0,0); } }");
     expect(css).toContain("@keyframes archive-guide-entry-fade { from { opacity: 0; } to { opacity: 1; } }");
-    expect(css).toContain('html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-travel-distance),0);');
+    expect(css).toContain('html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-remaining-distance),0);');
     expect(css).toContain('html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-book,');
     expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-book');
     expect(css).toContain("--guide-route-transition-easing: cubic-bezier(.25,.1,.25,1);");
@@ -178,8 +178,9 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-batch,');
     expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-batch');
     expect(css).toContain("archive-guide-entry-fade var(--archive-guide-batch-duration) var(--guide-route-transition-easing) var(--archive-guide-batch-delay) both;");
-    expect(css).toContain(".h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,var(--guide-route-exit-distance),0);");
-    expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing), transform var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing);");
+    expect(css).toContain(".h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0);");
+    expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) ease-out;");
+    expect(css).toContain(".h5-guide-route-buffer.is-committing .h5-guide-route-track { transform: translate3d(0,var(--guide-route-exit-distance),0); }");
     expect(css).toMatch(/\.reports-archive-entry-group\s*\{[^}]*height:\s*38\.9958610761%;[^}]*overflow:\s*hidden;/);
     expect(css).toContain(".reports-archive-entry-coordinate-layer { position: absolute; top: 0; left: 0; width: 100%; height: 256.4374711583%; }");
     expect(css).toContain("html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden;");
@@ -187,7 +188,7 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("@keyframes guide-route-layer-reveal");
     expect(css).toContain("#h5-guide-route-buffer-host");
     expect(layout).toContain('id="h5-guide-route-buffer-host"');
-    expect(guide).toContain("prepareGuideRouteContinuity();");
+    expect(guide).toContain('prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");');
     expect(guide).toContain("navigateWithGuideContinuity(() => router.push");
     expect(reports).toContain("useLayoutEffect(() => {");
     expect(reports).toContain("announceGuideRouteReady();");
@@ -215,14 +216,19 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
     expect(routeTransition).toContain('snapshot.className = "h5-guide-route-snapshot"');
     expect(routeTransition).toContain('snapshot.src = guideRouteSnapshotSrc');
+    expect(routeTransition).toContain('destination.src = guideRouteDestinationSrc');
+    expect(routeTransition).toContain('track.className = "h5-guide-route-track"');
     expect(routeTransition).toContain("const routeDistance = Math.max(1, Math.round(sourceRect.height || window.innerHeight));");
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);');
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);');
+    expect(routeTransition).toContain('root.style.setProperty("--guide-route-remaining-distance", `${remainingDistance}px`);');
     expect(routeTransition).not.toContain("cloneNode(true)");
     expect(routeTransition).not.toContain("freezeGuideSnapshot");
-    expect(routeTransition).toMatch(/window\.requestAnimationFrame\(\(\) => \{\s*root\.setAttribute\(guideRouteEntryAttribute, "revealing"\);\s*buffer\?\.classList\.add\("is-releasing"\);/);
+    expect(routeTransition).toContain('root.setAttribute(guideRouteEntryAttribute, "revealing")');
+    expect(routeTransition).toContain('buffer?.classList.add("is-releasing")');
     expect(routeTransition).not.toContain("freezeClone");
     expect(css).toContain(".h5-guide-route-snapshot { position: absolute; display: block; max-width: none; object-fit: cover;");
+    expect(css).toContain(".h5-guide-route-destination-image { position: absolute;");
     expect(css).not.toContain("translate3d(100%,0,0)");
   });
 
@@ -353,7 +359,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("#h5-category-route-buffer-host { position: fixed; z-index: 2147483640;");
     expect(css).toContain("html[data-category-route-buffer] .runtime-loading-layer { visibility: hidden; }");
     expect(css).toContain(".guide-loading-buffer.is-leaving");
-    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*width:\s*min\(100%,\s*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;/);
+    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;/);
     expect(css).toMatch(/\.guide-loading-buffer-gif,\s*\.guide-loading-buffer-poster\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
     expect(css).toContain(".guide-loading-buffer-poster { visibility: visible; }");
   });

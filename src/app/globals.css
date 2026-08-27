@@ -36,6 +36,10 @@
   --guide-route-buffer-release-duration: 520ms;
   --guide-route-travel-distance: 100dvh;
   --guide-route-exit-distance: -100dvh;
+  --guide-route-remaining-distance: var(--guide-route-travel-distance);
+  --guide-swipe-offset: 0px;
+  --guide-swipe-guide-opacity: 1;
+  --guide-swipe-destination-opacity: .18;
   --guide-loading-exit-duration: 260ms;
   --category-route-exit-duration: 420ms;
   --category-route-entry-duration: 520ms;
@@ -284,18 +288,29 @@ button, a { font: inherit; }
 .standalone-preview-scroll .h5-shell { max-width: none; min-width: 0; box-shadow: none; }
 .runtime-loading-layer { position: fixed; z-index: 2147483600; inset: 0; overflow: hidden; background: var(--color-canvas); pointer-events: auto; }
 .runtime-loading-layer.is-leaving { pointer-events: none; }
-.guide-loading-buffer { container-type: size; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-loading-exit-duration) var(--h5-route-transition-easing), transform var(--guide-loading-exit-duration) var(--h5-route-transition-easing); }
+.guide-loading-buffer { container-type: size; display: block; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-loading-exit-duration) var(--h5-route-transition-easing), transform var(--guide-loading-exit-duration) var(--h5-route-transition-easing); }
 .guide-loading-buffer.is-leaving { opacity: 0; transform: translate3d(0,-6dvh,0); pointer-events: none; }
-.guide-loading-buffer-stage { position: relative; width: min(100%, var(--h5-content-width)); max-width: none; height: 100%; aspect-ratio: auto; flex: 0 0 auto; overflow: hidden; background: var(--color-canvas); }
+.guide-loading-buffer-stage { position: relative; width: 100%; max-width: none; height: 100%; aspect-ratio: auto; overflow: hidden; background-color: transparent; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
 .guide-loading-buffer-gif, .guide-loading-buffer-poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .guide-loading-buffer-poster { visibility: visible; }
-.brand-guide { container-type: size; position: relative; isolation: isolate; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--h5-route-transition-duration) var(--h5-route-transition-easing), transform var(--h5-route-transition-duration) var(--h5-route-transition-easing); cursor: default; touch-action: pan-x; overscroll-behavior: none; }
+.brand-guide { container-type: size; position: relative; isolation: isolate; display: block; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; overflow: hidden; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); cursor: default; touch-action: none; overscroll-behavior: none; }
 .brand-guide::-webkit-scrollbar { width: 0; height: 0; }
-.brand-guide.is-leaving { opacity: 0; transform: translate3d(0,-5dvh,0); pointer-events: none; }
-.brand-guide-stage { position: relative; z-index: 1; isolation: isolate; width: min(100%, var(--h5-content-width)); max-width: none; height: 100%; aspect-ratio: auto; flex: 0 0 auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
+.brand-guide.is-leaving { pointer-events: none; }
+.brand-guide-swipe-track { position: absolute; z-index: 1; inset: 0; width: 100%; height: 200%; transform: translate3d(0,var(--guide-swipe-offset),0); backface-visibility: hidden; contain: layout paint style; }
+.brand-guide.is-dragging .brand-guide-swipe-track { will-change: transform; }
+.brand-guide.is-settling .brand-guide-swipe-track { transition: transform 240ms cubic-bezier(.22,1,.36,1); will-change: transform; }
+.brand-guide-stage { position: relative; isolation: isolate; width: 100%; max-width: none; height: 50%; aspect-ratio: auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
+.brand-guide-artwork { position: absolute; z-index: 1; inset: 0; overflow: hidden; opacity: var(--guide-swipe-guide-opacity); transform: translate3d(0,0,0); backface-visibility: hidden; contain: layout paint style; }
+.brand-guide.is-dragging .brand-guide-artwork { will-change: opacity; }
+.brand-guide.is-settling .brand-guide-artwork { transition: opacity 220ms ease-out; }
+.brand-guide-destination-preview { container-type: inline-size; position: relative; width: 100%; height: 50%; overflow: hidden; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; }
+.brand-guide-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: var(--guide-swipe-destination-opacity); transform: translate3d(0,0,0); backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.brand-guide.is-dragging .brand-guide-destination-image { will-change: opacity; }
+.brand-guide.is-settling .brand-guide-destination-image { transition: opacity 220ms ease-out; }
+.brand-guide.has-destination-fallback .brand-guide-destination-image { display: none; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: translate3d(0,0,0); backface-visibility: hidden; }
 .brand-guide-bootstrap-frame { position: absolute; z-index: 45; inset: 0; display: block; width: 100%; height: 100%; }
 .brand-guide-bootstrap-reduced { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-base { z-index: 10; }
@@ -360,10 +375,32 @@ html[data-category-native-transition]::view-transition-old(root) { animation: ca
 html[data-category-native-transition]::view-transition-new(root) { animation: category-native-view-new var(--category-route-buffer-release-duration) var(--category-route-buffer-easing) both; }
 #h5-guide-route-buffer-host { position: fixed; z-index: 2147482500; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-guide-route-buffer-host:empty { display: none; }
-.h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: opacity, transform; }
-.h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,var(--guide-route-exit-distance),0); transition: opacity var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing), transform var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing); }
+.h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; backface-visibility: hidden; }
+.h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--guide-route-buffer-release-duration) ease-out; will-change: opacity; }
 .h5-guide-route-buffer, .h5-guide-route-buffer * { pointer-events: none !important; }
-.h5-guide-route-snapshot { position: absolute; display: block; max-width: none; object-fit: cover; object-position: center; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
+.h5-guide-route-track { position: absolute; inset: 0; width: 100%; height: 200%; transform: translate3d(0,var(--guide-route-start-offset,0px),0); transition: transform var(--guide-route-commit-duration,520ms) var(--guide-route-transition-easing); backface-visibility: hidden; will-change: transform; }
+.h5-guide-route-buffer.is-committing .h5-guide-route-track { transform: translate3d(0,var(--guide-route-exit-distance),0); }
+.h5-guide-route-panel { position: relative; width: 100%; height: 50%; overflow: hidden; }
+.h5-guide-route-guide-panel { background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
+.h5-guide-route-destination-panel { container-type: inline-size; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; }
+.h5-guide-route-snapshot { position: absolute; display: block; max-width: none; object-fit: cover; object-position: center; opacity: var(--guide-route-start-guide-opacity,1); transition: opacity var(--guide-route-commit-duration,520ms) ease-out; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; will-change: opacity; }
+.h5-guide-route-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: var(--guide-route-start-destination-opacity,.18); transition: opacity var(--guide-route-commit-duration,520ms) ease-out; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; will-change: opacity; }
+
+@media (orientation: portrait) and (min-aspect-ratio: 15 / 31) {
+  .guide-loading-buffer, .guide-loading-buffer-stage { background-position: center top; }
+  .guide-loading-buffer-gif, .guide-loading-buffer-poster,
+  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
+  .h5-guide-route-snapshot { object-position: center top; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .guide-loading-buffer-gif, .guide-loading-buffer-poster,
+  .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
+  .h5-guide-route-snapshot { object-fit: contain; object-position: center; }
+}
+.h5-guide-route-buffer.is-committing .h5-guide-route-snapshot { opacity: .08; }
+.h5-guide-route-buffer.is-committing .h5-guide-route-destination-image { opacity: 1; }
+.h5-guide-route-buffer.has-destination-fallback .h5-guide-route-destination-image { display: none; }
 #h5-category-route-buffer-host { position: fixed; z-index: 2147483640; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-category-route-buffer-host:empty { display: none; }
 .h5-category-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: transform; }
@@ -376,7 +413,7 @@ html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointe
 @keyframes h5-page-leave { to { opacity: 0; transform: translate3d(0,-7px,0); } }
 @keyframes h5-page-swipe-back { to { opacity: 0; transform: translate3d(8px,0,0); } }
 @keyframes reports-slide-up-fade { from { opacity: 0; transform: translate3d(0,12dvh,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
-@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-travel-distance),0); } to { transform: translate3d(0,0,0); } }
+@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-remaining-distance),0); } to { transform: translate3d(0,0,0); } }
 @keyframes archive-guide-entry-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes archive-selected-module-extract-left { from { opacity: 1; transform: translate3d(0,0,0); } to { opacity: .18; transform: translate3d(calc(-1 * var(--category-route-exit-distance)),0,0); } }
 @keyframes category-detail-enter-from-right { from { opacity: .72; transform: translate3d(var(--category-route-entry-distance),0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
@@ -403,7 +440,7 @@ html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointe
 .reports-archive-entry-book { z-index: 10; }
 .reports-archive-entry-batch { z-index: 11; }
 html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-book,
-html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-travel-distance),0); will-change: transform, opacity; }
+html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-remaining-distance),0); will-change: transform, opacity; }
 html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-book,
 .reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-book { z-index: 50; animation: archive-guide-entry-rise var(--archive-guide-book-duration) var(--guide-route-transition-easing) var(--archive-guide-book-delay) both, archive-guide-entry-fade var(--archive-guide-book-duration) var(--guide-route-transition-easing) var(--archive-guide-book-delay) both; will-change: transform, opacity; }
 html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-batch,
@@ -991,7 +1028,7 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .guide-loading-buffer, .brand-guide, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
+  .guide-loading-buffer, .brand-guide, .brand-guide-swipe-track, .brand-guide-artwork, .brand-guide-destination-image, .h5-guide-route-track, .h5-guide-route-snapshot, .h5-guide-route-destination-image, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
   .guide-loading-buffer-gif { visibility: hidden; }
   .guide-loading-buffer-poster { visibility: visible; }
   .brand-guide { transition: opacity 150ms ease; }
@@ -1019,20 +1056,6 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .reports-archive-final:not([data-exit-slug])[data-pressed-slug="review-assurance"] .reports-archive-source-layer[data-archive-module="review-assurance"],
   .reports-archive-final:not([data-exit-slug])[data-pressed-slug="production-traceability"] .reports-archive-source-layer[data-archive-module="production-traceability"] { transition: none !important; transform: none !important; }
   .reports-archive-entry-group { opacity: 1 !important; }
-}
-
-/* Short or landscape embedded-browser viewports are wider than the supplied
-   750×1625 guide canvas. Keep approved foreground artwork complete while the
-   matching texture on the root and transition buffer continues to cover every
-   safe-area edge, so the contained canvas never exposes a blank gutter. */
-@media (orientation: portrait) and (min-aspect-ratio: 15 / 31) {
-  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
-  .guide-loading-buffer-gif, .guide-loading-buffer-poster, .h5-guide-route-snapshot { object-fit: contain; }
-}
-
-@container (min-aspect-ratio: 15 / 31) {
-  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
-  .guide-loading-buffer-gif, .guide-loading-buffer-poster { object-fit: contain; }
 }
 
 /* Keep the action cue clear of embedded-browser chrome on short landscape screens. */
