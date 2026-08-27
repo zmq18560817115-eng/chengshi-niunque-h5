@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:production": "sh deploy/build-production.sh",
     "start": "next start",
     "start:production": "sh deploy/start-production.sh",
     "lint": "eslint . --max-warnings=0",
@@ -19,15 +20,15 @@
     "test:e2e:install": "playwright install chromium",
     "prisma:generate": "prisma generate",
     "prisma:seed": "pnpm content:seed",
-    "content:seed": "tsx --env-file=.env scripts/seed-default-h5-content.ts",
-    "content:bootstrap": "tsx --env-file=.env scripts/seed-default-h5-content.ts --publish-shell",
-    "content:repair": "tsx --env-file=.env scripts/seed-default-h5-content.ts --publish-shell --repair-published-shell",
-    "content:verify": "tsx --env-file=.env scripts/verify-default-h5-content.ts",
+    "content:seed": "tsx --env-file-if-exists=.env scripts/seed-default-h5-content.ts",
+    "content:bootstrap": "tsx --env-file-if-exists=.env scripts/seed-default-h5-content.ts --publish-shell",
+    "content:repair": "tsx --env-file-if-exists=.env scripts/seed-default-h5-content.ts --publish-shell --repair-published-shell",
+    "content:verify": "tsx --env-file-if-exists=.env scripts/verify-default-h5-content.ts",
     "prisma:validate": "prisma validate",
-    "storage:bootstrap": "tsx --env-file=.env scripts/bootstrap-storage.ts",
-    "storage:ensure": "tsx --env-file=.env scripts/ensure-storage.ts",
-    "admin:seed": "tsx --env-file=.env scripts/seed-admin.ts",
-    "admin:verify": "tsx --env-file=.env scripts/verify-admin-login.ts"
+    "storage:bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap-storage.ts",
+    "storage:ensure": "tsx --env-file-if-exists=.env scripts/ensure-storage.ts",
+    "admin:seed": "tsx --env-file-if-exists=.env scripts/seed-admin.ts",
+    "admin:verify": "tsx --env-file-if-exists=.env scripts/verify-admin-login.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",

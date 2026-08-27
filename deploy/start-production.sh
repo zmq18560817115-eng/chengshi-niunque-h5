@@ -20,5 +20,5 @@ if [ -f .next/standalone/server.js ]; then
   exec node .next/standalone/server.js
 fi
 
-echo "Production server entrypoint was not found. Run pnpm build before starting the service." >&2
+echo "Production server entrypoint was not found. Run pnpm build:production before starting the service." >&2
 exit 1

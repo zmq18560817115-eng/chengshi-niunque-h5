@@ -7,6 +7,7 @@ describe("production deployment entrypoint", () => {
     const dockerfile = readFileSync("Dockerfile", "utf8");
     const compose = readFileSync("compose.production.yaml", "utf8");
     const pm2 = readFileSync("deploy/ecosystem.config.cjs", "utf8");
+    const productionBuild = readFileSync("deploy/build-production.sh", "utf8");
     const packageJson = readFileSync("package.json", "utf8");
     const example = readFileSync(".env.example", "utf8");
     const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
@@ -23,8 +24,9 @@ describe("production deployment entrypoint", () => {
     expect(entrypoint.indexOf("pnpm content:verify")).toBeLessThan(entrypoint.indexOf("pnpm admin:seed"));
     expect(entrypoint.indexOf("pnpm admin:verify")).toBeLessThan(entrypoint.indexOf("if [ -f server.js ]"));
     expect(entrypoint).toContain("exec node .next/standalone/server.js");
-    expect(entrypoint).toContain("Run pnpm build before starting the service.");
+    expect(entrypoint).toContain("Run pnpm build:production before starting the service.");
     expect(dockerfile).toContain('CMD ["sh", "./deploy/start-production.sh"]');
+    expect(dockerfile).toContain("RUN pnpm build:production");
     expect(dockerfile).toContain("COPY src/config ./src/config");
     expect(compose).toContain("condition: service_healthy");
     expect(example).toContain("ADMIN_SEED_USERNAME");
@@ -37,5 +39,10 @@ describe("production deployment entrypoint", () => {
     expect(pm2).toContain('script: "./deploy/start-production.sh"');
     expect(pm2).toContain('interpreter: "/bin/sh"');
     expect(packageJson).toContain('"start:production": "sh deploy/start-production.sh"');
+    expect(packageJson).toContain('"build:production": "sh deploy/build-production.sh"');
+    expect(packageJson).not.toContain("tsx --env-file=.env");
+    expect(packageJson.match(/tsx --env-file-if-exists=\.env/g)).toHaveLength(8);
+    expect(productionBuild).toContain("export NEXT_STANDALONE=true");
+    expect(productionBuild).toContain("exec pnpm build");
   });
 });
