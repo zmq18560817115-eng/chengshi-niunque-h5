@@ -26,7 +26,10 @@ describe("ImageReportViewer", () => {
     expect(screen.getByRole("img")).toHaveStyle({ width: "100%" });
     fireEvent.touchStart(stage, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }] });
     fireEvent.touchMove(stage, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 200, clientY: 0 }] });
-    expect(screen.getByRole("img")).toHaveStyle({ width: "200%" });
+    await waitFor(() => expect(screen.getByRole("img")).toHaveStyle({ width: "200%" }));
+    expect(stage).toHaveClass("is-pinching");
+    fireEvent.touchEnd(stage, { touches: [] });
+    expect(stage).not.toHaveClass("is-pinching");
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     expect(viewer).toHaveAttribute("data-page", "2");
     expect(screen.getByRole("img")).toHaveAttribute("src", "/reports/image/page/page-2");

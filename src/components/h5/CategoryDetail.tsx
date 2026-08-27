@@ -58,11 +58,18 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     if (preview) return;
     const root = document.documentElement;
     root.setAttribute("data-h5-page-lock", "category");
+    const page = document.querySelector<HTMLElement>(`.category-page-final[data-category="${module.slug}"]`);
+    if (page) page.scrollTop = 0;
     window.scrollTo(0, 0);
+    const resetFrame = window.requestAnimationFrame(() => {
+      if (page) page.scrollTop = 0;
+      window.scrollTo(0, 0);
+    });
     return () => {
+      window.cancelAnimationFrame(resetFrame);
       if (root.getAttribute("data-h5-page-lock") === "category") root.removeAttribute("data-h5-page-lock");
     };
-  }, [preview]);
+  }, [module.slug, preview]);
   useEffect(() => { if (!preview) slots.forEach((card, index) => router.prefetch(`/reports/${module.slug}/items/${card?.id ?? placeholderCardId(index)}/reports`)); }, [module.slug, preview, router, slots]);
   useLayoutEffect(() => {
     if (preview) return;

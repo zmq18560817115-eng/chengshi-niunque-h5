@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+test.use({ browserName: "chromium" });
+
 const reportPages = [
   "/reports/inspection-projects/items/placeholder-slot-3/reports",
   "/reports/review-assurance/items/placeholder-slot-1/reports",
@@ -11,6 +13,7 @@ test("all fourth-level report pages zoom inside a fixed viewer", async ({ page }
 
   for (const path of reportPages) {
     await page.goto(path);
+    await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
     const stage = page.locator(".report-image-stage").first();
     const image = stage.getByRole("img");
     await expect(stage).toBeVisible();

@@ -113,7 +113,15 @@ const guideEntryBatchParts = new Set([
   "module-1-passed-copy",
 ]);
 
-export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug = null }: { preview?: boolean; activeSlug?: string | null; exitingSlug?: string | null }) {
+const deepDeferredParts = new Set([
+  "module-2-review-folder",
+  "module-2-resource-20",
+  "module-2-production-folder",
+  "module-2-resource-21",
+  "module-3-complete-output",
+]);
+
+export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug = null, mountDeferred = true, mountDeepDeferred = true }: { preview?: boolean; activeSlug?: string | null; exitingSlug?: string | null; mountDeferred?: boolean; mountDeepDeferred?: boolean }) {
   const renderLayer = (layer: ArtworkLayer) => {
     const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
     const active = moduleSlug === activeSlug;
@@ -139,7 +147,11 @@ export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug
     );
   };
 
-  const baseLayers = artworkLayers.filter((layer) => !guideEntryBookParts.has(layer.id) && !guideEntryBatchParts.has(layer.id));
+  const baseLayers = artworkLayers.filter((layer) => !guideEntryBookParts.has(layer.id)
+    && !guideEntryBatchParts.has(layer.id)
+    && (layerEntryStage(layer.id) <= 3
+      || (mountDeferred && !deepDeferredParts.has(layer.id))
+      || (mountDeepDeferred && deepDeferredParts.has(layer.id))));
   const bookLayers = artworkLayers.filter((layer) => guideEntryBookParts.has(layer.id));
   const batchLayers = artworkLayers.filter((layer) => guideEntryBatchParts.has(layer.id));
 
@@ -147,11 +159,15 @@ export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug
     <div className="reports-archive-art reports-archive-source-art" role="img" aria-label="诚实透明档案" data-artwork-source="layered-originals">
       {baseLayers.map(renderLayer)}
       <div className="reports-archive-entry-group reports-archive-entry-book" data-guide-entry-group="archive-book">
-        {bookLayers.map(renderLayer)}
-        <ArchiveUnlockTabMotion preview={preview} />
+        <div className="reports-archive-entry-coordinate-layer">
+          {bookLayers.map(renderLayer)}
+          <ArchiveUnlockTabMotion preview={preview} />
+        </div>
       </div>
       <div className="reports-archive-entry-group reports-archive-entry-batch" data-guide-entry-group="latest-batch">
-        {batchLayers.map(renderLayer)}
+        <div className="reports-archive-entry-coordinate-layer">
+          {batchLayers.map(renderLayer)}
+        </div>
       </div>
     </div>
   );

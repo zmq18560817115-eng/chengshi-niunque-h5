@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import Image from "next/image";
 import type { PublicAsset } from "@/server/services/public-content-service";
 
@@ -9,6 +9,7 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [scale, setScale] = useState(1);
   const [dragging, setDragging] = useState(false);
+  const [pinching, setPinching] = useState(false);
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -17,7 +18,13 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
   const pinchStart = useRef<{ distance: number; scale: number; contentX: number; contentY: number; viewportX: number; viewportY: number } | null>(null);
   const touchPanStart = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const dragStart = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const pinchFrame = useRef<number | null>(null);
+  const pendingPinch = useRef<{ next: number; stage: HTMLDivElement; contentX: number; contentY: number; viewportX: number; viewportY: number } | null>(null);
   const page = pages[Math.min(pageIndex, pages.length - 1)];
+
+  useEffect(() => () => {
+    if (pinchFrame.current !== null) window.cancelAnimationFrame(pinchFrame.current);
+  }, []);
 
   const touchDistance = (event: TouchEvent<HTMLDivElement>) => {
     const [first, second] = [event.touches[0], event.touches[1]];
@@ -64,7 +71,7 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
     </header>
     {pages.length > 1 && <nav className="report-page-controls" aria-label={`${asset.title}图片页`}><button type="button" onClick={() => selectPage(pageIndex - 1)} disabled={pageIndex === 0}>上一页</button><span>{pageIndex + 1} / {pages.length}</span><button type="button" onClick={() => selectPage(pageIndex + 1)} disabled={pageIndex === pages.length - 1}>下一页</button></nav>}
     {failed ? <div className="report-error" role="alert"><strong>{asset.title} · 第 {pageIndex + 1} 页</strong><p>资料加载失败</p><button type="button" onClick={() => { setFailed(false); setLoaded(false); setRetry((value) => value + 1); }}>重新加载</button></div> :
-      <div ref={stageRef} className={`report-image-stage ${loaded ? "is-loaded" : "is-loading"} ${dragging ? "is-dragging" : ""}`} aria-label="报告图片固定查看区域，可在区域内反复缩放和拖动，不会放大整个页面" onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); updateScale(scale === 1 ? 2 : 1, { x: event.clientX - bounds.left, y: event.clientY - bounds.top }); }}
+      <div ref={stageRef} className={`report-image-stage ${loaded ? "is-loaded" : "is-loading"} ${dragging ? "is-dragging" : ""} ${pinching ? "is-pinching" : ""}`} aria-label="报告图片固定查看区域，可在区域内反复缩放和拖动，不会放大整个页面" onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); updateScale(scale === 1 ? 2 : 1, { x: event.clientX - bounds.left, y: event.clientY - bounds.top }); }}
         onTouchStart={(event) => {
           if (event.touches.length === 2) {
             const bounds = event.currentTarget.getBoundingClientRect();
@@ -72,6 +79,7 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
             const viewportY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - bounds.top;
             pinchStart.current = { distance: touchDistance(event), scale, contentX: (event.currentTarget.scrollLeft + viewportX) / scale, contentY: (event.currentTarget.scrollTop + viewportY) / scale, viewportX, viewportY };
             touchPanStart.current = null;
+            setPinching(true);
           } else if (event.touches.length === 1 && scale > 1) {
             touchPanStart.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop };
           }
@@ -82,18 +90,29 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
             if (!distance || !pinchStart.current.distance) return;
             event.preventDefault();
             const next = Math.min(4, Math.max(1, pinchStart.current.scale * distance / pinchStart.current.distance));
-            scaleRef.current = next;
-            setScale(next);
             const start = pinchStart.current;
-            const stage = event.currentTarget;
-            requestAnimationFrame(() => { stage.scrollLeft = start.contentX * next - start.viewportX; stage.scrollTop = start.contentY * next - start.viewportY; });
+            pendingPinch.current = { next, stage: event.currentTarget, contentX: start.contentX, contentY: start.contentY, viewportX: start.viewportX, viewportY: start.viewportY };
+            if (pinchFrame.current === null) {
+              pinchFrame.current = window.requestAnimationFrame(() => {
+                pinchFrame.current = null;
+                const pending = pendingPinch.current;
+                pendingPinch.current = null;
+                if (!pending) return;
+                scaleRef.current = pending.next;
+                setScale(pending.next);
+                window.requestAnimationFrame(() => {
+                  pending.stage.scrollLeft = pending.contentX * pending.next - pending.viewportX;
+                  pending.stage.scrollTop = pending.contentY * pending.next - pending.viewportY;
+                });
+              });
+            }
           } else if (event.touches.length === 1 && touchPanStart.current && scale > 1) {
             event.preventDefault();
             event.currentTarget.scrollLeft = touchPanStart.current.left - (event.touches[0].clientX - touchPanStart.current.x);
             event.currentTarget.scrollTop = touchPanStart.current.top - (event.touches[0].clientY - touchPanStart.current.y);
           }
         }}
-        onTouchEnd={(event) => { if (event.touches.length < 2) pinchStart.current = null; if (event.touches.length === 0) touchPanStart.current = null; }}
+        onTouchEnd={(event) => { if (event.touches.length < 2) { pinchStart.current = null; setPinching(false); } if (event.touches.length === 0) touchPanStart.current = null; }}
         onPointerDown={(event) => { if (event.pointerType !== "mouse" || event.button !== 0) return; dragStart.current = { x: event.clientX, y: event.clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop }; event.currentTarget.setPointerCapture(event.pointerId); setDragging(true); }}
         onPointerMove={(event) => { if (!dragStart.current) return; event.currentTarget.scrollLeft = dragStart.current.left - (event.clientX - dragStart.current.x); event.currentTarget.scrollTop = dragStart.current.top - (event.clientY - dragStart.current.y); }}
         onPointerUp={(event) => { if (!dragStart.current) return; dragStart.current = null; event.currentTarget.releasePointerCapture(event.pointerId); setDragging(false); }}

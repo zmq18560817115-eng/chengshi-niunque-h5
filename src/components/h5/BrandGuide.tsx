@@ -145,7 +145,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const handleMotionState = useCallback((state: AssetStatus) => {
     setAssetStatus(state);
     if (state === "loading" || state === "failed" || state === "reduced" || state === "disabled") setAnimationStarted(false);
-    if (state === "ready") setGestureReady(true);
     if (state === "failed" || state === "reduced" || state === "disabled") {
       setSwipeReady(true);
       setGestureReady(true);

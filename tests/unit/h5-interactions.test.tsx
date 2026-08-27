@@ -2,10 +2,15 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { BrandGuide } from "@/components/h5/BrandGuide";
 import { GuideExperience } from "@/components/h5/GuideExperience";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
+import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
+import { archiveModuleExitDelayMs } from "@/components/h5/category-route-transition";
+import { guideRouteNavigationDelayMs } from "@/components/h5/guide-route-transition";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
+import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
+import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 import { RuntimeLoadingBuffer, runtimeLoadingAnimationDelayMs } from "@/components/h5/RuntimeLoadingBuffer";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
@@ -89,17 +94,20 @@ describe("multi-page H5 interactions", () => {
     const modules = [{ id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
 
-    fireEvent.click(container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!);
+    const hotspot = container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!;
+    const archive = container.querySelector(".reports-archive");
+    fireEvent.pointerDown(hotspot);
+
+    expect(archive).toHaveAttribute("data-pressed-slug", "review-assurance");
+    expect(hotspot).toHaveClass("is-pressed");
+
+    fireEvent.click(hotspot);
 
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", "review-assurance");
-    expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
-    expect(container.querySelector('[data-slug="review-assurance"]')).toHaveClass("is-pressed");
-    expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-pressed-layer");
-    act(() => vi.advanceTimersByTime(16));
-    expect(container.querySelector(".reports-archive")).toHaveClass("is-leaving");
-    expect(container.querySelector(".reports-archive")).toHaveAttribute("data-exit-slug", "review-assurance");
-    expect(container.querySelector('[data-archive-module="review-assurance"]')).toHaveClass("archive-module-exit-layer");
-    expect(container.querySelector('[data-archive-module="inspection-projects"]')).not.toHaveClass("archive-module-exit-layer");
+    expect(archive).not.toHaveClass("is-leaving");
+    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs));
+    expect(archive).toHaveClass("is-leaving");
+    expect(archive).toHaveAttribute("data-exit-slug", "review-assurance");
   });
 
   it("maps the supplied click cue to inspection and covers the complete brown board", () => {
@@ -129,9 +137,11 @@ describe("multi-page H5 interactions", () => {
     expect(mascot).toHaveClass("archive-inspection-mascot-hotspot");
     expect(mascot).toHaveStyle({ left: "41%", top: "52.843261%", width: "27%", height: "5.758503%" });
     expect(review).toHaveStyle({ top: "56.253374%" });
+    fireEvent.pointerDown(mascot);
+    expect(container.querySelector(".reports-archive")).toHaveAttribute("data-pressed-slug", "inspection-projects");
+    expect(mascot).toHaveClass("is-pressed");
     fireEvent.click(mascot);
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", "inspection-projects");
-    expect(container.querySelector('[data-source-part="module-2-resource-09"]')).toHaveClass("archive-module-pressed-layer");
   });
 
   it("assembles the archive from original layers and preserves navigation hotspots", () => {
@@ -165,7 +175,7 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("does not render the retired module-two decoration or static title resources", () => {
-    const { container } = render(<ReportsArchive modules={[]}/>);
+    const { container } = render(<ArchiveArtwork/>);
     const sourceParts = [...container.querySelectorAll<HTMLElement>("[data-source-part]")]
       .map((layer) => layer.dataset.sourcePart);
     expect(sourceParts).toEqual(expect.arrayContaining(["module-2-resource-10", "module-2-resource-20"]));
@@ -192,7 +202,12 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("wires the supplied fish GIFs, story reveal, and three CSS title groups over the archive artwork", () => {
-    const { container } = render(<ReportsArchive modules={[]}/>);
+    const { container } = render(<>
+      <ArchiveArtwork/>
+      <ArchiveStoryCopyMotion/>
+      <ArchiveFishFloatMotion/>
+      <ArchiveSectionTitleMotion/>
+    </>);
     expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).toBeInTheDocument();
     expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(4);
     expect(container.querySelector("[data-motion-module='archiveFishFloat']")).toBeInTheDocument();
@@ -263,8 +278,12 @@ describe("multi-page H5 interactions", () => {
 
   it("keeps the approved archive artwork stable for reduced motion", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
-    const { container } = render(<ReportsArchive modules={[]}/>);
-    expect(pendingImages.length).toBeGreaterThan(0);
+    const { container } = render(<>
+      <ArchiveArtwork/>
+      <ArchiveStoryCopyMotion/>
+      <ArchiveFishFloatMotion/>
+      <ArchiveSectionTitleMotion/>
+    </>);
     expect(container.querySelector(".archive-fish-float")).toBeInTheDocument();
     expect(container.querySelector(".archive-fish-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-fish-motion-gif")).not.toBeInTheDocument();
@@ -333,6 +352,15 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-gif")).toBeInTheDocument();
   });
 
+  it("keeps the lightweight loading poster for reduced-motion users", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    const { container } = render(<RuntimeLoadingBuffer />);
+    act(() => vi.advanceTimersByTime(runtimeLoadingAnimationDelayMs + 1));
+    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
+    expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
+  });
+
   it("keeps the loading buffer only until the current guide artwork has decoded", async () => {
     vi.useFakeTimers();
     const { container } = render(<GuideExperience />);
@@ -362,21 +390,38 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
   });
 
-  it("responds on touch-move as soon as guide assets are ready without waiting for the visual hint timer", async () => {
+  it("unlocks touch-move after the MotionStage crossfade without waiting for the visual hint timer", async () => {
+    vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     const stage = container.querySelector(".brand-guide-stage");
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(page).toHaveClass("is-ready", "is-motion-enabled"));
+    await act(async () => {
+      await resolvePendingImages(() => true);
+      await vi.advanceTimersByTimeAsync(32);
+    });
+    expect(page).toHaveClass("is-ready", "is-motion-enabled");
     expect(stage).toHaveAttribute("data-swipe-state", "locked");
-    expect(stage).toHaveAttribute("data-gesture-state", "ready");
+    expect(stage).toHaveAttribute("data-gesture-state", "locked");
     expect(stage).toHaveAttribute("data-swipe-distance-px", "24");
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs - 1);
+    });
+    expect(stage).toHaveAttribute("data-gesture-state", "locked");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(stage).toHaveAttribute("data-gesture-state", "locked");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16);
+    });
+    expect(stage).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ clientX: 200, clientY: 300 }] });
     fireEvent.touchMove(page, { touches: [{ clientX: 198, clientY: 276 }] });
-    await waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
     expect(page).toHaveClass("is-leaving");
+    act(() => vi.advanceTimersByTime(guideRouteNavigationDelayMs));
+    expect(onEnter).toHaveBeenCalledOnce();
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: 196, clientY: 220 }] });
     expect(onEnter).toHaveBeenCalledOnce();
   });
@@ -408,6 +453,16 @@ describe("multi-page H5 interactions", () => {
     fireEvent.touchStart(page, { touches: [{ clientX: 30, clientY: 200 }] });
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: 80, clientY: 205 }] });
     expect(page).not.toHaveClass("is-swipe-back");
+    fireEvent.touchStart(page, { touches: [{ clientX: 20, clientY: 200 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 120, clientY: 206 }] });
+    expect(page).toHaveClass("is-swipe-back");
+  });
+
+  it("can hide the back control without disabling deliberate right-swipe navigation", () => {
+    vi.useFakeTimers();
+    render(<SwipeBackPage className="h5-page-transition" fallbackHref="/reports" showBackControl={false}><p>资料内容</p></SwipeBackPage>);
+    const page = screen.getByRole("main");
+    expect(screen.queryByRole("button", { name: "返回上一页" })).not.toBeInTheDocument();
     fireEvent.touchStart(page, { touches: [{ clientX: 20, clientY: 200 }] });
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: 120, clientY: 206 }] });
     expect(page).toHaveClass("is-swipe-back");

@@ -12,6 +12,8 @@ describe("production deployment entrypoint", () => {
     const example = readFileSync(".env.example", "utf8");
     const contentSeed = readFileSync("scripts/seed-default-h5-content.ts", "utf8");
     const contentVerify = readFileSync("scripts/verify-default-h5-content.ts", "utf8");
+    const nextConfig = readFileSync("next.config.ts", "utf8");
+    const nginx = readFileSync("deploy/nginx/default.conf", "utf8");
 
     expect(entrypoint).toContain("set -eu");
     expect(entrypoint).toContain("pnpm prisma migrate deploy");
@@ -44,5 +46,25 @@ describe("production deployment entrypoint", () => {
     expect(packageJson.match(/tsx --env-file-if-exists=\.env/g)).toHaveLength(8);
     expect(productionBuild).toContain("export NEXT_STANDALONE=true");
     expect(productionBuild).toContain("exec pnpm build");
+    expect(nextConfig).toContain('source: "/design/:path*"');
+    expect(nextConfig).toContain("public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400");
+    expect(nginx).toContain("location ^~ /_next/static/");
+    expect(nginx).toContain('add_header Cache-Control "public, max-age=31536000, immutable";');
+    expect(nginx).toContain("gzip on;");
+    expect(nginx).not.toMatch(/add_header Cache-Control [^;]+ always;/);
+  });
+
+  it("runs the required quality gates and mobile browser journeys in CI", () => {
+    const workflow = readFileSync(".github/workflows/quality.yml", "utf8");
+    expect(workflow).toContain("postgres:17-alpine");
+    expect(workflow).toContain("minio/minio:RELEASE.2025-07-23T15-54-02Z");
+    expect(workflow).toContain("pnpm install --frozen-lockfile");
+    expect(workflow).toContain("pnpm lint");
+    expect(workflow).toContain("pnpm typecheck");
+    expect(workflow).toContain("pnpm test");
+    expect(workflow).toContain("pnpm prisma:validate");
+    expect(workflow).toContain("pnpm build");
+    expect(workflow).toContain("playwright install --with-deps chromium");
+    expect(workflow).toContain("pnpm test:e2e");
   });
 });
