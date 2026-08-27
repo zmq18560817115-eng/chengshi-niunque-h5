@@ -46,7 +46,7 @@ for (const width of widths) {
         const style = getComputedStyle(node);
         return { image: style.backgroundImage, position: style.backgroundPosition, repeat: style.backgroundRepeat, size: style.backgroundSize };
       });
-      expect(backdrop.image).toContain("category-paper-base.jpg");
+      expect(backdrop.image).toContain("category-paper-base.runtime.webp");
       expect(backdrop.image).toContain("category-runtime");
       expect(backdrop.position).toContain("50%");
       expect(backdrop.repeat).toBe("repeat-x");

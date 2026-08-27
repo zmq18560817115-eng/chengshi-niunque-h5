@@ -33,13 +33,13 @@
   --h5-route-transition-duration: 460ms;
   --h5-route-transition-easing: cubic-bezier(.22,1,.36,1);
   --guide-route-transition-easing: cubic-bezier(.25,.1,.25,1);
-  --guide-route-buffer-release-duration: 840ms;
+  --guide-route-buffer-release-duration: 520ms;
   --guide-route-travel-distance: 100dvh;
   --guide-route-exit-distance: -100dvh;
   --guide-loading-exit-duration: 260ms;
-  --category-route-exit-duration: 520ms;
-  --category-route-entry-duration: 760ms;
-  --category-route-buffer-release-duration: 820ms;
+  --category-route-exit-duration: 420ms;
+  --category-route-entry-duration: 520ms;
+  --category-route-buffer-release-duration: 520ms;
   --category-route-buffer-easing: cubic-bezier(.35,0,.25,1);
   --category-route-exit-distance: 15dvw;
   --category-route-entry-distance: 8dvw;
@@ -52,7 +52,8 @@
 * { box-sizing: border-box; }
 html { width: 100%; min-height: 100%; overflow-x: hidden; overflow-y: auto; background: #eee7dc; color: var(--color-ink); }
 body { width: 100%; min-height: 100%; margin: 0; overflow-x: hidden; font-family: var(--font-body); background: #eee7dc; }
-html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background-color: #f8e89d; }
+html[data-category-route-buffer], html[data-category-route-buffer] body { background-color: #f5f0e7; }
 html[data-h5-page-lock="category"], html[data-h5-page-lock="category"] body { width: 100%; height: 100%; min-height: 100%; overflow: hidden; overscroll-behavior: none; background: #f5f0e7; }
 html:has(.guide-loading-buffer), html:has(.brand-guide), html:has(.h5-shell) { scrollbar-width: none; }
 html:has(.guide-loading-buffer)::-webkit-scrollbar, html:has(.brand-guide)::-webkit-scrollbar, html:has(.h5-shell)::-webkit-scrollbar { width: 0; height: 0; }
@@ -277,12 +278,12 @@ button, a { font: inherit; }
 .standalone-preview-scroll .h5-shell { max-width: none; min-width: 0; box-shadow: none; }
 .runtime-loading-layer { position: fixed; z-index: 2147483600; inset: 0; overflow: hidden; background: var(--color-canvas); pointer-events: auto; }
 .runtime-loading-layer.is-leaving { pointer-events: none; }
-.guide-loading-buffer { container-type: size; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; background: var(--color-canvas); opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-loading-exit-duration) var(--h5-route-transition-easing), transform var(--guide-loading-exit-duration) var(--h5-route-transition-easing); }
+.guide-loading-buffer { container-type: size; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-loading-exit-duration) var(--h5-route-transition-easing), transform var(--guide-loading-exit-duration) var(--h5-route-transition-easing); }
 .guide-loading-buffer.is-leaving { opacity: 0; transform: translate3d(0,-6dvh,0); pointer-events: none; }
 .guide-loading-buffer-stage { position: relative; width: min(100%, var(--h5-content-width)); max-width: none; height: 100%; aspect-ratio: auto; flex: 0 0 auto; overflow: hidden; background: var(--color-canvas); }
 .guide-loading-buffer-gif, .guide-loading-buffer-poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .guide-loading-buffer-poster { visibility: visible; }
-.brand-guide { container-type: size; position: relative; isolation: isolate; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--h5-route-transition-duration) var(--h5-route-transition-easing), transform var(--h5-route-transition-duration) var(--h5-route-transition-easing); cursor: default; touch-action: pan-x; overscroll-behavior: none; }
+.brand-guide { container-type: size; position: relative; isolation: isolate; display: flex; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; align-items: center; justify-content: center; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--h5-route-transition-duration) var(--h5-route-transition-easing), transform var(--h5-route-transition-duration) var(--h5-route-transition-easing); cursor: default; touch-action: pan-x; overscroll-behavior: none; }
 .brand-guide::-webkit-scrollbar { width: 0; height: 0; }
 .brand-guide.is-leaving { opacity: 0; transform: translate3d(0,-5dvh,0); pointer-events: none; }
 .brand-guide-stage { position: relative; z-index: 1; isolation: isolate; width: min(100%, var(--h5-content-width)); max-width: none; height: 100%; aspect-ratio: auto; flex: 0 0 auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
@@ -293,14 +294,15 @@ button, a { font: inherit; }
 .brand-guide-bootstrap-reduced { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 27; visibility: visible; opacity: 1; pointer-events: none; }
-.brand-guide-paper { z-index: 34; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
+.brand-guide-paper { z-index: 34; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; backface-visibility: hidden; }
 .brand-guide-paper-top { --paper-offset: 0ms; animation-name: guide-paper-from-top, guide-paper-fade; }
 .brand-guide-paper-left { --paper-offset: 80ms; animation-name: guide-paper-from-left, guide-paper-fade; }
 .brand-guide-paper-right { --paper-offset: 150ms; animation-name: guide-paper-from-right, guide-paper-fade; }
 .brand-guide-paper-bottom { --paper-offset: 220ms; animation-name: guide-paper-from-bottom, guide-paper-fade; }
 .brand-guide-character { z-index: 20; backface-visibility: hidden; }
-.brand-guide-character-open { will-change: opacity; }
-.brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
+.brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; }
+.brand-guide.is-animating .brand-guide-paper { will-change: transform, opacity; }
+.brand-guide.is-animating .brand-guide-character-closed { will-change: opacity; }
 .brand-guide-window-mask { z-index: 25; pointer-events: none; }
 .brand-guide-foreground-top { z-index: 35; }
 .brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom); display: block; width: var(--guide-entry-hint-width); height: auto; translate: -50% 0; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translate3d(0,0,0); }
@@ -345,22 +347,22 @@ html[data-guide-route-entry] .reports-archive-art { animation: none; }
 .category-page-final[data-route-entry="reports-archive-buffer"] { opacity: 1; transform: translate3d(100dvw,0,0); animation: none; }
 .category-page-final[data-route-entry="reports-archive"][data-route-ready="true"] { animation: category-detail-enter-from-right var(--category-route-entry-duration) var(--h5-route-transition-easing) both; }
 .category-page-final[data-route-entry="reports-archive-buffer"][data-route-ready="true"] { animation: category-route-buffer-enter-from-right var(--category-route-buffer-release-duration) var(--category-route-buffer-easing) both; }
+html[data-category-native-transition] .category-page-final { opacity: 1; transform: none; animation: none; }
+html[data-category-native-transition] .runtime-loading-layer { visibility: hidden; pointer-events: none; }
+html[data-category-native-transition]::view-transition-group(root) { animation-duration: var(--category-route-buffer-release-duration); animation-timing-function: var(--category-route-buffer-easing); }
+html[data-category-native-transition]::view-transition-old(root) { animation: category-native-view-old var(--category-route-buffer-release-duration) var(--category-route-buffer-easing) both; }
+html[data-category-native-transition]::view-transition-new(root) { animation: category-native-view-new var(--category-route-buffer-release-duration) var(--category-route-buffer-easing) both; }
 #h5-guide-route-buffer-host { position: fixed; z-index: 2147482500; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-guide-route-buffer-host:empty { display: none; }
-.h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background: #f8e89d; backface-visibility: hidden; will-change: opacity, transform; }
+.h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: opacity, transform; }
 .h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,var(--guide-route-exit-distance),0); transition: opacity var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing), transform var(--guide-route-buffer-release-duration) var(--guide-route-transition-easing); }
 .h5-guide-route-buffer, .h5-guide-route-buffer * { pointer-events: none !important; }
-.h5-guide-route-buffer .brand-guide.is-guide-route-buffer-clone,
-.h5-guide-route-buffer .brand-guide.is-guide-route-buffer-clone * { animation: none !important; transition: none !important; }
-.h5-guide-route-buffer .brand-guide.is-guide-route-buffer-clone.is-swipe-accepted .brand-guide-entry-hint { animation: guide-entry-hint-accepted var(--guide-entry-feedback-duration) var(--h5-route-transition-easing) both !important; will-change: transform; }
+.h5-guide-route-snapshot { position: absolute; display: block; max-width: none; object-fit: cover; object-position: center; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
 #h5-category-route-buffer-host { position: fixed; z-index: 2147483640; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-category-route-buffer-host:empty { display: none; }
-.h5-category-route-buffer { position: absolute; inset: 0; overflow: hidden; opacity: 1; transform: translate3d(0,0,0); will-change: transform; }
+.h5-category-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: transform; }
 .h5-category-route-buffer.is-moving { transform: translate3d(0,0,0); transition: none; }
 .h5-category-route-buffer.is-releasing { opacity: 1; transform: translate3d(-100dvw,0,0); transition: transform var(--category-route-buffer-release-duration) var(--category-route-buffer-easing); }
-.h5-category-route-buffer .reports-archive-final { box-shadow: none; }
-.h5-category-route-buffer .reports-archive-final.is-category-route-buffer-clone,
-.h5-category-route-buffer .reports-archive-final.is-category-route-buffer-clone * { animation: none !important; transition: none !important; }
 .h5-category-route-buffer, .h5-category-route-buffer * { pointer-events: none !important; }
 html[data-category-route-buffer] .runtime-loading-layer { visibility: hidden; }
 html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointer-events: none; }
@@ -373,11 +375,13 @@ html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointe
 @keyframes archive-selected-module-extract-left { from { opacity: 1; transform: translate3d(0,0,0); } to { opacity: .18; transform: translate3d(calc(-1 * var(--category-route-exit-distance)),0,0); } }
 @keyframes category-detail-enter-from-right { from { opacity: .72; transform: translate3d(var(--category-route-entry-distance),0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 @keyframes category-route-buffer-enter-from-right { from { opacity: 1; transform: translate3d(100dvw,0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes category-native-view-old { from { transform: translate3d(0,0,0); } to { transform: translate3d(-100dvw,0,0); } }
+@keyframes category-native-view-new { from { transform: translate3d(100dvw,0,0); } to { transform: translate3d(0,0,0); } }
 .reports-archive-final, .category-page-final { position: relative; overflow: hidden; background: #f5f0e7; box-shadow: none; }
 .reports-archive-final { aspect-ratio: 1000 / 5341; }
 .reports-archive-final:not([data-preview]) { min-width: 0; width: min(calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)), var(--h5-content-width)); margin-top: env(safe-area-inset-top); margin-bottom: env(safe-area-inset-bottom); }
 .reports-archive-canvas { position: absolute; inset-inline: 0; top: -4.0432503277%; width: 100%; height: 104.0432503277%; }
-.category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: auto; min-width: 0; min-height: 0; margin-inline: auto; overflow-x: hidden; overflow-y: auto; container-type: inline-size; background-color: #f5f0e7; background-image: url("/design/final-v1/category-runtime/category-paper-base.jpg"); background-position: center top; background-size: auto min(216.65vw,1624.875px); background-repeat: repeat-x; overscroll-behavior-x: none; overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: auto; min-width: 0; min-height: 0; margin-inline: auto; overflow-x: hidden; overflow-y: auto; container-type: inline-size; background-color: #f5f0e7; background-image: url("/design/final-v1/category-runtime/category-paper-base.runtime.webp"); background-position: center top; background-size: auto min(216.65vw,1624.875px); background-repeat: repeat-x; overscroll-behavior-x: none; overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .category-page-final::-webkit-scrollbar { width: 0; height: 0; }
 .category-page-viewport { position: relative; z-index: 1; width: 100%; max-width: 100%; height: auto; aspect-ratio: 2000 / 4333; flex: 0 0 auto; overflow: hidden; container-type: inline-size; background: transparent; }
 .category-page-final[data-preview] { position: relative; inset: auto; display: block; height: auto; min-height: 0; touch-action: auto; }
@@ -999,23 +1003,27 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .archive-module-circle, .archive-module-result-passed { clip-path: inset(0); opacity: 1; animation: none !important; }
   .archive-module-unlock { transform: none; transition: none; }
   .archive-section-title-poster { animation: none !important; transform: none; }
-  .brand-guide-entry-hint, .h5-guide-route-buffer .brand-guide.is-guide-route-buffer-clone.is-swipe-accepted .brand-guide-entry-hint, .reports-archive-entry-group, .archive-section-click-cue-gif, .reports-archive-source-layer.archive-module-pressed-layer, .archive-section-title-group.archive-module-pressed-layer { animation: none !important; transition: none !important; transform: none !important; }
+  .brand-guide-entry-hint, .reports-archive-entry-group, .archive-section-click-cue-gif, .reports-archive-source-layer.archive-module-pressed-layer, .archive-section-title-group.archive-module-pressed-layer { animation: none !important; transition: none !important; transform: none !important; }
   .reports-archive-entry-group { opacity: 1 !important; }
 }
 
-/* Short embedded-browser viewports are wider than the supplied 750×1625
-   guide canvas. Contain every approved full-canvas layer on the same origin,
-   and let the supplied yellow texture fill only the side remainder. */
+/* Short or landscape embedded-browser viewports are wider than the supplied
+   750×1625 guide canvas. Keep approved foreground artwork complete while the
+   matching texture on the root and transition buffer continues to cover every
+   safe-area edge, so the contained canvas never exposes a blank gutter. */
 @media (orientation: portrait) and (min-aspect-ratio: 15 / 31) {
-  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { object-fit: contain; }
-  .guide-loading-buffer-gif, .guide-loading-buffer-poster { object-fit: contain; }
+  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
+  .guide-loading-buffer-gif, .guide-loading-buffer-poster, .h5-guide-route-snapshot { object-fit: contain; }
 }
 
-/* Resolve against the actual safe-area content box when container queries are
-   available; the media query above remains the fallback for older WebViews. */
 @container (min-aspect-ratio: 15 / 31) {
   .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
   .guide-loading-buffer-gif, .guide-loading-buffer-poster { object-fit: contain; }
+}
+
+/* Keep the action cue clear of embedded-browser chrome on short landscape screens. */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --guide-entry-hint-width: min(34vw, 240px); --guide-entry-hint-bottom: max(1.5%, env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 359px) {

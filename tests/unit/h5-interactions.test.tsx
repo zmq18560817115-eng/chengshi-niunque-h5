@@ -331,7 +331,7 @@ describe("multi-page H5 interactions", () => {
     });
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(340); });
     expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(true);
   });
 

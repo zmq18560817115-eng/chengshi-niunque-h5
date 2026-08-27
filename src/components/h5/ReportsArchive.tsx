@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { archiveClickCueLayout, archiveInspectionMascotLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
-import { getCategoryReadinessAssets } from "@/config/h5-category-themes";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
 import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
@@ -12,7 +11,7 @@ import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFi
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
-import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity, prepareCategoryRouteContinuity } from "@/components/h5/category-route-transition";
+import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity } from "@/components/h5/category-route-transition";
 import {
   announceGuideRouteReady,
   guideArchiveBatchDelayMs,
@@ -20,7 +19,7 @@ import {
   guideRouteEntryAttribute,
   guideRouteStageDurationMs,
 } from "@/components/h5/guide-route-transition";
-import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 const reportsReadinessRequests = [
   ...archiveArtworkCriticalAssets.map((src) => ({ src, priority: "high" as const })),
@@ -151,7 +150,6 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
-      prepareCategoryRouteContinuity();
       setLeaving(true);
       window.setTimeout(() => navigateWithCategoryContinuity(() => router.push(`/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
     }, archiveModuleExitDelayMs);
@@ -160,8 +158,6 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const pressModule = (slug: string) => {
     if (navigating.current || leaving || guideEntry || preview) return;
     setPressedSlug(slug);
-    const requests = getCategoryReadinessAssets(slug).map((src) => ({ src, priority: "high" as const }));
-    void preloadHomepageAssets(requests).catch(() => undefined);
   };
 
   const exitingSlug = leaving ? pressedSlug : null;

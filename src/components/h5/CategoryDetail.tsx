@@ -7,7 +7,7 @@ import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/Ada
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
-import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource } from "@/components/h5/category-route-transition";
+import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteMountedEvent, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -76,6 +76,8 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     const root = document.documentElement;
     if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
     root.removeAttribute(categoryRouteEntryAttribute);
+    window.dispatchEvent(new Event(categoryRouteMountedEvent));
+    if (root.hasAttribute(categoryRouteNativeTransitionAttribute)) return;
     if (motionEnabled) {
       setRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
     }

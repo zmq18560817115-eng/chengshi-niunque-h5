@@ -137,6 +137,8 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
   const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
   await expect(guideBuffer).toBeVisible({ timeout: 3000 });
+  await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toHaveCount(1);
+  await expect(guideBuffer.locator(".brand-guide-paper, .brand-guide-character")).toHaveCount(0);
   await page.waitForTimeout(1000);
   await expect(runtimeLoadingLayer).toHaveCount(0);
   await expect(page.locator(".guide-loading-buffer-poster, .guide-loading-buffer-gif")).toHaveCount(0);
@@ -194,11 +196,11 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   })));
 
   expect(timing[0].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
-  expect(timing[0].durations).toEqual([840, 840]);
+  expect(timing[0].durations).toEqual([520, 520]);
   expect(timing[0].delays).toEqual([0, 0]);
   expect(timing[1].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
-  expect(timing[1].durations).toEqual([620, 620]);
-  expect(timing[1].delays).toEqual([672, 672]);
+  expect(timing[1].durations).toEqual([420, 420]);
+  expect(timing[1].delays).toEqual([374.4, 374.4]);
   await page.screenshot({ path: "artifacts/design-qa/guide-to-archive-revealing-375x812.png" });
 
   await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });

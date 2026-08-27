@@ -36,7 +36,9 @@ export type CategoryCardFallback = {
 
 const sharedCardDescription = "DHA、ARA有没有达到标签标示量。妈妈只看报告结论是否\"符合/通过\",不用自己算公式。";
 
-const runtimeAsset = (name: string) => `/design/final-v1/category-runtime/${name}`;
+// Source PNG/JPG files remain the design masters. Runtime references use the
+// half-resolution WebP copies beside them to keep mobile decode memory bounded.
+const runtimeAsset = (name: string) => `/design/final-v1/category-runtime/${name.replace(/\.(?:png|jpe?g)$/i, ".runtime.webp")}`;
 
 const categoryPaperLayer = {
   id: "paper",

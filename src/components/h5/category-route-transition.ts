@@ -2,45 +2,33 @@ export const categoryRouteEntryAttribute = "data-category-route-entry";
 export const categoryRouteEntrySource = "reports-archive";
 export const categoryRouteBufferedEntrySource = "reports-archive-buffer";
 export const categoryRouteBufferAttribute = "data-category-route-buffer";
+export const categoryRouteNativeTransitionAttribute = "data-category-native-transition";
 export const categoryRouteReadyEvent = "h5-category-route-ready";
+export const categoryRouteMountedEvent = "h5-category-route-mounted";
 export const categoryRouteBufferHostId = "h5-category-route-buffer-host";
 // Keep one short, perceptible pressed frame for touch and keyboard activation
-// before the continuous route clone takes ownership of the transition.
-export const archiveModuleExitDelayMs = 48;
-export const archiveModuleExitDurationMs = 520;
+// before the compositor transition takes ownership of the route.
+export const archiveModuleExitDelayMs = 16;
+export const archiveModuleExitDurationMs = 420;
 export const archiveModuleNavigationDelayMs = 0;
-export const categoryRouteBufferReleaseDurationMs = 820;
+export const categoryRouteBufferReleaseDurationMs = 520;
 
 let bufferCleanupTimer: number | undefined;
+
+type CategoryViewTransition = { finished: Promise<unknown> };
+type CategoryViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => void | Promise<void>) => CategoryViewTransition;
+};
 
 export function prepareCategoryRouteContinuity() {
   const root = document.documentElement;
   const host = document.getElementById(categoryRouteBufferHostId);
-  const source = document.querySelector<HTMLElement>(".reports-archive-final");
-  if (!host || !source) return;
+  if (!host) return;
 
   window.clearTimeout(bufferCleanupTimer);
-  const sourceRect = source.getBoundingClientRect();
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.classList.remove("is-leaving");
-  clone.classList.add("is-category-route-buffer-clone");
-  clone.removeAttribute("data-exit-slug");
-  clone.querySelectorAll(".archive-module-exit-layer").forEach((node) => node.classList.remove("archive-module-exit-layer"));
-  Object.assign(clone.style, {
-    position: "absolute",
-    left: `${sourceRect.left}px`,
-    top: `${sourceRect.top}px`,
-    width: `${sourceRect.width}px`,
-    height: `${sourceRect.height}px`,
-    maxWidth: "none",
-    margin: "0",
-    pointerEvents: "none",
-  });
-
   const buffer = document.createElement("div");
   buffer.className = "h5-category-route-buffer";
   buffer.setAttribute("aria-hidden", "true");
-  buffer.append(clone);
   host.replaceChildren(buffer);
   root.setAttribute(categoryRouteBufferAttribute, "active");
   window.requestAnimationFrame(() => window.requestAnimationFrame(() => buffer.classList.add("is-moving")));
@@ -63,7 +51,39 @@ function releaseCategoryRouteBuffer() {
 }
 
 export function navigateWithCategoryContinuity(navigate: () => void) {
-  if (!document.documentElement.hasAttribute(categoryRouteBufferAttribute)) prepareCategoryRouteContinuity();
+  const root = document.documentElement;
+  const viewDocument = document as CategoryViewTransitionDocument;
+  const startViewTransition = viewDocument.startViewTransition?.bind(viewDocument);
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  if (startViewTransition && !reducedMotion) {
+    let settled = false;
+    let resolveMounted: (() => void) | undefined;
+    const mounted = new Promise<void>((resolve) => { resolveMounted = resolve; });
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(fallbackTimer);
+      window.removeEventListener(categoryRouteMountedEvent, finish);
+      resolveMounted?.();
+    };
+    const fallbackTimer = window.setTimeout(finish, 3000);
+    window.addEventListener(categoryRouteMountedEvent, finish, { once: true });
+    root.setAttribute(categoryRouteNativeTransitionAttribute, "active");
+    try {
+      const transition = startViewTransition(async () => {
+        navigate();
+        await mounted;
+      });
+      const clearNativeTransition = () => root.removeAttribute(categoryRouteNativeTransitionAttribute);
+      void transition.finished.then(clearNativeTransition, clearNativeTransition);
+      return;
+    } catch {
+      finish();
+      root.removeAttribute(categoryRouteNativeTransitionAttribute);
+    }
+  }
+
+  if (!root.hasAttribute(categoryRouteBufferAttribute)) prepareCategoryRouteContinuity();
   let settled = false;
   const finish = () => {
     if (settled) return;

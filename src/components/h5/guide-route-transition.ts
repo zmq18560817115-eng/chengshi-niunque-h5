@@ -3,14 +3,15 @@ import { requestVisualViewportHeightSync } from "@/components/h5/useVisualViewpo
 export const guideRouteEntryAttribute = "data-guide-route-entry";
 export const guideRouteReadyEvent = "h5-guide-route-ready";
 export const guideRouteBufferHostId = "h5-guide-route-buffer-host";
-export const guideRouteNavigationDelayMs = 40;
-export const guideRouteBufferReleaseDurationMs = 840;
+export const guideRouteNavigationDelayMs = 16;
+export const guideRouteBufferReleaseDurationMs = 520;
+const guideRouteSnapshotSrc = "/design/guide/guide-final-fallback-v3.webp";
 
 export const guideArchiveEntryTiming = {
   bookDelayMs: 0,
-  bookDurationMs: 840,
-  batchOverlapProgress: 0.8,
-  batchDurationMs: 620,
+  bookDurationMs: 520,
+  batchOverlapProgress: 0.72,
+  batchDurationMs: 420,
 } as const;
 
 export const guideArchiveBatchDelayMs = guideArchiveEntryTiming.bookDelayMs
@@ -22,30 +23,12 @@ export const guideRouteStageDurationMs = guideArchiveBatchDelayMs
 let bufferCleanupTimer: number | undefined;
 let stageCleanupTimer: number | undefined;
 
-const guideSnapshotSelectors = [
-  ".brand-guide-paper-top",
-  ".brand-guide-paper-left",
-  ".brand-guide-paper-right",
-  ".brand-guide-paper-bottom",
-  ".brand-guide-character-closed",
-] as const;
-
-function freezeGuideSnapshot(source: HTMLElement, clone: HTMLElement) {
-  guideSnapshotSelectors.forEach((selector) => {
-    const sourceNode = source.querySelector<HTMLElement>(selector);
-    const cloneNode = clone.querySelector<HTMLElement>(selector);
-    if (!sourceNode || !cloneNode) return;
-    const computed = window.getComputedStyle(sourceNode);
-    cloneNode.style.setProperty("opacity", computed.opacity, "important");
-    cloneNode.style.setProperty("transform", computed.transform, "important");
-  });
-}
-
 export function prepareGuideRouteContinuity() {
   const root = document.documentElement;
   const host = document.getElementById(guideRouteBufferHostId);
   const source = document.querySelector<HTMLElement>(".brand-guide");
-  if (!host || !source) return;
+  const sourceStage = source?.querySelector<HTMLElement>(".brand-guide-stage");
+  if (!host || !source || !sourceStage) return;
 
   window.clearTimeout(bufferCleanupTimer);
   window.clearTimeout(stageCleanupTimer);
@@ -53,25 +36,24 @@ export function prepareGuideRouteContinuity() {
   const routeDistance = Math.max(1, Math.round(sourceRect.height || window.innerHeight));
   root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);
   root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.classList.remove("is-leaving");
-  clone.classList.add("is-guide-route-buffer-clone", "is-swipe-accepted");
-  freezeGuideSnapshot(source, clone);
-  Object.assign(clone.style, {
-    position: "absolute",
-    left: `${sourceRect.left}px`,
-    top: `${sourceRect.top}px`,
-    width: `${sourceRect.width}px`,
-    height: `${sourceRect.height}px`,
-    maxWidth: "none",
-    margin: "0",
-    pointerEvents: "none",
+  const stageRect = sourceStage.getBoundingClientRect();
+  const snapshot = document.createElement("img");
+  snapshot.className = "h5-guide-route-snapshot";
+  snapshot.src = guideRouteSnapshotSrc;
+  snapshot.alt = "";
+  snapshot.decoding = "async";
+  snapshot.setAttribute("aria-hidden", "true");
+  Object.assign(snapshot.style, {
+    left: `${stageRect.left}px`,
+    top: `${stageRect.top}px`,
+    width: `${stageRect.width}px`,
+    height: `${stageRect.height}px`,
   });
 
   const buffer = document.createElement("div");
   buffer.className = "h5-guide-route-buffer";
   buffer.setAttribute("aria-hidden", "true");
-  buffer.append(clone);
+  buffer.append(snapshot);
   host.replaceChildren(buffer);
   root.setAttribute(guideRouteEntryAttribute, "active");
 }

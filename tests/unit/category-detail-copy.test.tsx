@@ -67,12 +67,12 @@ describe("CategoryDetail dynamic card copy", () => {
         status.querySelector(".category-card-status-text-art"),
       ),
     ).toBe(true);
-    expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.png"));
+    expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.runtime.webp"));
     expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(6);
     expect(container.querySelector(".category-page-viewport")).toHaveAttribute("data-artwork-source", "layered-components");
     expect(container.innerHTML).not.toContain("inspection-source.jpg");
     expect(container.querySelectorAll(".category-card-backplate")).toHaveLength(3);
-    expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-card-1.png"));
+    expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-card-1.runtime.webp"));
     expect(container.querySelector(".category-inspection-batch-bubble")).not.toBeInTheDocument();
     expect(container.querySelector(".category-page-final")).not.toHaveClass("h5-page-transition", "is-leaving");
   });

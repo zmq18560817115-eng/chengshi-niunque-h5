@@ -14,9 +14,9 @@ describe("H5 category report themes", () => {
   });
 
   it.each([
-    ["inspection-projects", "inspection-folder-layer.png"],
-    ["review-assurance", "review-folder-layer.png"],
-    ["production-traceability", "traceability-folder-layer.png"],
+    ["inspection-projects", "inspection-folder-layer.runtime.webp"],
+    ["review-assurance", "review-folder-layer.runtime.webp"],
+    ["production-traceability", "traceability-folder-layer.runtime.webp"],
   ])("assembles %s from independent design layers", (slug, folder) => {
     const theme = getCategoryTheme(slug);
     expect(theme.artworkLayers?.map((layer) => layer.id)).toEqual(["paper", "folder", "title-ring", "title-digit", "title", "footer-note"]);
