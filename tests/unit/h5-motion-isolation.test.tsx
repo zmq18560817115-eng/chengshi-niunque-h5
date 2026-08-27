@@ -409,7 +409,7 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("ArchiveArtwork, archiveArtworkCriticalAssets");
     expect(reports).not.toContain("archiveArtworkDeferredAssets");
     expect(reports).toContain("const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);");
-    expect(reports).toContain("<ArchiveArtwork preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />");
+    expect(reports).toContain("<ArchiveArtwork preview={preview} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />");
     expect(reports).not.toContain("archive-reference.webp");
     expect(artwork).toContain('data-artwork-source="layered-originals"');
     expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');

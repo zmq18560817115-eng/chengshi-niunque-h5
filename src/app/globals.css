@@ -52,7 +52,13 @@
 * { box-sizing: border-box; }
 html { width: 100%; min-height: 100%; overflow-x: hidden; overflow-y: auto; background: #eee7dc; color: var(--color-ink); }
 body { width: 100%; min-height: 100%; margin: 0; overflow-x: hidden; font-family: var(--font-body); background: #eee7dc; }
-html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background-color: #f8e89d; }
+html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #f8e89d; }
+/* 引导页占屏时,把基础底色垫成引导页黄:可视视口高度在微信/飞书工具栏收展时
+   若短于绘制区,露出的边缘直接是引导页黄而非浅米色,消除"背景空挡"。
+   进入首页的路由交接同理:缓冲层滑离瞬间即使首页贴图晚一帧,露出的也是同色黄,
+   不再出现浅色/闪白。 */
+html:has(.brand-guide), html:has(.brand-guide) body,
+html:has(.guide-loading-buffer), html:has(.guide-loading-buffer) body { background: #f8e89d; }
 html[data-category-route-buffer], html[data-category-route-buffer] body { background-color: #f5f0e7; }
 html[data-h5-page-lock="category"], html[data-h5-page-lock="category"] body { width: 100%; height: 100%; min-height: 100%; overflow: hidden; overscroll-behavior: none; background: #f5f0e7; }
 html:has(.guide-loading-buffer), html:has(.brand-guide), html:has(.h5-shell) { scrollbar-width: none; }
@@ -406,6 +412,11 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 .reports-archive-source-layer.archive-module-pressed-layer,
 .archive-section-title-group.archive-module-pressed-layer,
 .archive-section-click-cue.archive-module-pressed-layer { filter: brightness(.965) saturate(1.02); transform: translate3d(0,.16%,0) scale3d(.986,.986,1); transform-origin: center; transition: filter 70ms ease-out, transform 70ms var(--h5-route-transition-easing); will-change: filter, transform; }
+/* 即时按压高亮:由 <main data-pressed-slug> 与图层 data-archive-module 匹配驱动,
+   无需重渲染贴图树,点按当帧即出反馈。仅在按压窗口(非退场 data-exit-slug)生效。 */
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="inspection-projects"] .reports-archive-source-layer[data-archive-module="inspection-projects"],
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="review-assurance"] .reports-archive-source-layer[data-archive-module="review-assurance"],
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="production-traceability"] .reports-archive-source-layer[data-archive-module="production-traceability"] { filter: brightness(.965) saturate(1.02); transform: translate3d(0,.16%,0) scale3d(.986,.986,1); transform-origin: center; transition: filter 70ms ease-out, transform 70ms var(--h5-route-transition-easing); will-change: filter, transform; }
 .reports-archive-source-layer.archive-module-exit-layer { z-index: 60 !important; animation: archive-selected-module-extract-left var(--category-route-exit-duration) var(--h5-route-transition-easing) both; will-change: opacity, transform; }
 .archive-story-copy { position: absolute; z-index: 24; inset: 0; width: 100%; height: 100%; }
 .archive-story-copy > .motion-stage { position: absolute; inset: 0; }
@@ -1004,6 +1015,9 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .archive-module-unlock { transform: none; transition: none; }
   .archive-section-title-poster { animation: none !important; transform: none; }
   .brand-guide-entry-hint, .reports-archive-entry-group, .archive-section-click-cue-gif, .reports-archive-source-layer.archive-module-pressed-layer, .archive-section-title-group.archive-module-pressed-layer { animation: none !important; transition: none !important; transform: none !important; }
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="inspection-projects"] .reports-archive-source-layer[data-archive-module="inspection-projects"],
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="review-assurance"] .reports-archive-source-layer[data-archive-module="review-assurance"],
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="production-traceability"] .reports-archive-source-layer[data-archive-module="production-traceability"] { transition: none !important; transform: none !important; }
   .reports-archive-entry-group { opacity: 1 !important; }
 }
 
