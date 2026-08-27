@@ -7,6 +7,19 @@ import { getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
 import Image from "next/image";
+import {
+  ArchiveFishFloatMotion,
+  ArchiveLatestCircle,
+  ArchiveResultColorMotion,
+  ArchiveStoryCopyMotion,
+  ArchiveUnlockTabMotion,
+} from "./motion/modules";
+
+// 首页采用“干净底图 + 分层动画覆盖”结构：底图 archive-base-clean 不含会动的
+// 元素，最新批次描圈、结果变色、开锁缎带、鱼漂浮、品牌文案逐行渐显由各自的
+// 运行贴图在滚动到位时叠加。每个覆盖层自身带静态回退，动画关闭/失败时回退到
+// 该层最终态，整体仍还原完整档案。
+const cleanBase = "/design/final-v1/motion/archive-clean/archive-base-clean.webp";
 
 export function ReportsArchive({ modules, preview = false, config = defaultH5SiteConfig }: { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig }) {
   const router = useRouter();
@@ -36,10 +49,13 @@ export function ReportsArchive({ modules, preview = false, config = defaultH5Sit
   };
 
   return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle}>
-    {/* The approved artwork is a complete 1000 x 5557 composition. Keeping it
-        as one layer after the guide avoids mobile WebView alpha-compositing
-        glitches caused by independently animated full-page canvases. */}
-    <Image className="reports-archive-art reports-archive-clean-base" src="/design/final-v1/archive-reference.webp" alt="诚实透明档案" width={1000} height={5557} priority sizes="(max-width: 750px) 100vw, 750px" unoptimized />
+    {/* 干净底图（1000 x 5557），其上叠加各分层运行贴图。 */}
+    <Image className="reports-archive-art reports-archive-clean-base" src={cleanBase} alt="诚实透明档案" width={1000} height={5557} priority sizes="(max-width: 750px) 100vw, 750px" unoptimized />
+    <ArchiveUnlockTabMotion preview={preview} />
+    <ArchiveLatestCircle preview={preview} />
+    <ArchiveResultColorMotion preview={preview} />
+    <ArchiveFishFloatMotion preview={preview} />
+    <ArchiveStoryCopyMotion preview={preview} />
     <nav className="reports-archive-hotspots" aria-label="档案分类">
       {visibleModules.map((module) => {
         const layout = getArchiveModuleLayout(module.slug)!;

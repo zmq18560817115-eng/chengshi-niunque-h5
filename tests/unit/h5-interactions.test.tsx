@@ -62,10 +62,10 @@ describe("multi-page H5 interactions", () => {
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
-  it("keeps the approved archive artwork as one stable visual and preserves navigation hotspots", () => {
+  it("uses the clean archive base and preserves navigation hotspots", () => {
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
-    expect([...container.querySelectorAll(".reports-archive-art")].some((image) => image.getAttribute("src")?.includes("archive-reference.webp"))).toBe(true);
+    expect([...container.querySelectorAll(".reports-archive-art")].some((image) => image.getAttribute("src")?.includes("archive-base-clean.webp"))).toBe(true);
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -83,19 +83,22 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-motion-layers")).not.toBeInTheDocument();
   });
 
-  it("does not compose additional full-page animation canvases over the archive artwork", () => {
+  it("composes the layered archive motion overlays over the clean base", () => {
     const { container } = render(<ReportsArchive modules={[]}/>);
-    expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).not.toBeInTheDocument();
-    expect(container.querySelector("[data-motion-module='archiveFishFloat']")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveUnlockTab']")).toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveLatestCircle']")).toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveResultColor']")).toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).toBeInTheDocument();
+    expect(container.querySelector("[data-motion-module='archiveFishFloat']")).toBeInTheDocument();
   });
 
-  it("keeps the approved archive artwork stable for reduced motion", async () => {
+  it("shows the archive motion overlays as static final state under reduced motion", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const { container } = render(<ReportsArchive modules={[]}/>);
+    // 减弱动画时不预载动态贴图（不产生 new Image() 请求），各覆盖层直接呈现静态终态。
     expect(pendingImages).toHaveLength(0);
-    expect(container.querySelector(".archive-fish-float")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
+    expect(container.querySelector(".archive-fish-float.is-fallback")).toBeInTheDocument();
+    expect(container.querySelector(".archive-result-color.is-complete")).toBeInTheDocument();
   });
 
   it("stays on the guide after five seconds and only enters once from the hint action", () => {
