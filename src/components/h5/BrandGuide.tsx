@@ -13,10 +13,12 @@ const guideAssetNames = [
   "guide-background.webp", "guide-arch.webp", "guide-window-mask.webp",
   "guide-character-open.webp", "guide-character-closed.webp", "guide-foreground-top.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
-  "swipe-hint-text.webp", "swipe-hint-arrow.webp",
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
-const guideAssets = [...guideAssetNames.map(assetUrl), assetUrl("guide-first-frame.webp"), assetUrl("guide-final-fallback.webp")];
+// 上滑提示与最终静态图均采用线上现行素材（swipe-up-hint-v2 / guide-final-fallback-v3）。
+const swipeHintAsset = "swipe-up-hint-v2.png";
+const fallbackAsset = "guide-final-fallback-v3.webp";
+const guideAssets = [...guideAssetNames.map(assetUrl), assetUrl(swipeHintAsset), assetUrl("guide-first-frame.webp"), assetUrl(fallbackAsset)];
 
 function GuideFirstFrame({ onError }: { onError: () => void }) {
   return <Image className="brand-guide-first-frame" src={assetUrl("guide-first-frame.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>;
@@ -24,8 +26,8 @@ function GuideFirstFrame({ onError }: { onError: () => void }) {
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
-    {!unavailable && <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback.webp")} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>}
-      <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>向左滑动进入</span>
+    {!unavailable && <Image className="brand-guide-fallback" src={assetUrl(fallbackAsset)} alt="诚实纽雀品牌引导" fill sizes="(max-width: 750px) 100vw, 750px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>}
+      <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>向上滑动进入</span>
   </>;
 }
 
@@ -43,8 +45,7 @@ function GuideLayers({ onError }: { onError: (name: string) => void }) {
     {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom")}
     {image("guide-foreground-top.webp", "brand-guide-foreground-top")}
     <div className="brand-guide-swipe-hint" aria-hidden="true">
-      {image("swipe-hint-text.webp", "brand-guide-swipe-text")}
-      {image("swipe-hint-arrow.webp", "brand-guide-swipe-arrow")}
+      <Image className="brand-guide-swipe-up" src={assetUrl(swipeHintAsset)} alt="" width={868} height={260} sizes="(max-width: 750px) 56vw, 420px" unoptimized decoding="async" onError={() => onError(swipeHintAsset)}/>
     </div>
   </div>;
 }
@@ -86,7 +87,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setSwipeReady(true);
   }, []);
   const handleFallbackError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-final-fallback.webp");
+    console.error(`[BrandGuide] asset failed: ${fallbackAsset}`);
     setFallbackUnavailable(true);
     setSwipeReady(true);
   }, []);

@@ -213,7 +213,7 @@ describe("multi-page H5 interactions", () => {
     await act(async () => pendingImages[0]?.reject());
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
     expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback-v3.webp");
     consoleError.mockRestore();
   });
 

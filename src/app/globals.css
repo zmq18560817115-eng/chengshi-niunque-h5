@@ -257,7 +257,7 @@ button, a { font: inherit; }
 .brand-guide-stage { position: relative; isolation: isolate; width: 100%; height: 100%; flex: 1 1 auto; overflow: hidden; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 0; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-window-mask, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-swipe-text, .brand-guide-swipe-arrow, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-window-mask, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-first-frame, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 15; visibility: visible; opacity: 1; }
 .brand-guide-paper { z-index: 30; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; will-change: transform, opacity; backface-visibility: hidden; }
@@ -270,8 +270,9 @@ button, a { font: inherit; }
 .brand-guide-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; will-change: opacity; }
 .brand-guide-window-mask { z-index: 25; pointer-events: none; }
 .brand-guide-foreground-top { z-index: 35; }
-.brand-guide-swipe-hint { position: absolute; z-index: 40; inset: 0; opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
-.brand-guide-swipe-arrow { animation: guide-hint-float 1.4s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
+/* 上滑提示：线上单张“上滑查看完整营养信息”素材，底部居中，与静态最终图位置一致。 */
+.brand-guide-swipe-hint { position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: flex-end; padding-bottom: max(2.4%, env(safe-area-inset-bottom)); opacity: 0; animation: guide-hint-in var(--guide-hint-duration) cubic-bezier(.22,1,.36,1) var(--guide-hint-start) both; pointer-events: none; will-change: transform, opacity; }
+.brand-guide-swipe-up { width: 54%; max-width: 420px; height: auto; animation: guide-hint-float-up 1.5s ease-in-out calc(var(--guide-hint-start) + var(--guide-hint-duration)) infinite; }
 .brand-guide-first-frame { z-index: 45; visibility: visible; opacity: 1; }
 .brand-guide-fallback { z-index: 45; visibility: hidden; opacity: 0; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
@@ -280,14 +281,14 @@ button, a { font: inherit; }
 .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
 .brand-guide.has-no-fallback .brand-guide-fallback-message { display: block; }
-.brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed, .brand-guide:not(.is-animating) .brand-guide-swipe-hint, .brand-guide:not(.is-animating) .brand-guide-swipe-arrow { animation-play-state: paused; }
+.brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed, .brand-guide:not(.is-animating) .brand-guide-swipe-hint, .brand-guide:not(.is-animating) .brand-guide-swipe-up { animation-play-state: paused; }
 .brand-guide.is-motion-disabled .brand-guide-dynamic-stage,
 .brand-guide.is-motion-disabled .brand-guide-first-frame { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.is-motion-disabled .brand-guide-paper,
 .brand-guide.is-motion-disabled .brand-guide-character-closed,
 .brand-guide.is-motion-disabled .brand-guide-swipe-hint,
-.brand-guide.is-motion-disabled .brand-guide-swipe-arrow { animation-play-state: paused !important; }
+.brand-guide.is-motion-disabled .brand-guide-swipe-up { animation-play-state: paused !important; }
 .brand-guide-accessible-copy { position: absolute; z-index: 50; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; white-space: nowrap; }
 .brand-guide-enter-action { position: absolute; z-index: 50; right: 3%; bottom: max(1.5%, env(safe-area-inset-bottom)); width: 46%; height: 11%; padding: 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .brand-guide-enter-action:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
@@ -300,6 +301,8 @@ button, a { font: inherit; }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-hint-in { 0% { transform: translate3d(0, 2.2%, 0); opacity: 0; } 38% { transform: translate3d(0, 1.2%, 0); opacity: .38; } 72% { transform: translate3d(0, .35%, 0); opacity: .82; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
 @keyframes guide-hint-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.35rem, 0, 0); } }
+/* 上滑提示的上下浮动，暗示向上滑动手势。 */
+@keyframes guide-hint-float-up { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -8%, 0); } }
 .reports-archive { animation: reports-enter .32s ease both; }
 /* 首页作为一整本档案渐显进入（第一部分：整册画面）。 */
 .reports-archive.reports-entry-transition { animation: reports-book-in 520ms cubic-bezier(.22,1,.36,1) both; }
