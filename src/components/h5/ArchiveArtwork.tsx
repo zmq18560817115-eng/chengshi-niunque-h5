@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
 
 const masterWidth = 1000;
@@ -121,15 +121,18 @@ const deepDeferredParts = new Set([
   "module-3-complete-output",
 ]);
 
-export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug = null, mountDeferred = true, mountDeepDeferred = true }: { preview?: boolean; activeSlug?: string | null; exitingSlug?: string | null; mountDeferred?: boolean; mountDeepDeferred?: boolean }) {
+// 按压高亮改由 CSS 依据 <main data-pressed-slug> + 图层 data-archive-module 驱动
+// (见 globals.css),这样点按只更新父级一个属性,无需重渲染这棵庞大的贴图树,
+// 点击反馈即时、不再卡顿。此组件仅在真正导航(exitingSlug 变化)时才需重渲染,
+// 因此用 memo 包裹,按压 pressedSlug 变化不会触及它。
+export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, exitingSlug = null, mountDeferred = true, mountDeepDeferred = true }: { preview?: boolean; exitingSlug?: string | null; mountDeferred?: boolean; mountDeepDeferred?: boolean }) {
   const renderLayer = (layer: ArtworkLayer) => {
     const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
-    const active = moduleSlug === activeSlug;
     const exiting = moduleSlug === exitingSlug;
     return (
       <Image
         key={layer.id}
-        className={`reports-archive-source-layer ${active ? "archive-module-pressed-layer" : ""} ${exiting ? "archive-module-exit-layer" : ""}`}
+        className={`reports-archive-source-layer ${exiting ? "archive-module-exit-layer" : ""}`}
         src={layer.src}
         alt=""
         width={layer.width}
@@ -171,4 +174,4 @@ export function ArchiveArtwork({ preview = false, activeSlug = null, exitingSlug
       </div>
     </div>
   );
-}
+});

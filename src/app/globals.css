@@ -408,6 +408,11 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 .reports-archive-source-layer.archive-module-pressed-layer,
 .archive-section-title-group.archive-module-pressed-layer,
 .archive-section-click-cue.archive-module-pressed-layer { filter: brightness(.965) saturate(1.02); transform: translate3d(0,.16%,0) scale3d(.986,.986,1); transform-origin: center; transition: filter 70ms ease-out, transform 70ms var(--h5-route-transition-easing); will-change: filter, transform; }
+/* 即时按压高亮:由 <main data-pressed-slug> 与图层 data-archive-module 匹配驱动,
+   无需重渲染贴图树,点按当帧即出反馈。仅在按压窗口(非退场 data-exit-slug)生效。 */
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="inspection-projects"] .reports-archive-source-layer[data-archive-module="inspection-projects"],
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="review-assurance"] .reports-archive-source-layer[data-archive-module="review-assurance"],
+.reports-archive-final:not([data-exit-slug])[data-pressed-slug="production-traceability"] .reports-archive-source-layer[data-archive-module="production-traceability"] { filter: brightness(.965) saturate(1.02); transform: translate3d(0,.16%,0) scale3d(.986,.986,1); transform-origin: center; transition: filter 70ms ease-out, transform 70ms var(--h5-route-transition-easing); will-change: filter, transform; }
 .reports-archive-source-layer.archive-module-exit-layer { z-index: 60 !important; animation: archive-selected-module-extract-left var(--category-route-exit-duration) var(--h5-route-transition-easing) both; will-change: opacity, transform; }
 .archive-story-copy { position: absolute; z-index: 24; inset: 0; width: 100%; height: 100%; }
 .archive-story-copy > .motion-stage { position: absolute; inset: 0; }
@@ -1006,6 +1011,9 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .archive-module-unlock { transform: none; transition: none; }
   .archive-section-title-poster { animation: none !important; transform: none; }
   .brand-guide-entry-hint, .h5-guide-route-buffer .brand-guide.is-guide-route-buffer-clone.is-swipe-accepted .brand-guide-entry-hint, .reports-archive-entry-group, .archive-section-click-cue-gif, .reports-archive-source-layer.archive-module-pressed-layer, .archive-section-title-group.archive-module-pressed-layer { animation: none !important; transition: none !important; transform: none !important; }
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="inspection-projects"] .reports-archive-source-layer[data-archive-module="inspection-projects"],
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="review-assurance"] .reports-archive-source-layer[data-archive-module="review-assurance"],
+  .reports-archive-final:not([data-exit-slug])[data-pressed-slug="production-traceability"] .reports-archive-source-layer[data-archive-module="production-traceability"] { transition: none !important; transform: none !important; }
   .reports-archive-entry-group { opacity: 1 !important; }
 }
 
