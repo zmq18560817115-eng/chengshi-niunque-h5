@@ -4,35 +4,14 @@ export const categoryRouteBufferedEntrySource = "reports-archive-buffer";
 export const categoryRouteBufferAttribute = "data-category-route-buffer";
 export const categoryRouteReadyEvent = "h5-category-route-ready";
 export const categoryRouteBufferHostId = "h5-category-route-buffer-host";
-export const archiveModuleExitDelayMs = 16;
+// Keep one short, perceptible pressed frame for touch and keyboard activation
+// before the continuous route clone takes ownership of the transition.
+export const archiveModuleExitDelayMs = 48;
 export const archiveModuleExitDurationMs = 520;
 export const archiveModuleNavigationDelayMs = 0;
 export const categoryRouteBufferReleaseDurationMs = 820;
 
 let bufferCleanupTimer: number | undefined;
-
-const freezeProperties = [
-  "opacity",
-  "transform",
-  "visibility",
-  "clip-path",
-  "mask-position",
-  "-webkit-mask-position",
-  "stroke-dashoffset",
-] as const;
-
-function freezeClone(source: HTMLElement, clone: HTMLElement) {
-  const sourceNodes = [source, ...source.querySelectorAll<HTMLElement | SVGElement>("*")];
-  const cloneNodes = [clone, ...clone.querySelectorAll<HTMLElement | SVGElement>("*")];
-  sourceNodes.forEach((sourceNode, index) => {
-    const cloneNode = cloneNodes[index];
-    if (!cloneNode) return;
-    const computed = window.getComputedStyle(sourceNode);
-    cloneNode.style.setProperty("animation", "none", "important");
-    cloneNode.style.setProperty("transition", "none", "important");
-    freezeProperties.forEach((property) => cloneNode.style.setProperty(property, computed.getPropertyValue(property), "important"));
-  });
-}
 
 export function prepareCategoryRouteContinuity() {
   const root = document.documentElement;
@@ -44,9 +23,9 @@ export function prepareCategoryRouteContinuity() {
   const sourceRect = source.getBoundingClientRect();
   const clone = source.cloneNode(true) as HTMLElement;
   clone.classList.remove("is-leaving");
+  clone.classList.add("is-category-route-buffer-clone");
   clone.removeAttribute("data-exit-slug");
   clone.querySelectorAll(".archive-module-exit-layer").forEach((node) => node.classList.remove("archive-module-exit-layer"));
-  freezeClone(source, clone);
   Object.assign(clone.style, {
     position: "absolute",
     left: `${sourceRect.left}px`,

@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
+export const publicContentRefreshIntervalMs = 30000;
+
 export function PublicContentLiveRefresh({ version }: { version: string }) {
   const router = useRouter();
   const refreshing = useRef(false);
@@ -23,9 +25,16 @@ export function PublicContentLiveRefresh({ version }: { version: string }) {
         // A temporary network interruption must not replace the last good public content.
       }
     };
-    const timer = window.setInterval(check, 2500);
+    const timer = window.setInterval(check, publicContentRefreshIntervalMs);
     document.addEventListener("visibilitychange", check);
-    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", check); };
+    window.addEventListener("focus", check);
+    window.addEventListener("online", check);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+      window.removeEventListener("online", check);
+    };
   }, [router, version]);
 
   return null;

@@ -181,11 +181,11 @@ function useSequentialTitlePlayback(enabled: boolean) {
   return { trigger, running: enabled && motionAllowed && regionVisible };
 }
 
-function ArchiveSectionClickCue({ enabled }: { enabled: boolean }) {
+function ArchiveSectionClickCue({ enabled, active }: { enabled: boolean; active: boolean }) {
   const { trigger, nearby, visible, ready, handleMotionState } = useViewportGif(enabled);
 
   return (
-    <div className="archive-section-click-cue" data-click-cue-nearby={nearby} data-click-cue-visible={visible} data-click-cue-ready={ready} style={position(clickCue)}>
+    <div className={`archive-section-click-cue ${active ? "archive-module-pressed-layer" : ""}`} data-click-cue-nearby={nearby} data-click-cue-visible={visible} data-click-cue-ready={ready} style={position(clickCue)}>
       <div ref={trigger} className="archive-section-title-trigger" />
       {nearby && <MotionBoundary fallback={null}>
         <MotionStage masterWidth={clickCue.width} masterHeight={clickCue.height} assets={[clickCue.gif]} enabled={enabled} crossfadeMs={0} fallback={null} onStateChange={handleMotionState}>
@@ -227,7 +227,7 @@ export function ArchiveSectionTitleMotion({ preview = false, activeSlug = null, 
   return (
     <div className="archive-section-title-motion" data-motion-module="archiveSectionTitle" data-title-sequence-running={running} data-title-sequence-mode={running ? "css-compositor-loop" : "paused"} aria-hidden="true">
       <div ref={trigger} className="archive-section-title-sequence-trigger" />
-      <ArchiveSectionClickCue enabled={enabled} />
+      <ArchiveSectionClickCue enabled={enabled} active={activeSlug === "inspection-projects"} />
       {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} active={group.slug === activeSlug} exiting={group.slug === exitingSlug} sequenceIndex={index} />)}
     </div>
   );

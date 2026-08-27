@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createElement, type ImgHTMLAttributes } from "react";
 import type { ImageProps } from "next/image";
 
@@ -22,7 +22,7 @@ vi.mock("next/image", () => ({
 
 Object.defineProperty(window, "scrollTo", { configurable: true, value: vi.fn() });
 
-for (const line of readFileSync(".env", "utf8").split(/\r?\n/)) {
+for (const line of (existsSync(".env") ? readFileSync(".env", "utf8") : "").split(/\r?\n/)) {
   const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
   if (!match || process.env[match[1]]) continue;
   const value = match[2].trim();

@@ -178,6 +178,10 @@ export const categoryThemes = {
 // a module is tapped without introducing any alternate flattened artwork.
 export const categoryRouteWarmAssets = [...new Set(Object.values(categoryReadinessAssets).flat())];
 
+export function getCategoryReadinessAssets(slug: string): readonly string[] {
+  return categoryReadinessAssets[slug as keyof typeof categoryReadinessAssets] ?? [];
+}
+
 export const placeholderCardId = (index: number) => `placeholder-slot-${index + 1}`;
 
 export function getPlaceholderSlot(slug: string, cardId: string) {

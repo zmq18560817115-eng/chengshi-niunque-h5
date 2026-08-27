@@ -22,7 +22,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   const theme = getCategoryTheme(slug);
   const placeholderSlot = getPlaceholderSlot(slug, cardId);
   if (!result && placeholderSlot === null) notFound();
-  if (!result && placeholderSlot !== null) return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final h5-page-transition ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} data-theme={theme.theme}>
+  if (!result && placeholderSlot !== null) return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final h5-page-transition ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} showBackControl={false} data-theme={theme.theme}>
     <section className="report-page-title report-placeholder-title"><p>{theme.label}</p><h1>测试报告占位</h1><div>当前板块的正式报告资料尚未完成上传，以下为测试报告占位。</div></section>
     <section className="report-page-content" aria-label="报告内容"><TestReportPlaceholders/></section>
   </SwipeBackPage></>;
@@ -30,7 +30,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   const images = result.card.assets.filter((asset) => asset.type === "IMAGE");
   const files = result.card.assets.filter((asset) => asset.type !== "IMAGE");
 
-  return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final h5-page-transition ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} data-theme={theme.theme}>
+  return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final h5-page-transition ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} showBackControl={false} data-theme={theme.theme}>
     <section className="report-page-title">
       <p>{theme.label}</p><h1>{result.card.title}</h1>{result.card.description && <div>{result.card.description}</div>}
     </section>

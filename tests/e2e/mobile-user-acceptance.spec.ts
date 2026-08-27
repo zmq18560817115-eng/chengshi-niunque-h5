@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Locator } from "@playwright/test";
 
 const devices = [
+  { name: "iphone-se-first-generation", width: 320, height: 568 },
+  { name: "compact-android", width: 360, height: 800 },
   { name: "iphone-se", width: 375, height: 667 },
   { name: "iphone-x-13-mini", width: 375, height: 812 },
   { name: "iphone-12-13-14", width: 390, height: 844 },
@@ -11,6 +13,7 @@ const devices = [
   { name: "large-android-pro-max", width: 430, height: 932 },
   { name: "iphone-17-pro-max", width: 440, height: 956 },
   { name: "iphone-17-pro-max-embedded-short", width: 440, height: 820 },
+  { name: "iphone-se-landscape", width: 667, height: 375 },
 ] as const;
 
 const evidenceRoot = "docs/audit-2026-08-18-mobile-user";
@@ -112,14 +115,15 @@ test("375x812 user can open every category and a published report", async ({ pag
   }
 
   await page.goto("/reports/inspection-projects/items/seed-card-inspection-nutrition/reports");
+  await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "核心营养含量" })).toBeVisible();
-  await expect(page.getByText("联调资料-核心营养-保湿机制")).toBeVisible();
+  await expect(page.locator(".report-file-card, .image-report")).not.toHaveCount(0);
   await expectNoHorizontalOverflow(page, 375);
   await page.screenshot({ path: `${evidenceRoot}/flow-published-report-375x812.png` });
   expect(runtimeErrors).toEqual([]);
 });
 
-test("guide handoff shows the adaptive buffer until slow homepage artwork is painted", async ({ page }) => {
+test("guide handoff keeps the route loader behind the frozen guide until homepage artwork is painted", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route("**/design/final-v1/**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 4200));
@@ -130,14 +134,81 @@ test("guide handoff shows the adaptive buffer until slow homepage artwork is pai
   await expect(enter).toBeEnabled({ timeout: 5000 });
   await enter.click();
   await page.waitForURL(/\/reports$/);
-  const reportsBuffer = page.locator('[data-loading-reason="reports-assets"]');
-  await expect(reportsBuffer).toBeVisible({ timeout: 3000 });
-  const bufferRoot = reportsBuffer.locator(".guide-loading-buffer");
-  const bufferStage = reportsBuffer.locator(".guide-loading-buffer-stage");
-  await expectStageFillsSafeContentBox(bufferRoot, bufferStage);
-  await expect(bufferStage).toHaveCSS("aspect-ratio", "auto");
-  await expect(reportsBuffer.locator(".guide-loading-buffer-poster")).toHaveCSS("object-fit", "cover");
-  await expect(reportsBuffer.locator(".guide-loading-buffer-poster")).toHaveCSS("object-position", "50% 50%");
-  await expect(reportsBuffer).toHaveCount(0, { timeout: 10000 });
+  const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+  const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
+  await expect(guideBuffer).toBeVisible({ timeout: 3000 });
+  await page.waitForTimeout(1000);
+  await expect(runtimeLoadingLayer).toHaveCount(0);
+  await expect(page.locator(".guide-loading-buffer-poster, .guide-loading-buffer-gif")).toHaveCount(0);
+  await expect(guideBuffer).toHaveCount(0, { timeout: 15000 });
   await expect(page.locator(".reports-archive-final")).toBeVisible();
+});
+
+test("375x812 guide handoff exposes staged timing and restores archive scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+
+  let releaseHomepageAssets!: () => void;
+  const homepageAssetsReleased = new Promise<void>((resolve) => {
+    releaseHomepageAssets = resolve;
+  });
+  await page.route("**/design/final-v1/**", async (route) => {
+    await homepageAssetsReleased;
+    await route.continue();
+  });
+
+  await page.goto("/go");
+  const enter = page.getByRole("button", { name: "进入档案" });
+  await expect(enter).toBeEnabled({ timeout: 5000 });
+
+  const root = page.locator("html");
+  const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+  const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
+  const archive = page.locator(".reports-archive-final");
+  const book = page.locator('[data-guide-entry-group="archive-book"]');
+  const batch = page.locator('[data-guide-entry-group="latest-batch"]');
+
+  await enter.click();
+  await page.waitForURL(/\/reports$/);
+  await expect(root).toHaveAttribute("data-guide-route-entry", "active");
+  await expect(guideBuffer).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(runtimeLoadingLayer).toHaveCount(0);
+
+  releaseHomepageAssets();
+  await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
+  await expect(guideBuffer).toHaveClass(/is-releasing/);
+  await expect(runtimeLoadingLayer).toHaveCount(0);
+  await expect(archive).toHaveAttribute("data-guide-entry", "reference-staged");
+
+  const timing = await Promise.all([book, batch].map((group) => group.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    const toMilliseconds = (value: string) => value.split(",").map((part) => {
+      const time = part.trim();
+      return time.endsWith("ms") ? Number.parseFloat(time) : Number.parseFloat(time) * 1000;
+    });
+    return {
+      names: style.animationName.split(",").map((name) => name.trim()),
+      durations: toMilliseconds(style.animationDuration),
+      delays: toMilliseconds(style.animationDelay),
+    };
+  })));
+
+  expect(timing[0].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
+  expect(timing[0].durations).toEqual([840, 840]);
+  expect(timing[0].delays).toEqual([0, 0]);
+  expect(timing[1].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
+  expect(timing[1].durations).toEqual([620, 620]);
+  expect(timing[1].delays).toEqual([672, 672]);
+  await page.screenshot({ path: "artifacts/design-qa/guide-to-archive-revealing-375x812.png" });
+
+  await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });
+  await expect(guideBuffer).toHaveCount(0);
+  await expect(archive).not.toHaveAttribute("data-guide-entry", /.+/);
+  await expect(archive).not.toHaveAttribute("aria-busy", "true");
+  await expect(archive).toHaveAttribute("data-deferred-artwork", "mounted");
+  await expect(runtimeLoadingLayer).toHaveCount(0);
+
+  await page.evaluate(() => window.scrollTo(0, 500));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.screenshot({ path: "artifacts/design-qa/archive-after-guide-375x812.png" });
 });

@@ -1,8 +1,9 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 function localEnv(name: string): string {
-  const line = readFileSync(".env", "utf8")
+  if (process.env[name]) return process.env[name]!;
+  const line = (existsSync(".env") ? readFileSync(".env", "utf8") : "")
     .split(/\r?\n/)
     .find((item) => item.startsWith(`${name}=`));
   if (!line) throw new Error(`Missing local environment variable: ${name}`);
@@ -11,8 +12,8 @@ function localEnv(name: string): string {
 
 test("production pages apply the shared H5 and admin styles", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/");
-  await expect(page.locator(".h5-shell")).toHaveCSS("max-width", "430px");
+  await page.goto("/reports");
+  await expect(page.locator(".h5-shell")).toHaveCSS("max-width", "750px");
   await expect(page.locator(".h5-shell")).not.toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
@@ -50,8 +51,8 @@ test("production pages apply the shared H5 and admin styles", async ({ page }) =
 
   await page.goto("/admin/modules");
   await expect(page.locator(".admin-shell")).toBeVisible();
-  await expect(page.locator(".module-table")).toBeVisible();
-  await page.locator("a.button-primary", { hasText: "编辑内容" }).first().click();
+  await expect(page.locator(".admin-module-cards")).toBeVisible();
+  await page.locator("a.button-primary", { hasText: "管理内容" }).first().click();
   await expect(page.locator(".workspace")).toHaveCSS("display", "grid");
   await expect(page.locator(".workspace-tree")).toBeVisible();
   await expect(page.locator(".workspace-preview")).toBeVisible();
@@ -59,10 +60,11 @@ test("production pages apply the shared H5 and admin styles", async ({ page }) =
   await expect(page.getByText("编辑预览，尚未发布").first()).toBeVisible();
 
   await page.locator(".tree-list > li > button").first().click();
+  await page.getByRole("tab", { name: "报告页" }).click();
   await expect(page.locator(".report-card.preview-focus")).toBeVisible();
   await page.locator(".tree-module").click();
 
-  await page.getByRole("tab", { name: "完整页面" }).click();
+  await page.getByRole("button", { name: "完整页面" }).click();
   const fullPreview = page.getByRole("dialog", { name: "完整页面预览" });
   await expect(fullPreview).toBeVisible();
   for (const width of [375, 390, 414]) {

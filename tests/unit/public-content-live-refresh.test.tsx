@@ -1,5 +1,5 @@
 import { render, waitFor } from "@testing-library/react";
-import { PublicContentLiveRefresh } from "@/components/h5/PublicContentLiveRefresh";
+import { PublicContentLiveRefresh, publicContentRefreshIntervalMs } from "@/components/h5/PublicContentLiveRefresh";
 
 const navigation = vi.hoisted(() => ({ refresh: vi.fn() }));
 
@@ -8,6 +8,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("PublicContentLiveRefresh", () => {
+  it("uses a battery-friendly background refresh interval", () => {
+    expect(publicContentRefreshIntervalMs).toBe(30000);
+  });
+
   beforeEach(() => {
     navigation.refresh.mockReset();
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
