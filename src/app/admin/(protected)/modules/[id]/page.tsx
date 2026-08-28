@@ -55,10 +55,11 @@ export default async function ModulePage({ params, searchParams }: { params: Pro
           assetType: asset.assetType,
           openMode: asset.openMode,
           storageKey: asset.storageKey,
+          mimeType: asset.mimeType,
           externalUrl: asset.externalUrl,
           sortOrder: asset.sortOrder,
           contentStatus: asset.contentStatus,
-          pages: asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber })),
+          pages: asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, storageKey: page.storageKey, mimeType: page.mimeType })),
         })),
       })),
     }}
