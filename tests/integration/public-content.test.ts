@@ -1,6 +1,7 @@
 import { GET } from "@/app/api/public/content/route";
 import { PublicContentService } from "@/server/services/public-content-service";
 import { prisma } from "@/server/db/prisma";
+import { hasMatchingReportImageExtension, isStaticReportImageMimeType } from "@/server/report-image-policy";
 
 describe("public content integration", () => {
   it("returns only published, online, non-deleted content in sort order", async () => {
@@ -17,9 +18,15 @@ describe("public content integration", () => {
           select: {
             title: true,
             assets: {
-              where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
+              where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null, assetType: "IMAGE" },
               orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-              select: { title: true, assetType: true },
+              select: {
+                title: true,
+                assetType: true,
+                storageKey: true,
+                mimeType: true,
+                pages: { select: { storageKey: true, mimeType: true } },
+              },
             },
           },
         },
@@ -33,7 +40,11 @@ describe("public content integration", () => {
       const actualModule = content.modules.find((module) => module.slug === expectedModule.slug);
       expect(actualModule?.cards.map((card) => card.title)).toEqual(expectedModule.cards.map((card) => card.title));
       expect(actualModule?.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.type })))).toEqual(
-        expectedModule.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.assetType }))),
+        expectedModule.cards.map((card) => card.assets
+          .filter((asset) => asset.pages.length
+            ? asset.pages.every((page) => isStaticReportImageMimeType(page.mimeType) && hasMatchingReportImageExtension(page.storageKey, page.mimeType))
+            : Boolean(asset.storageKey && isStaticReportImageMimeType(asset.mimeType) && hasMatchingReportImageExtension(asset.storageKey, asset.mimeType)))
+          .map((asset) => ({ title: asset.title, type: asset.assetType }))),
       );
     }
   });

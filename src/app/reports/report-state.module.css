@@ -1,0 +1,68 @@
+.page {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: max(2rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  color: var(--color-ink);
+  background: var(--color-yellow);
+}
+
+.card {
+  width: min(100%, 28rem);
+  padding: clamp(1.5rem, 8vw, 2.75rem);
+  border: 2px solid rgb(64 41 31 / .16);
+  border-radius: 1.5rem;
+  text-align: center;
+  background: rgb(255 250 240 / .92);
+  box-shadow: var(--shadow-paper);
+}
+
+.brand {
+  margin: 0 0 1.5rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
+.card h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 8vw, 2.6rem);
+  line-height: 1.25;
+}
+
+.card p:not(.brand) {
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.7;
+}
+
+.actions {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1.75rem;
+}
+
+.actions button,
+.actions a {
+  min-height: 48px;
+  padding: .8rem 1rem;
+  border: 1px solid var(--color-ink);
+  border-radius: 999px;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 750;
+  text-decoration: none;
+  background: white;
+  cursor: pointer;
+}
+
+.actions button {
+  color: white;
+  background: var(--color-ink);
+}
+
+.actions button:focus-visible,
+.actions a:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}

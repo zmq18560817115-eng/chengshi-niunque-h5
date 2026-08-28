@@ -8,7 +8,9 @@ const nextConfig: NextConfig = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   reactStrictMode: true,
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
-  experimental: { serverActions: { bodySizeLimit: "21mb" } },
+  // The application validates a 100 MiB report batch itself. Leave room for
+  // multipart/form-data overhead so Next does not reject a valid upload first.
+  experimental: { serverActions: { bodySizeLimit: "110mb" } },
   async headers() {
     return [
       {
