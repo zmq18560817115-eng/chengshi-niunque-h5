@@ -5,24 +5,12 @@ export type StorageConfig = {
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle: boolean;
-  requestTimeoutMs: number;
-  maxAttempts: number;
 };
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
-
-function optionalInteger(name: string, fallback: number, minimum: number, maximum: number): number {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`);
   }
   return value;
 }
@@ -44,17 +32,7 @@ export function getStorageConfig(): StorageConfig {
     accessKeyId: required("S3_ACCESS_KEY_ID"),
     secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
     forcePathStyle: forcePathStyle === "true",
-    requestTimeoutMs: optionalInteger("S3_REQUEST_TIMEOUT_MS", 3_000, 1_000, 30_000),
-    maxAttempts: optionalInteger("S3_MAX_ATTEMPTS", 2, 1, 3),
   };
-}
-
-export function getHealthCheckTimeoutMs(): number {
-  return optionalInteger("HEALTH_CHECK_TIMEOUT_MS", 3_000, 500, 15_000);
-}
-
-export function getPublicDataTimeoutMs(): number {
-  return optionalInteger("PUBLIC_DATA_TIMEOUT_MS", 5_000, 500, 20_000);
 }
 
 export function getSessionSecret(): string {

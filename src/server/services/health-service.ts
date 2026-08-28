@@ -1,13 +1,11 @@
 import { prisma } from "@/server/db/prisma";
-import { getHealthCheckTimeoutMs } from "@/server/env";
 import { getObjectStorage } from "@/server/storage";
-import { withTimeout } from "@/server/utils/with-timeout";
 
 type CheckStatus = "ok" | "error";
 
 async function checkDatabase(): Promise<CheckStatus> {
   try {
-    await withTimeout(prisma.$queryRaw`SELECT 1`, getHealthCheckTimeoutMs(), "Database health check");
+    await prisma.$queryRaw`SELECT 1`;
     return "ok";
   } catch {
     return "error";
@@ -16,7 +14,7 @@ async function checkDatabase(): Promise<CheckStatus> {
 
 async function checkObjectStorage(): Promise<CheckStatus> {
   try {
-    await withTimeout(getObjectStorage().checkConnection(), getHealthCheckTimeoutMs(), "Object storage health check");
+    await getObjectStorage().checkConnection();
     return "ok";
   } catch {
     return "error";

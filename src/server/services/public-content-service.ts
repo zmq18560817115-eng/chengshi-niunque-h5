@@ -4,7 +4,6 @@ import {
   PublicContentRepository,
   type PublicModuleRecord,
 } from "@/server/repositories/public-content-repository";
-import { hasMatchingReportImageExtension, isStaticReportImageMimeType } from "@/server/report-image-policy";
 import { defaultH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
 
 export type PublicAsset = {
@@ -45,25 +44,12 @@ export function publicSiteConfig(_content: PublicContent): H5SiteConfig {
   return defaultH5SiteConfig;
 }
 
-type PublicAssetRecord = PublicModuleRecord["cards"][number]["assets"][number];
-
-function isPublicImageAsset(asset: PublicAssetRecord): boolean {
-  if (asset.assetType !== "IMAGE") return false;
-  if (asset.pages.length > 0) {
-    return asset.pages.every((page) => (
-      isStaticReportImageMimeType(page.mimeType)
-      && hasMatchingReportImageExtension(page.storageKey, page.mimeType)
-    ));
+function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number]): string {
+  if (asset.assetType === "EXTERNAL_LINK") {
+    return asset.externalUrl ?? "";
   }
-  return Boolean(
-    asset.storageKey
-    && isStaticReportImageMimeType(asset.mimeType)
-    && hasMatchingReportImageExtension(asset.storageKey, asset.mimeType),
-  );
-}
-
-function assetHref(asset: PublicAssetRecord): string {
-  return `/reports/image/${asset.id}`;
+  const viewer = asset.assetType === "PDF" ? "pdf" : "image";
+  return `/reports/${viewer}/${asset.id}`;
 }
 
 export function reportButtonText(reportCount: number): string {
@@ -79,7 +65,7 @@ function contentVersion(modules: PublicModuleRecord[], settings: Array<{ updated
       cards: module.cards.map((card) => ({
         id: card.id,
         updatedAt: card.updatedAt.toISOString(),
-        assets: card.assets.filter(isPublicImageAsset).map((asset) => ({
+        assets: card.assets.map((asset) => ({
           id: asset.id,
           updatedAt: asset.updatedAt.toISOString(),
           pages: asset.pages.map((page) => ({ id: page.id, updatedAt: page.updatedAt.toISOString() })),
@@ -106,26 +92,26 @@ export class PublicContentService {
         slug: module.slug,
         title: module.title,
         description: module.description,
-        cards: module.cards.map((card) => {
-          const assets = card.assets.filter(isPublicImageAsset);
-          return {
+        cards: module.cards.map((card) => ({
           id: card.id,
           title: card.title,
           description: card.description,
-          buttonText: reportButtonText(assets.length),
+          buttonText: reportButtonText(card.assets.length),
           footerNote: card.footerNote,
-          assets: assets.map((asset) => ({
+          assets: card.assets.map((asset) => ({
             id: asset.id,
             title: asset.title,
             description: asset.description,
-            type: "IMAGE" as const,
+            type: asset.assetType,
             href: assetHref(asset),
-            openMode: "same_tab" as const,
-            pages: asset.pages.length > 0
+            openMode: asset.openMode === "NEW_TAB" ? "new_tab" : "same_tab",
+            pages: asset.assetType === "IMAGE"
+              ? asset.pages.length > 0
                 ? asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` }))
-                : [{ id: asset.id, pageNumber: 1, href: `/reports/image/${asset.id}` }],
+                : [{ id: asset.id, pageNumber: 1, href: `/reports/image/${asset.id}` }]
+              : [],
           })),
-        }}),
+        })),
       })),
       settings: settings.map((setting) => ({
         key: setting.key,

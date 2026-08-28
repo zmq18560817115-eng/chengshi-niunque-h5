@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrandGuide, guideDestinationTimeoutMs } from "@/components/h5/BrandGuide";
+import { BrandGuide } from "@/components/h5/BrandGuide";
 import { GuideExperience } from "@/components/h5/GuideExperience";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
@@ -12,7 +12,7 @@ import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFi
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
-import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
+import { RuntimeLoadingBuffer, runtimeLoadingAnimationDelayMs } from "@/components/h5/RuntimeLoadingBuffer";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
 type PendingImage = { src: string; resolve: () => void; reject: () => void };
@@ -48,15 +48,6 @@ async function resolvePendingImages(predicate: (image: PendingImage) => boolean)
   }
 }
 
-async function markGuideDestinationReady(container: HTMLElement) {
-  await act(async () => Promise.resolve());
-  const destination = container.querySelector<Element>(".brand-guide-destination-image");
-  if (!destination) throw new Error("guide destination image did not mount");
-  Object.defineProperty(destination, "decode", { configurable: true, value: () => Promise.resolve() });
-  fireEvent.load(destination);
-  await act(async () => Promise.resolve());
-}
-
 const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
 
 describe("multi-page H5 interactions", () => {
@@ -65,7 +56,6 @@ describe("multi-page H5 interactions", () => {
     pendingImages = [];
     sessionStorage.clear();
     document.documentElement.removeAttribute("data-category-route-entry");
-    document.documentElement.removeAttribute("data-guide-route-entry");
     vi.stubGlobal("Image", PreloadImageMock);
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
     vi.stubGlobal("IntersectionObserver", class {
@@ -312,14 +302,13 @@ describe("multi-page H5 interactions", () => {
   it("stays on the guide after five seconds and only enters once from the hint action", async () => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
-    const { container } = render(<BrandGuide onEnter={onEnter} />);
+    render(<BrandGuide onEnter={onEnter} />);
     act(() => vi.advanceTimersByTime(5000));
     expect(onEnter).not.toHaveBeenCalled();
     await act(async () => {
       await resolvePendingImages(() => true);
       await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + h5MotionTiming.guide.swipeReadyMs + 32);
     });
-    await markGuideDestinationReady(container);
     const action = screen.getByRole("button", { name: "进入档案" });
     expect(action).toBeEnabled();
     fireEvent.click(action);
@@ -328,7 +317,7 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it("prepares only guide artwork before interaction instead of decoding archive layers underneath it", async () => {
+  it("warms homepage artwork in the background without fixing the loading page before the guide", async () => {
     vi.useFakeTimers();
     const { container } = render(<GuideExperience />);
 
@@ -350,11 +339,10 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(340); });
-    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(false);
-    expect(pendingImages.some(({ src }) => src.includes("archive-reference.webp"))).toBe(false);
+    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(true);
   });
 
-  it("limits competing image warmups and never mounts the large loading GIF", async () => {
+  it("limits competing image warmups and defers the large loading GIF for short waits", async () => {
     vi.useFakeTimers();
     const warmup = preloadHomepageAssets(Array.from({ length: 7 }, (_, index) => ({ src: `/warm-${index}.webp`, priority: "high" as const })));
     expect(pendingImages).toHaveLength(4);
@@ -364,28 +352,20 @@ describe("multi-page H5 interactions", () => {
     await expect(warmup).resolves.toEqual({ total: 7, failed: [] });
 
     const { container } = render(<RuntimeLoadingBuffer />);
-    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
-    expect(container.querySelector(".guide-loading-buffer-progress")).toBeInTheDocument();
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(5000));
+    act(() => vi.advanceTimersByTime(runtimeLoadingAnimationDelayMs - 1));
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(container.querySelector(".guide-loading-buffer-gif")).toBeInTheDocument();
   });
 
   it("keeps the lightweight loading poster for reduced-motion users", () => {
     vi.useFakeTimers();
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
     const { container } = render(<RuntimeLoadingBuffer />);
+    act(() => vi.advanceTimersByTime(runtimeLoadingAnimationDelayMs + 1));
     expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
-    expect(container.querySelector(".guide-loading-buffer-progress")).toBeInTheDocument();
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
-  });
-
-  it("keeps the loading layer mounted so CSS suppression can recover after guide continuity", () => {
-    document.documentElement.setAttribute("data-guide-route-entry", "active");
-    const { container } = render(<RuntimeLoadingBuffer />);
-    expect(container.querySelector(".runtime-loading-layer")).toBeInTheDocument();
-    document.documentElement.removeAttribute("data-guide-route-entry");
-    expect(container.querySelector(".runtime-loading-layer")).toBeInTheDocument();
   });
 
   it("keeps the loading buffer only until the current guide artwork has decoded", async () => {
@@ -427,7 +407,6 @@ describe("multi-page H5 interactions", () => {
       await resolvePendingImages(() => true);
       await vi.advanceTimersByTimeAsync(32);
     });
-    await markGuideDestinationReady(container);
     expect(page).toHaveClass("is-ready", "is-motion-enabled");
     expect(stage).toHaveAttribute("data-swipe-state", "locked");
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
@@ -472,7 +451,6 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await markGuideDestinationReady(container);
     await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: start.x, clientY: start.y }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: end.x, clientY: end.y }] });
@@ -489,7 +467,6 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await markGuideDestinationReady(container);
     await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
@@ -505,7 +482,6 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await markGuideDestinationReady(container);
     await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
@@ -531,7 +507,6 @@ describe("multi-page H5 interactions", () => {
       fireEvent(page, event);
     };
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await markGuideDestinationReady(container);
     await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
     dispatchTouchPointer("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 200, clientY: 320 });
     dispatchTouchPointer("pointermove", { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 198, clientY: 210 });
@@ -634,7 +609,6 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).not.toBeInTheDocument();
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready"));
-    await markGuideDestinationReady(container);
     expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
     await waitFor(() => expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled(), { timeout: 3000 });
@@ -657,45 +631,18 @@ describe("multi-page H5 interactions", () => {
     consoleError.mockRestore();
   });
 
-  it("keeps the textured destination fallback if a late load event follows an image error", async () => {
+  it("keeps the textured destination fallback after a separate preload later succeeds", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container } = render(<BrandGuide/>);
     const page = screen.getByRole("main");
     const stage = container.querySelector(".brand-guide-stage");
+    const destination = container.querySelector(".brand-guide-destination-image");
+    fireEvent.error(destination as Element);
+    expect(stage).toHaveAttribute("data-destination-state", "fallback");
+    expect(page).toHaveClass("has-destination-fallback");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => {
-      expect(container.querySelector(".brand-guide-destination-image")).toBeInTheDocument();
-    });
-    const destination = container.querySelector<Element>(".brand-guide-destination-image");
-    if (!destination) throw new Error("guide destination image did not mount");
-    fireEvent.error(destination);
     expect(stage).toHaveAttribute("data-destination-state", "fallback");
     expect(page).toHaveClass("has-destination-fallback");
-    fireEvent.load(destination);
-    expect(stage).toHaveAttribute("data-destination-state", "fallback");
-    expect(page).toHaveClass("has-destination-fallback");
-    consoleError.mockRestore();
-  });
-
-  it("enables the fallback entry when the archive preview request never settles", async () => {
-    vi.useFakeTimers();
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const onEnter = vi.fn();
-    const { container } = render(<BrandGuide onEnter={onEnter}/>);
-    await act(async () => {
-      await resolvePendingImages(() => true);
-      await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + h5MotionTiming.guide.swipeReadyMs + 32);
-    });
-    expect(container.querySelector(".brand-guide-destination-image")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
-
-    await act(async () => { await vi.advanceTimersByTimeAsync(guideDestinationTimeoutMs); });
-
-    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-destination-state", "fallback");
-    expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
-    await act(async () => { await vi.advanceTimersByTimeAsync(guideRouteNavigationDelayMs); });
-    expect(onEnter).toHaveBeenCalledTimes(1);
     consoleError.mockRestore();
   });
 
@@ -704,7 +651,8 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide />);
     const page = screen.getByRole("main");
     await waitFor(() => expect(page).toHaveClass("is-reduced"));
-    expect(pendingImages).toHaveLength(0);
+    expect(pendingImages).toHaveLength(1);
+    expect(pendingImages[0]?.src).toContain("archive-reference.webp");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();

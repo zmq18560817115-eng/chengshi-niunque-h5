@@ -65,7 +65,7 @@ describe("admin card publishing workflow", () => {
 
     expect(screen.getByRole("button", { name: "保存报告草稿" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "发布报告并上线卡片" })).toBeInTheDocument();
-    expect(screen.getByText("卡片按钮数量由已发布图片报告数自动生成，不需要手动填写。")).toBeInTheDocument();
+    expect(screen.getByText("卡片按钮数量由已发布报告数自动生成，不需要手动填写。")).toBeInTheDocument();
   });
 
   it("keeps card editing independent from the required asset fields", () => {

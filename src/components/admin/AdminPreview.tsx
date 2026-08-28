@@ -15,11 +15,12 @@ export type PreviewModule = { id: string; title: string; slug: string; descripti
 export type PreviewSelection = { type: "module" } | { type: "card"; id: string } | { type: "asset"; id: string };
 
 function assetHref(asset: PreviewAsset) {
-  return asset.assetType === "IMAGE" && asset.storageKey ? `/reports/image/${asset.id}` : "";
+  if (asset.assetType === "EXTERNAL_LINK") return asset.externalUrl ?? "";
+  return asset.storageKey ? `/reports/${asset.assetType === "PDF" ? "pdf" : "image"}/${asset.id}` : "";
 }
 
 function toPublicModule(module: PreviewModule): PublicModule {
-  return { id: module.id, slug: module.slug, title: module.title || "未填写模块名称", description: module.description, cards: [...module.cards].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((card) => { const assets = [...card.assets].filter((asset) => asset.assetType === "IMAGE").sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((asset) => ({ id: asset.id, title: asset.title || "尚未配置资料", description: asset.description, type: asset.assetType, href: assetHref(asset), openMode: "same_tab" as const, pages: asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` })) })); return { id: card.id, title: card.title || "未填写卡片标题", description: card.description, buttonText: assets.length ? `查看${assets.length}份报告` : "暂无报告", footerNote: card.footerNote, assets }; }) };
+  return { id: module.id, slug: module.slug, title: module.title || "未填写模块名称", description: module.description, cards: [...module.cards].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((card) => { const assets = [...card.assets].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)).map((asset) => ({ id: asset.id, title: asset.title || "尚未配置资料", description: asset.description, type: asset.assetType, href: assetHref(asset), openMode: asset.openMode === "NEW_TAB" ? "new_tab" as const : "same_tab" as const, pages: asset.assetType === "IMAGE" ? asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` })) : [] })); return { id: card.id, title: card.title || "未填写卡片标题", description: card.description, buttonText: assets.length ? `查看${assets.length}份报告` : "暂无报告", footerNote: card.footerNote, assets }; }) };
 }
 
 export function mergePreviewModules(module: PreviewModule, published: PublicModule[], moduleOrders: Array<{ id: string; sortOrder: number }>) {

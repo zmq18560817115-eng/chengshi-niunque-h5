@@ -18,16 +18,6 @@ vi.mock("@/components/h5/homepage-preload", () => ({
   preloadHomepageAssets: vi.fn().mockResolvedValue({ total: 4, failed: [] }),
 }));
 
-const imageAsset = (id: string): PublicModule["cards"][number]["assets"][number] => ({
-  id,
-  title: `图片报告 ${id}`,
-  description: null,
-  type: "IMAGE",
-  href: `/reports/image/${id}`,
-  openMode: "same_tab",
-  pages: [{ id: `${id}-page-1`, pageNumber: 1, href: `/reports/image/page/${id}-page-1` }],
-});
-
 const moduleFixture: PublicModule = {
   id: "inspection",
   slug: "inspection-projects",
@@ -39,7 +29,7 @@ const moduleFixture: PublicModule = {
     description: "DHA、ARA与安全检测说明。",
     buttonText: "查看2份报告",
     footerNote: null,
-    assets: [imageAsset("nutrition-1"), imageAsset("nutrition-2")],
+    assets: [],
   }],
 };
 
@@ -49,8 +39,8 @@ const traceabilityModuleFixture: PublicModule = {
   title: "生产溯源",
   description: null,
   cards: [
-    { id: "qualification", title: "生产资质", description: null, buttonText: "查看1份报告", footerNote: null, assets: [imageAsset("qualification-1")] },
-    { id: "quality", title: "质量管理", description: null, buttonText: "查看1份报告", footerNote: null, assets: [imageAsset("quality-1")] },
+    { id: "qualification", title: "生产资质", description: null, buttonText: "查看2份报告", footerNote: null, assets: [] },
+    { id: "quality", title: "质量管理", description: null, buttonText: "查看3份报告", footerNote: null, assets: [] },
   ],
 };
 
@@ -68,7 +58,15 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
     expect(screen.getByText("DHA、ARA与安全检测说明。")).toBeInTheDocument();
     expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
-    expect(container.querySelector(".category-card-status")).not.toBeInTheDocument();
+    const passedStatuses = container.querySelectorAll(
+      '.category-card-status[data-status="已通过"]',
+    );
+    expect(passedStatuses).toHaveLength(2);
+    expect(
+      [...passedStatuses].every((status) =>
+        status.querySelector(".category-card-status-text-art"),
+      ),
+    ).toBe(true);
     expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.runtime.webp"));
     expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(6);
     expect(container.querySelector(".category-page-viewport")).toHaveAttribute("data-artwork-source", "layered-components");
@@ -80,28 +78,9 @@ describe("CategoryDetail dynamic card copy", () => {
   });
 
   it("uses artwork-matched fallback copy for empty slots", () => {
-    const { container } = render(<CategoryDetail module={moduleFixture} preview />);
+    render(<CategoryDetail module={moduleFixture} preview />);
     expect(screen.getByText("油脂新鲜度")).toBeInTheDocument();
     expect(screen.getByText("安全底线")).toBeInTheDocument();
-    expect(screen.getAllByText("暂无报告")).toHaveLength(2);
-    expect(container.querySelectorAll(".category-card-hotspot.is-unavailable")).toHaveLength(2);
-    expect(container.innerHTML).not.toContain("placeholder-slot-");
-  });
-
-  it("does not show a positive status without an image report", () => {
-    const moduleWithoutImages: PublicModule = {
-      ...moduleFixture,
-      cards: [{
-        ...moduleFixture.cards[0],
-        assets: [],
-      }],
-    };
-    const { container } = render(<CategoryDetail module={moduleWithoutImages} />);
-    expect(screen.getAllByText("暂无报告")).toHaveLength(3);
-    expect(container.querySelector(".category-card-status")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".category-card-hotspot.is-unavailable")).toHaveLength(3);
-    expect(screen.queryByRole("button", { name: "核心营养含量，暂无报告" })).not.toBeInTheDocument();
-    expect(navigation.prefetch).not.toHaveBeenCalled();
   });
 
   it("marks the archive entry on the first layout frame and announces only after artwork readiness", async () => {
@@ -156,23 +135,27 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 
-  it("does not present decorative positive conclusions as report-derived status", () => {
+  it("renders production status with original fish and design-text artwork instead of system text", () => {
     const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
-    expect(container.querySelector(".category-card-status")).not.toBeInTheDocument();
-    expect(container.innerHTML).not.toContain("已核验");
-    expect(container.innerHTML).not.toContain("已核对");
+    const statusLabels = [...container.querySelectorAll<HTMLElement>(".category-card-status")];
+
+    expect(statusLabels).toHaveLength(2);
+    expect(statusLabels.map((label) => label.textContent)).toEqual(["", ""]);
+    expect(statusLabels.map((label) => label.dataset.status)).toEqual(["已核验", "已核对"]);
+    expect(statusLabels.map((label) => label.querySelectorAll("img").length)).toEqual([2, 2]);
+    expect(statusLabels.every((label) => label.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/"))).toBe(true);
+    expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
   });
 
-  it("preloads the complete category asset set, shows the back control, and navigates immediately", async () => {
+  it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     await waitFor(() => expect(preloadHomepageAssets).toHaveBeenCalled());
     expect(vi.mocked(preloadHomepageAssets).mock.calls[0]?.[0]).toEqual(
       categoryReadinessAssets["inspection-projects"].map((src) => ({ src, priority: "high" })),
     );
-    expect(screen.getByRole("button", { name: "返回上一页" })).toBeInTheDocument();
-    expect(navigation.prefetch).toHaveBeenCalledTimes(1);
-    expect(navigation.prefetch).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
+    expect(screen.queryByRole("button", { name: "返回上一页" })).not.toBeInTheDocument();
 
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
     expect(firstCard).not.toBeNull();

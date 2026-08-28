@@ -41,11 +41,51 @@ const publishedModules = [
   },
 ];
 
-const retiredAssetIds = [
-  "seed-asset-card-link",
-  "seed-asset-pdf",
-  "seed-asset-image",
-  "seed-asset-link",
+const assetSeeds = [
+  {
+    id: "seed-asset-card-link",
+    reportCardId: "seed-card-inspection-nutrition",
+    title: "检测方法公开说明",
+    description: "用于验证卡片内资料排序的外链样例。",
+    assetType: "EXTERNAL_LINK",
+    openMode: "NEW_TAB",
+    externalUrl: "https://www.samr.gov.cn/",
+    mimeType: "text/html",
+    sortOrder: 5,
+  },
+  {
+    id: "seed-asset-pdf",
+    reportCardId: "seed-card-inspection-nutrition",
+    title: "营养成分检测报告",
+    description: "PDF 检测报告样例。",
+    assetType: "PDF",
+    storageKey: "seed/reports/nutrition-report.pdf",
+    mimeType: "application/pdf",
+    byteSize: 68n,
+    sortOrder: 10,
+  },
+  {
+    id: "seed-asset-image",
+    reportCardId: "seed-card-review-process",
+    title: "复核流程图",
+    description: "图片资料样例。",
+    assetType: "IMAGE",
+    storageKey: "seed/images/review-process.svg",
+    mimeType: "image/svg+xml",
+    byteSize: 257n,
+    sortOrder: 10,
+  },
+  {
+    id: "seed-asset-link",
+    reportCardId: "seed-card-traceability-origin",
+    title: "公开标准参考",
+    description: "外部公开资料链接样例。",
+    assetType: "EXTERNAL_LINK",
+    openMode: "NEW_TAB",
+    externalUrl: "https://www.gov.cn/",
+    mimeType: "text/html",
+    sortOrder: 10,
+  },
 ];
 
 async function seed() {
@@ -110,16 +150,30 @@ async function seed() {
     }
   }
 
-  await prisma.reportAsset.updateMany({
-    where: { id: { in: retiredAssetIds } },
-    data: {
-      contentStatus: "OFFLINE",
-      isOnline: false,
-      offlineAt: deletedAt,
-      deletedAt,
-      updatedById: adminId,
-    },
-  });
+  for (const asset of assetSeeds) {
+    await prisma.reportAsset.upsert({
+      where: { id: asset.id },
+      update: {
+        ...asset,
+        externalUrl: asset.externalUrl ?? null,
+        storageKey: asset.storageKey ?? null,
+        contentStatus: "PUBLISHED",
+        isOnline: true,
+        publishedAt,
+        offlineAt: null,
+        deletedAt: null,
+        updatedById: adminId,
+      },
+      create: {
+        ...asset,
+        contentStatus: "PUBLISHED",
+        isOnline: true,
+        publishedAt,
+        createdById: adminId,
+        updatedById: adminId,
+      },
+    });
+  }
 
   const hiddenModules = [
     { id: "seed-module-draft", slug: "draft-content", title: "草稿模块", contentStatus: "DRAFT", isOnline: false, deletedAt: null, sortOrder: 40 },

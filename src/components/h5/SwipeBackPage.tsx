@@ -4,12 +4,6 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type ReactNode, type TouchEvent } from "react";
 
 const SWIPE_BACK_DISTANCE = 72;
-const SWIPE_BACK_EDGE_PX = 28;
-const SWIPE_BACK_IGNORED_TARGETS = [
-  "button", "a", "input", "select", "textarea", "summary",
-  "[role='button']", "[role='link']", "[contenteditable='true']",
-  "[data-swipe-back-ignore]", ".report-image-stage",
-].join(",");
 
 export function SwipeBackPage({
   children,
@@ -32,20 +26,12 @@ export function SwipeBackPage({
   const goBack = () => {
     if (preview || leavingBack) return;
     setLeavingBack(true);
-    window.setTimeout(() => router.replace(fallbackHref), 220);
+    window.setTimeout(() => router.push(fallbackHref), 220);
   };
 
   const onTouchStart = (event: TouchEvent<HTMLElement>) => {
-    start.current = null;
     if (preview || leavingBack || event.touches.length !== 1) return;
-    const target = event.target;
-    if (target instanceof Element && target.closest(SWIPE_BACK_IGNORED_TARGETS)) return;
-    const touch = event.touches[0];
-    const viewportLeft = window.visualViewport?.offsetLeft ?? 0;
-    const contentLeft = event.currentTarget.getBoundingClientRect().left;
-    const usableEdgeLeft = Math.max(viewportLeft, contentLeft);
-    if (touch.clientX < usableEdgeLeft || touch.clientX > usableEdgeLeft + SWIPE_BACK_EDGE_PX) return;
-    start.current = { x: touch.clientX, y: touch.clientY };
+    start.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
   };
 
   const onTouchEnd = (event: TouchEvent<HTMLElement>) => {
@@ -58,7 +44,7 @@ export function SwipeBackPage({
     goBack();
   };
 
-  return <main {...props} className={`${className} ${leavingBack ? "is-swipe-back" : ""}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { start.current = null; }}>
+  return <main {...props} className={`${className} ${leavingBack ? "is-swipe-back" : ""}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
     {!preview && showBackControl ? <button className="swipe-back-control" type="button" onClick={goBack} disabled={leavingBack}>返回上一页</button> : null}
     {children}
   </main>;

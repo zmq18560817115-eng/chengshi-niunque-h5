@@ -7,7 +7,7 @@ const masterHeight = 5557;
 const archiveOutputRoot = "/design/final-v1/长图输出";
 const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers";
 const paperTexture = `${archiveRuntimeRoot}/archive-paper-texture.webp`;
-const runtimeAsset = (name: string) => `${archiveRuntimeRoot}/${name}`;
+const moduleOneAsset = (name: string) => `${archiveRuntimeRoot}/${name}`;
 const moduleTwoAsset = (name: string) => `${archiveOutputRoot}/长图模块2/${name}`;
 const moduleThreeOutput = `${archiveRuntimeRoot}/module-3-output.webp`;
 
@@ -41,35 +41,8 @@ const atHalfSize = (id: string, src: string, sourceWidth: number, sourceHeight: 
   unoptimized,
 });
 
-type AlphaCrop = { x: number; y: number; width: number; height: number };
-const alphaCroppedLayer = (
-  id: string,
-  src: string,
-  originalLeft: number,
-  originalTop: number,
-  scale: number,
-  crop: AlphaCrop,
-  eager = false,
-): ArtworkLayer => ({
-  id,
-  src,
-  left: originalLeft + crop.x * scale,
-  top: originalTop + crop.y * scale,
-  width: crop.width * scale,
-  height: crop.height * scale,
-  eager,
-  unoptimized: true,
-});
-
-const moduleOneLayer = (id: string, name: string, crop: AlphaCrop): ArtworkLayer => alphaCroppedLayer(
-  id,
-  runtimeAsset(`${name}.alpha-crop.webp`),
-  -406,
-  0,
-  1,
-  crop,
-  true,
-);
+const moduleOneTransform = { left: -406, top: 0, width: 1517, height: 2167 } as const;
+const moduleOneLayer = (id: string, name: string): ArtworkLayer => ({ id, src: moduleOneAsset(name), ...moduleOneTransform, eager: true, unoptimized: true });
 
 // The order is the original visual stacking order. Resources 4–7 are the
 // retired plant decoration. Resources 11–19 move to the title-motion layer,
@@ -77,25 +50,25 @@ const moduleOneLayer = (id: string, name: string, crop: AlphaCrop): ArtworkLayer
 const artworkLayers: readonly ArtworkLayer[] = [
   { id: "paper-texture", src: paperTexture, left: -11, top: 0, width: 1022, height: 7093, eager: true, unoptimized: true },
 
-  moduleOneLayer("module-1-folder-back", "module-1-folder-back", { x: 118, y: 276, width: 1338, height: 1752 }),
-  moduleOneLayer("module-1-folder-front", "module-1-folder-front", { x: 194, y: 262, width: 1160, height: 1676 }),
-  moduleOneLayer("module-1-logo", "module-1-logo", { x: 475, y: 389, width: 260, height: 91 }),
-  moduleOneLayer("module-1-title", "module-1-title", { x: 447, y: 505, width: 632, height: 403 }),
-  moduleOneLayer("module-1-badge", "module-1-badge", { x: 527, y: 591, width: 962, height: 1158 }),
-  moduleOneLayer("module-1-batch-coil", "module-1-batch-coil", { x: 428, y: 1582, width: 465, height: 100 }),
-  moduleOneLayer("module-1-batch", "module-1-batch", { x: 463, y: 1602, width: 402, height: 158 }),
-  moduleOneLayer("module-1-passed-panel", "module-1-passed-panel", { x: 286, y: 1581, width: 904, height: 453 }),
-  moduleOneLayer("module-1-passed-copy", "module-1-passed-copy", { x: 469, y: 1821, width: 628, height: 113 }),
+  moduleOneLayer("module-1-folder-back", "module-1-folder-back.webp"),
+  moduleOneLayer("module-1-folder-front", "module-1-folder-front.webp"),
+  moduleOneLayer("module-1-logo", "module-1-logo.webp"),
+  moduleOneLayer("module-1-title", "module-1-title.webp"),
+  moduleOneLayer("module-1-badge", "module-1-badge.webp"),
+  moduleOneLayer("module-1-batch-coil", "module-1-batch-coil.webp"),
+  moduleOneLayer("module-1-batch", "module-1-batch.webp"),
+  moduleOneLayer("module-1-passed-panel", "module-1-passed-panel.webp"),
+  moduleOneLayer("module-1-passed-copy", "module-1-passed-copy.webp"),
   atHalfSize("module-2-resource-02", moduleTwoAsset("资源 2.png"), 1244, 715, 190.5, 2247.5),
   atHalfSize("module-2-resource-03", moduleTwoAsset("资源 3.png"), 215, 251, 696, 2199),
   atHalfSize("module-2-resource-08", moduleTwoAsset("资源 8.png"), 1101, 1216, 51, 2624),
-  alphaCroppedLayer("module-2-inspection-folder", runtimeAsset("module-2-inspection-folder.alpha-crop.png"), -270, 2162, .5, { x: 283, y: 1167, width: 2326, height: 2981 }),
+  atHalfSize("module-2-inspection-folder", moduleTwoAsset("绿档.png"), 2893, 4572, -270, 2162),
   atHalfSize("module-2-resource-10", moduleTwoAsset("资源 10.png"), 334, 165, 172, 3044.5),
   atHalfSize("module-2-resource-09", moduleTwoAsset("资源 9.png"), 1201, 1274, 410, 2936.5),
-  alphaCroppedLayer("module-2-review-folder", runtimeAsset("module-2-review-folder.alpha-crop.png"), -260, 2162, .5, { x: 283, y: 1928, width: 2326, height: 2202 }),
+  atHalfSize("module-2-review-folder", moduleTwoAsset("黄档.png"), 2893, 4572, -260, 2162),
   atHalfSize("module-2-resource-20", moduleTwoAsset("资源 20.png"), 1296, 1108, 18.5, 3349),
-  alphaCroppedLayer("module-2-production-folder", runtimeAsset("module-2-production-folder.alpha-crop.png"), -262, 2162, .5, { x: 283, y: 2641, width: 2326, height: 1743 }),
-  alphaCroppedLayer("module-2-resource-21", runtimeAsset("module-2-resource-21.alpha-crop.png"), 135.5, 3827, .5, { x: 4, y: 4, width: 1398, height: 529 }),
+  atHalfSize("module-2-production-folder", moduleTwoAsset("棕档.png"), 2893, 4572, -262, 2162),
+  atHalfSize("module-2-resource-21", moduleTwoAsset("资源 21.png"), 1457, 543, 135.5, 3827),
 
   { id: "module-3-complete-output", src: moduleThreeOutput, left: 0, top: 4374.5, width: 1000, height: 1182.5, unoptimized: true },
 ] as const;

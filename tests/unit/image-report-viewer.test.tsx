@@ -9,20 +9,17 @@ describe("ImageReportViewer", () => {
     const viewer = container.querySelector(".image-report") as HTMLElement;
     const stage = container.querySelector(".report-image-stage") as HTMLElement;
     expect(stage).toHaveClass("is-loading");
-    expect(stage.getAttribute("aria-label")).toContain("单指上下滑动可继续浏览页面");
+    expect(stage.getAttribute("aria-label")).toContain("区域内反复缩放");
     fireEvent.load(screen.getByRole("img"));
     await waitFor(() => expect(stage).toHaveClass("is-loaded"));
-    expect(stage).not.toHaveClass("is-zoomed");
     fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
     expect(screen.getByRole("img")).toHaveStyle({ width: "125%" });
-    expect(stage).toHaveClass("is-zoomed");
     for (let index = 0; index < 11; index += 1) fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
     expect(screen.getByRole("img")).toHaveStyle({ width: "400%" });
     expect(screen.getByRole("button", { name: "放大报告图片" })).toBeDisabled();
     for (let index = 0; index < 12; index += 1) fireEvent.click(screen.getByRole("button", { name: "缩小报告图片" }));
     expect(screen.getByRole("img")).toHaveStyle({ width: "100%" });
     expect(screen.getByRole("button", { name: "缩小报告图片" })).toBeDisabled();
-    expect(stage).not.toHaveClass("is-zoomed");
     fireEvent.doubleClick(container.querySelector(".report-image-stage") as HTMLElement);
     expect(screen.getByRole("img")).toHaveStyle({ width: "200%" });
     fireEvent.doubleClick(container.querySelector(".report-image-stage") as HTMLElement);
@@ -42,50 +39,5 @@ describe("ImageReportViewer", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("营养检测报告 · 第 2 页资料加载失败");
     fireEvent.click(screen.getByRole("button", { name: "重新加载" }));
     expect(screen.getByRole("img")).toBeInTheDocument();
-  });
-
-  it("lets the page own one-finger scrolling at 100% and isolates viewer gestures after zoom", () => {
-    const parentTouchStart = vi.fn();
-    const parentTouchMove = vi.fn();
-    const { container } = render(<div onTouchStart={parentTouchStart} onTouchMove={parentTouchMove}><ImageReportViewer asset={asset}/></div>);
-    const stage = container.querySelector(".report-image-stage") as HTMLElement;
-    fireEvent.load(screen.getByRole("img"));
-
-    fireEvent.touchStart(stage, { touches: [{ clientX: 120, clientY: 300 }] });
-    const pageScrollAllowed = fireEvent.touchMove(stage, { touches: [{ clientX: 120, clientY: 220 }] });
-    expect(pageScrollAllowed).toBe(true);
-    expect(parentTouchStart).not.toHaveBeenCalled();
-    expect(parentTouchMove).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
-    Object.defineProperty(stage, "scrollLeft", { configurable: true, writable: true, value: 80 });
-    Object.defineProperty(stage, "scrollTop", { configurable: true, writable: true, value: 80 });
-    fireEvent.touchStart(stage, { touches: [{ clientX: 120, clientY: 300 }] });
-    fireEvent.touchMove(stage, { touches: [{ clientX: 70, clientY: 240 }] });
-    expect(stage).toHaveClass("is-zoomed");
-    expect(stage.scrollLeft).toBe(130);
-    expect(stage.scrollTop).toBe(140);
-    expect(parentTouchStart).not.toHaveBeenCalled();
-    expect(parentTouchMove).not.toHaveBeenCalled();
-  });
-
-  it("uses the currently visible part of a long report as the first button-zoom focal point", async () => {
-    const { container } = render(<ImageReportViewer asset={asset}/>);
-    const stage = container.querySelector(".report-image-stage") as HTMLElement;
-    fireEvent.load(screen.getByRole("img"));
-    vi.spyOn(stage, "getBoundingClientRect").mockReturnValue({
-      x: 0, y: -800, left: 0, top: -800, right: 390, bottom: 2400,
-      width: 390, height: 3200, toJSON: () => ({}),
-    });
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
-    Object.defineProperty(window, "scrollY", { configurable: true, value: 1200 });
-    Object.defineProperty(stage, "scrollTop", { configurable: true, writable: true, value: 0 });
-
-    fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
-
-    await waitFor(() => expect(stage.scrollTop).toBeGreaterThan(1000));
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 400);
-    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
   });
 });

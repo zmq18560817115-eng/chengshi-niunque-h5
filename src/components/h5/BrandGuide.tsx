@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdaptiveReadiness } from "./AdaptiveReadinessGate";
+import { preloadHomepageAssets } from "./homepage-preload";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
@@ -17,7 +18,6 @@ import {
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 type GuideMotionPreference = "unknown" | "allowed" | "reduced";
 type GuideDestinationStatus = "loading" | "ready" | "fallback";
-export const guideDestinationTimeoutMs = 6_000;
 const GUIDE_SWIPE_DISTANCE_PX = 24;
 const GUIDE_SWIPE_COMMIT_PROGRESS = 0.12;
 const GUIDE_SWIPE_FAST_VELOCITY = 0.55;
@@ -85,28 +85,26 @@ function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerEr
   </div>;
 }
 
-function GuideDestinationPreview({ mountImage, onReady, onError }: { mountImage: boolean; onReady: () => void; onError: () => void }) {
+function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; onError: () => void }) {
   return <section className="brand-guide-destination-preview" aria-hidden="true">
-    <div className="brand-guide-destination-frame">
-      {mountImage ? <Image
-        className="brand-guide-destination-image"
-        src={guideRouteDestinationSrc}
-        alt=""
-        width={1000}
-        height={5557}
-        sizes="(max-width: 750px) 100vw, 750px"
-        priority
-        fetchPriority="high"
-        unoptimized
-        decoding="async"
-        onLoad={(event) => {
-          const image = event.currentTarget;
-          if (typeof image.decode === "function") void image.decode().then(onReady, onError);
-          else onReady();
-        }}
-        onError={onError}
-      /> : null}
-    </div>
+    <Image
+      className="brand-guide-destination-image"
+      src={guideRouteDestinationSrc}
+      alt=""
+      width={1000}
+      height={5557}
+      sizes="100vw"
+      priority
+      fetchPriority="high"
+      unoptimized
+      decoding="async"
+      onLoad={(event) => {
+        const image = event.currentTarget;
+        if (typeof image.decode === "function") void image.decode().then(onReady, onError);
+        else onReady();
+      }}
+      onError={onError}
+    />
   </section>;
 }
 
@@ -122,14 +120,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
   const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const [destinationStatus, setDestinationStatus] = useState<GuideDestinationStatus>(preview ? "ready" : "loading");
-  const mountDestination = guideContentReady && (
-    preview
-    || !motionEnabled
-    || motionPreference === "reduced"
-    || assetStatus === "failed"
-    || assetStatus === "ready"
-    || animationStarted
-  );
   const destinationUsable = destinationStatus !== "loading";
   const transitionSwipeReady = swipeReady && destinationUsable;
   const transitionGestureReady = gestureReady && destinationUsable;
@@ -149,10 +139,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     const viewportHeight = Math.max(1, root.getBoundingClientRect().height || window.visualViewport?.height || window.innerHeight);
     swipeProgress.current = progress;
     root.style.setProperty("--guide-swipe-offset", `${-(progress * viewportHeight).toFixed(3)}px`);
-    root.style.setProperty("--guide-swipe-guide-opacity", `${Math.max(0.12, 1 - progress * 0.88).toFixed(4)}`);
-    root.style.setProperty("--guide-swipe-destination-opacity", `${Math.min(1, 0.16 + progress * 0.84).toFixed(4)}`);
-    root.style.setProperty("--guide-swipe-guide-blur", `${(progress * 1.4).toFixed(3)}px`);
-    root.style.setProperty("--guide-swipe-destination-blur", `${((1 - progress) * 1.2).toFixed(3)}px`);
+    root.style.setProperty("--guide-swipe-guide-opacity", `${Math.max(0.08, 1 - progress * 0.92).toFixed(4)}`);
+    root.style.setProperty("--guide-swipe-destination-opacity", `${Math.min(1, 0.18 + progress * 1.64).toFixed(4)}`);
     root.dataset.swipeProgress = progress.toFixed(3);
   }, []);
 
@@ -204,13 +192,17 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, [onEnter, preview, router]);
 
   useEffect(() => {
-    if (!guideContentReady || destinationStatus !== "loading") return;
-    const timer = window.setTimeout(() => {
-      console.error(`[BrandGuide] asset timed out: ${guideRouteDestinationSrc}`);
-      setDestinationStatus("fallback");
-    }, guideDestinationTimeoutMs);
-    return () => window.clearTimeout(timer);
-  }, [destinationStatus, guideContentReady]);
+    if (preview || !guideContentReady) return;
+    let cancelled = false;
+    void preloadHomepageAssets([{ src: guideRouteDestinationSrc, priority: "high" }]).then((result) => {
+      if (cancelled) return;
+      if (result.failed.length > 0) {
+        console.error(`[BrandGuide] destination preload failed: ${result.failed.join(", ")}`);
+        setDestinationStatus("fallback");
+      } else setDestinationStatus((current) => current === "fallback" ? current : "ready");
+    });
+    return () => { cancelled = true; };
+  }, [guideContentReady, preview]);
 
   useEffect(() => {
     if (!animationStarted) return;
@@ -224,17 +216,14 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     entering.current = true;
     const startProgress = source === "gesture" ? clampProgress(progress) : 0;
     flushGuideProgress(startProgress);
+    if (!onEnter) prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
+    setLeaving(true);
     guideRoot.current?.classList.remove("is-dragging", "is-settling");
-    const finishEnter = () => {
-      setLeaving(true);
-      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-      window.setTimeout(() => {
-        if (onEnter) onEnter();
-        else navigateWithGuideContinuity(() => router.push("/reports"));
-      }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
-    };
-    if (onEnter) finishEnter();
-    else void prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback").then(finishEnter);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    window.setTimeout(() => {
+      if (onEnter) onEnter();
+      else navigateWithGuideContinuity(() => router.push("/reports"));
+    }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
   }, [destinationStatus, flushGuideProgress, leaving, onEnter, preview, router, transitionGestureReady, transitionSwipeReady]);
 
   const settleGuide = useCallback(() => {
@@ -364,7 +353,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
   const bootstrapFrame = <GuideBootstrapFrame onLayerError={handleLayerError} onFinalFallbackError={handleFallbackError}/>;
   const firstFrame = <GuideLayers animated={false} onError={handleLayerError}/>;
-  const mountMotionStage = guideContentReady && motionEnabled && motionPreference === "allowed";
+  const mountMotionStage = motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -439,7 +428,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
         <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
         <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={leaving || preview || !transitionSwipeReady}>进入档案</button>
       </section>
-      <GuideDestinationPreview mountImage={mountDestination} onReady={() => setDestinationStatus((current) => current === "fallback" ? current : "ready")} onError={handleDestinationError}/>
+      <GuideDestinationPreview onReady={() => setDestinationStatus("ready")} onError={handleDestinationError}/>
     </div>
   </main>;
 }

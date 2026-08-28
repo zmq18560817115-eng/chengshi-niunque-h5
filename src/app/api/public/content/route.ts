@@ -13,7 +13,7 @@ export async function GET() {
   } catch {
     return NextResponse.json(
       { error: "PUBLIC_CONTENT_UNAVAILABLE" },
-      { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

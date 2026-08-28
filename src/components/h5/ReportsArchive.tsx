@@ -169,7 +169,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     "--archive-guide-batch-delay": `${guideArchiveBatchDelayMs}ms`,
   } as CSSProperties;
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-runtime-ready={readinessReady || undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-preview={preview || undefined} style={guideEntryStyle}>
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-preview={preview || undefined} style={guideEntryStyle}>
     <div className="reports-archive-canvas">
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their

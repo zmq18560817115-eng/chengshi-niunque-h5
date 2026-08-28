@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
 import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
-import { getCategoryTheme, type CategoryCardFallback } from "@/config/h5-category-themes";
+import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteMountedEvent, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
@@ -26,11 +26,11 @@ function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback
   const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim());
   const description = card?.description?.trim();
   const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);
-  const reportCount = card?.assets.filter((asset) => asset.type === "IMAGE").length ?? 0;
+  const reportCount = card?.assets.length ?? 0;
   return {
     title: placeholderTitle ? fallback.title : card?.title ?? fallback.title,
     description: placeholderDescription ? fallback.description : description,
-    buttonText: reportCount > 0 ? `查看${reportCount}份报告` : "暂无报告",
+    buttonText: reportCount > 0 ? `查看${reportCount}份报告` : card ? "暂无报告" : fallback.buttonText,
   };
 }
 
@@ -70,7 +70,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
       if (root.getAttribute("data-h5-page-lock") === "category") root.removeAttribute("data-h5-page-lock");
     };
   }, [module.slug, preview]);
-  useEffect(() => { if (!preview) slots.forEach((card) => { if (card?.assets.some((asset) => asset.type === "IMAGE")) router.prefetch(`/reports/${module.slug}/items/${card.id}/reports`); }); }, [module.slug, preview, router, slots]);
+  useEffect(() => { if (!preview) slots.forEach((card, index) => router.prefetch(`/reports/${module.slug}/items/${card?.id ?? placeholderCardId(index)}/reports`)); }, [module.slug, preview, router, slots]);
   useLayoutEffect(() => {
     if (preview) return;
     const root = document.documentElement;
@@ -91,9 +91,9 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     announceCategoryRouteReady();
   }, [routeReady]);
 
-  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
+  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {
@@ -121,14 +121,12 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
       {slots.map((card, index) => {
         const layout = theme.cardLayouts[index];
         const fallback = theme.cardFallbacks[index];
-        const cardId = card?.id ?? `missing-card-slot-${index + 1}`;
+        const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const hasPublishedImages = Boolean(card?.assets.some((asset) => asset.type === "IMAGE"));
-        // The supplied status artwork is illustrative only. Do not render a
-        // positive conclusion until the content model has an explicit,
-        // administrator-managed report conclusion field.
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="sr-only">{label}</span></>;
+        const statusBaseWidth = fallback.statusBaseArtwork?.width ?? 413;
+        const statusStyle = { "--category-status-text-width": `${fallback.statusArtwork.width / statusBaseWidth * 100}%` } as CSSProperties;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText} style={statusStyle}>{fallback.statusBaseArtwork ? <Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /> : null}<Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,
@@ -138,7 +136,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
           "--category-copy-y": layout.contentY,
           "--category-copy-width": layout.contentWidth,
         } as CSSProperties;
-        return preview || !hasPublishedImages ? <article key={cardId} className={`category-card-hotspot${hasPublishedImages ? "" : " is-unavailable"}`} data-index={index} data-placeholder={!card || undefined} aria-label={label} style={style}>{copy}</article> :
+        return preview ? <article key={cardId} className="category-card-hotspot" data-index={index} style={style}>{copy}</article> :
           <button key={cardId} type="button" className="category-card-hotspot" data-index={index} style={style} data-card-id={cardId} data-placeholder={!card || undefined} aria-label={label} disabled={leaving} onClick={() => {
             if (leaving) return;
             setLeaving(true);

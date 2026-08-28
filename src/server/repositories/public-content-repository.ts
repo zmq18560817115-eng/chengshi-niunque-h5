@@ -1,7 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
-import { getPublicDataTimeoutMs } from "@/server/env";
-import { withTimeout } from "@/server/utils/with-timeout";
 
 const publicVisibility = {
   contentStatus: "PUBLISHED",
@@ -24,7 +22,7 @@ const publicModuleQuery = {
       orderBy: stableOrder(),
       include: {
         assets: {
-          where: { ...publicVisibility, assetType: "IMAGE" },
+          where: publicVisibility,
           orderBy: stableOrder(),
           include: {
             pages: { orderBy: [{ pageNumber: "asc" }, { id: "asc" }] },
@@ -41,22 +39,14 @@ export class PublicContentRepository {
   constructor(private readonly client: PrismaClient = prisma) {}
 
   listModules(): Promise<PublicModuleRecord[]> {
-    return withTimeout(
-      this.client.informationModule.findMany(publicModuleQuery),
-      getPublicDataTimeoutMs(),
-      "Public module query",
-    );
+    return this.client.informationModule.findMany(publicModuleQuery);
   }
 
   listSettings() {
-    return withTimeout(
-      this.client.siteSetting.findMany({
-        where: publicVisibility,
-        orderBy: stableOrder(),
-        select: { key: true, name: true, value: true, updatedAt: true },
-      }),
-      getPublicDataTimeoutMs(),
-      "Public settings query",
-    );
+    return this.client.siteSetting.findMany({
+      where: publicVisibility,
+      orderBy: stableOrder(),
+      select: { key: true, name: true, value: true, updatedAt: true },
+    });
   }
 }
