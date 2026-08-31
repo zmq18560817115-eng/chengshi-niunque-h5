@@ -6,7 +6,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { archiveModuleExitDelayMs } from "@/components/h5/category-route-transition";
-import { guideRouteEntryAttribute, guideRouteNavigationDelayMs } from "@/components/h5/guide-route-transition";
+import { clearGuideRouteContinuity, guideRouteBufferHostId, guideRouteDestinationSrc, guideRouteEntryAttribute, guideRouteNavigationDelayMs, primeGuideRouteContinuity, type GuideRouteProfile } from "@/components/h5/guide-route-transition";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
@@ -15,8 +15,13 @@ import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUn
 import { RuntimeLoadingBuffer, runtimeLoadingAnimationDelayMs } from "@/components/h5/RuntimeLoadingBuffer";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 
-type PendingImage = { src: string; resolve: () => void; reject: () => void };
+type PendingImage = { src: string; kind: "dom" | "preload"; settled: boolean; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
+let loadedDomImages = new WeakSet<HTMLImageElement>();
+const originalImageDecode = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "decode");
+const originalImageNaturalWidth = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "naturalWidth");
+const originalInnerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+const originalInnerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
 
 class PreloadImageMock {
   decoding = "auto";
@@ -29,6 +34,8 @@ class PreloadImageMock {
     return new Promise<void>((resolve, reject) => {
       pendingImages.push({
         src: this.src,
+        kind: "preload",
+        settled: false,
         resolve: () => { this.onload?.(); resolve(); },
         reject: () => { this.onerror?.(); reject(); },
       });
@@ -36,23 +43,70 @@ class PreloadImageMock {
   }
 }
 
-async function resolvePendingImages(predicate: (image: PendingImage) => boolean) {
-  const resolved = new Set<PendingImage>();
-  for (let round = 0; round < 80; round += 1) {
-    const batch = pendingImages.filter((image) => predicate(image) && !resolved.has(image));
-    batch.forEach((image) => {
-      resolved.add(image);
-      image.resolve();
-    });
-    await Promise.resolve();
+function imageSource(image: HTMLImageElement) {
+  return image.getAttribute("src") ?? image.src;
+}
+
+function startDomImageDecodes(predicate: (image: PendingImage) => boolean) {
+  for (const image of [...document.querySelectorAll<HTMLImageElement>("img")]) {
+    if (loadedDomImages.has(image)) continue;
+    const candidate = { src: imageSource(image), kind: "dom" as const, settled: false, resolve: () => undefined, reject: () => undefined };
+    if (!predicate(candidate)) continue;
+    loadedDomImages.add(image);
+    fireEvent.load(image);
   }
 }
 
-async function unlockGuideGesture() {
+function failDomImage(image: Element) {
+  loadedDomImages.add(image as HTMLImageElement);
+  fireEvent.error(image);
+}
+
+async function resolvePendingImages(predicate: (image: PendingImage) => boolean) {
+  for (let round = 0; round < 80; round += 1) {
+    startDomImageDecodes(predicate);
+    await Promise.resolve();
+    const batch = pendingImages.filter((image) => predicate(image) && !image.settled);
+    batch.forEach((image) => {
+      image.settled = true;
+      image.resolve();
+    });
+    await Promise.resolve();
+    if (batch.length === 0) await Promise.resolve();
+  }
+}
+
+async function settleGuideRenderEffects() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(0);
+  });
+}
+
+async function decodeMountedGuideImages() {
+  await settleGuideRenderEffects();
   await act(async () => { await resolvePendingImages(() => true); });
-  await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + 32); });
-  await act(async () => { await vi.runOnlyPendingTimersAsync(); });
-  await act(async () => { await vi.runOnlyPendingTimersAsync(); });
+  // Fake timers replace the synchronous RAF stub. Advance both readiness
+  // frames, then let the destination-ready render mount its primed buffer.
+  if (vi.isFakeTimers()) {
+    await act(async () => { await vi.advanceTimersByTimeAsync(32); });
+  }
+  await act(async () => { await resolvePendingImages(() => true); });
+  const profile = document.querySelector<HTMLElement>(".brand-guide")?.dataset.guideProfile as GuideRouteProfile | "unknown" | undefined;
+  if (profile && profile !== "unknown") {
+    await act(async () => {
+      await primeGuideRouteContinuity(profile, false);
+      await Promise.resolve();
+    });
+  }
+  await settleGuideRenderEffects();
+}
+
+async function unlockGuideGesture() {
+  await decodeMountedGuideImages();
+  await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs + 32); });
 }
 
 const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
@@ -61,10 +115,33 @@ describe("multi-page H5 interactions", () => {
   beforeEach(() => {
     releaseHomepagePreloadedAssets();
     pendingImages = [];
+    loadedDomImages = new WeakSet<HTMLImageElement>();
     sessionStorage.clear();
+    document.getElementById(guideRouteBufferHostId)?.remove();
     document.documentElement.removeAttribute("data-category-route-entry");
+    document.documentElement.removeAttribute(guideRouteEntryAttribute);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 375 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 812 });
     vi.stubGlobal("Image", PreloadImageMock);
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, get: () => 750 });
+    Object.defineProperty(HTMLImageElement.prototype, "decode", {
+      configurable: true,
+      value: function decode(this: HTMLImageElement) {
+        return new Promise<void>((resolve, reject) => {
+          const pending: PendingImage = {
+            src: imageSource(this),
+            kind: "dom",
+            settled: false,
+            resolve,
+            reject,
+          };
+          pendingImages.push(pending);
+        });
+      },
+    });
+    document.body.insertAdjacentHTML("afterbegin", `<div id="${guideRouteBufferHostId}" aria-hidden="true"></div>`);
     vi.stubGlobal("IntersectionObserver", class {
       constructor() {}
       observe() {}
@@ -78,8 +155,14 @@ describe("multi-page H5 interactions", () => {
   });
 
   afterEach(() => {
+    clearGuideRouteContinuity();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    if (originalImageDecode) Object.defineProperty(HTMLImageElement.prototype, "decode", originalImageDecode);
+    else delete (HTMLImageElement.prototype as Partial<HTMLImageElement>).decode;
+    if (originalImageNaturalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalImageNaturalWidth);
+    if (originalInnerWidth) Object.defineProperty(window, "innerWidth", originalInnerWidth);
+    if (originalInnerHeight) Object.defineProperty(window, "innerHeight", originalInnerHeight);
   });
 
   it("maps the three archive folders to their matching category routes", () => {
@@ -328,10 +411,7 @@ describe("multi-page H5 interactions", () => {
     render(<BrandGuide onEnter={onEnter} />);
     act(() => vi.advanceTimersByTime(5000));
     expect(onEnter).not.toHaveBeenCalled();
-    await act(async () => {
-      await resolvePendingImages(() => true);
-      await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + h5MotionTiming.guide.swipeReadyMs + 32);
-    });
+    await unlockGuideGesture();
     const action = screen.getByRole("button", { name: "进入档案" });
     expect(action).toBeEnabled();
     fireEvent.click(action);
@@ -340,29 +420,19 @@ describe("multi-page H5 interactions", () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it("warms homepage artwork in the background without fixing the loading page before the guide", async () => {
-    vi.useFakeTimers();
+  it("renders the guide directly and primes only lightweight guide-route artwork", async () => {
     const { container } = render(<GuideExperience />);
 
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    expect(pendingImages.every(isGuideReadinessAsset)).toBe(true);
-    expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
-    act(() => vi.advanceTimersByTime(599));
-    expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1));
-    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
     await act(async () => {
       await resolvePendingImages(isGuideReadinessAsset);
     });
-    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(260);
-    });
-    expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    await act(async () => { await vi.advanceTimersByTimeAsync(340); });
-    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(true);
+    expect(pendingImages.every(isGuideReadinessAsset)).toBe(true);
+    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(false);
+    expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
+    expect(container.querySelector(".brand-guide-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
+    expect(document.querySelector(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)).toHaveAttribute("data-guide-profile", "portrait-standard");
   });
 
   it("limits competing image warmups and defers the large loading GIF for short waits", async () => {
@@ -391,45 +461,56 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
   });
 
-  it("keeps the loading buffer only until the current guide artwork has decoded", async () => {
-    vi.useFakeTimers();
-    const { container } = render(<GuideExperience />);
+  it("keeps the static fallback until every actual standard DOM layer has decoded", async () => {
+    const { container } = render(<BrandGuide />);
+    const page = container.querySelector(".brand-guide")!;
+    const finalPaper = "/design/guide/report-paper-bottom.webp";
+
+    expect(page).toHaveClass("is-loading");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
     await act(async () => {
-      vi.advanceTimersByTime(15000);
-      await Promise.resolve();
+      await resolvePendingImages(({ src }) => src.includes("/design/guide/") && !src.includes(finalPaper));
     });
-    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-loading");
-    expect(container.querySelector(".brand-guide")).toBeInTheDocument();
+    expect(page).toHaveClass("is-loading");
 
     await act(async () => {
-      await resolvePendingImages(isGuideReadinessAsset);
+      await resolvePendingImages(() => true);
     });
-    expect(container.querySelector(".guide-loading-buffer")).toHaveClass("is-leaving");
+    expect(page).toHaveClass("is-ready");
+    expect(container.querySelector(".brand-guide-live-stage")).toBeInTheDocument();
+    expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
   });
 
-  it("never mounts the loading buffer when the current guide artwork is ready inside the reveal threshold", async () => {
-    vi.useFakeTimers();
-    const { container } = render(<GuideExperience />);
+  it("mounts only the selected compact or landscape composition", async () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 568 });
+    const compact = render(<BrandGuide />);
+    await waitFor(() => expect(compact.container.querySelector(".brand-guide")).toHaveAttribute("data-guide-profile", "portrait-compact"));
+    expect(compact.container.querySelector(".guide-compact-portrait-composition")).toBeInTheDocument();
+    expect(compact.container.querySelectorAll(".guide-compact-paper")).toHaveLength(4);
+    expect(compact.container.querySelectorAll(".guide-compact-character-layer")).toHaveLength(4);
+    expect(compact.container.querySelector(".brand-guide-live-stage")).not.toBeInTheDocument();
+    expect(compact.container.querySelector(".guide-landscape-composition")).not.toBeInTheDocument();
+    compact.unmount();
+    clearGuideRouteContinuity();
 
-    await act(async () => {
-      await resolvePendingImages(isGuideReadinessAsset);
-      await vi.advanceTimersByTimeAsync(1000);
-    });
-
-    expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide")).toBeInTheDocument();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 667 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 375 });
+    const landscape = render(<BrandGuide />);
+    await waitFor(() => expect(landscape.container.querySelector(".brand-guide")).toHaveAttribute("data-guide-profile", "landscape"));
+    expect(landscape.container.querySelector(".guide-landscape-composition")).toBeInTheDocument();
+    expect(landscape.container.querySelectorAll(".guide-landscape-character img")).toHaveLength(3);
+    expect(landscape.container.querySelector(".brand-guide-portrait-scene")).not.toBeInTheDocument();
+    expect(landscape.container.querySelector(".guide-compact-portrait-composition")).not.toBeInTheDocument();
   });
 
-  it("tracks touch progress after the MotionStage crossfade and commits on release", async () => {
+  it("tracks touch progress after actual DOM decode and the fallback crossfade", async () => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
     const stage = container.querySelector(".brand-guide-stage");
-    await act(async () => {
-      await resolvePendingImages(() => true);
-      await vi.advanceTimersByTimeAsync(32);
-    });
+    await decodeMountedGuideImages();
     expect(page).toHaveClass("is-ready", "is-motion-enabled");
     expect(stage).toHaveAttribute("data-swipe-state", "locked");
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
@@ -443,8 +524,9 @@ describe("multi-page H5 interactions", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    await act(async () => { await vi.runOnlyPendingTimersAsync(); });
-    await act(async () => { await vi.runOnlyPendingTimersAsync(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs - 1); });
+    expect(stage).toHaveAttribute("data-gesture-state", "locked");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(stage).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 300 }] });
     await act(async () => {
@@ -619,20 +701,20 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("mounts guide animation layers with the configured unified timeline", async () => {
+    vi.useFakeTimers();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
+    expect(page).toHaveAttribute("data-guide-profile", "portrait-standard");
     expect(container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
     expect(container.querySelector(".brand-guide-paper-arm-occlusion")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-paper-right-occlusion")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(1);
     const animatedCanvas = container.querySelector(".is-animated-canvas");
-    const windowMask = animatedCanvas?.querySelector(".brand-guide-window-mask");
     const windowFrame = animatedCanvas?.querySelector(".brand-guide-arch");
-    expect(windowMask).toBeInTheDocument();
     expect(windowFrame).toBeInTheDocument();
-    expect(windowMask!.compareDocumentPosition(windowFrame!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(animatedCanvas?.querySelector(".brand-guide-window-mask")).not.toBeInTheDocument();
+    expect(animatedCanvas?.querySelector(".brand-guide-base")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
     expect(container.querySelector(".brand-guide-character-closed")?.getAttribute("src")).toContain("guide-character-closed.webp");
     const stage = container.querySelector(".brand-guide-stage");
@@ -646,38 +728,29 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-swipe-ready-ms", "2140");
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage.is-loading .is-initial-canvas")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-character-open")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-window-mask")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-arch")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-foreground-top")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-paper")).not.toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback-v3.webp");
-    expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".is-animated-canvas .brand-guide-final-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".is-animated-canvas .brand-guide-initial-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".is-animated-canvas .brand-guide-base")?.getAttribute("src")).toContain("guide-background.webp");
-    expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).toBeInTheDocument();
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(page).toHaveClass("is-ready"));
-    expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground.webp");
+    expect(page).toHaveClass("is-loading");
+    await decodeMountedGuideImages();
+    expect(page).toHaveClass("is-ready");
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
-    await waitFor(() => expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled(), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs); });
+    expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
-    await waitFor(() => expect(onEnter).toHaveBeenCalledOnce());
+    await act(async () => { await vi.advanceTimersByTimeAsync(guideRouteNavigationDelayMs); });
+    expect(onEnter).toHaveBeenCalledOnce();
     consoleError.mockRestore();
   });
 
-  it("keeps the complete final fallback when a critical guide asset fails", async () => {
+  it("keeps the static foreground fallback when a critical DOM layer fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container } = render(<BrandGuide/>);
-    const loadingWindowMask = container.querySelector(".is-animated-canvas .brand-guide-window-mask");
-    expect(loadingWindowMask).toBeInTheDocument();
-    fireEvent.error(loadingWindowMask as Element);
-    await act(async () => pendingImages.forEach(({ reject }) => reject()));
+    const character = container.querySelector(".is-animated-canvas .brand-guide-character-open");
+    expect(character).toBeInTheDocument();
+    failDomImage(character as Element);
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
-    expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback-v3.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground.webp");
     expect(container.querySelector(".brand-guide")).not.toHaveClass("has-no-fallback");
     consoleError.mockRestore();
   });
@@ -688,7 +761,7 @@ describe("multi-page H5 interactions", () => {
     const page = screen.getByRole("main");
     const stage = container.querySelector(".brand-guide-stage");
     const destination = container.querySelector(".brand-guide-destination-image");
-    fireEvent.error(destination as Element);
+    failDomImage(destination as Element);
     expect(stage).toHaveAttribute("data-destination-state", "fallback");
     expect(page).toHaveClass("has-destination-fallback");
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
@@ -698,16 +771,16 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("keeps the final static fallback when reduced motion is requested", async () => {
-    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
     const { container } = render(<BrandGuide />);
     const page = screen.getByRole("main");
     await waitFor(() => expect(page).toHaveClass("is-reduced"));
-    expect(pendingImages).toHaveLength(1);
-    expect(pendingImages[0]?.src).toContain("archive-reference.webp");
+    expect(pendingImages).toHaveLength(0);
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")).toBeInTheDocument();
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
+    expect(container.querySelector(".brand-guide-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
   });
 
   it("keeps the 750 by 1625 guide stage stable while disabled", async () => {
