@@ -626,7 +626,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
     expect(container.querySelector(".brand-guide-paper-arm-occlusion")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-paper-right-occlusion")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(2);
+    expect(container.querySelectorAll(".brand-guide-window-mask")).toHaveLength(1);
     const animatedCanvas = container.querySelector(".is-animated-canvas");
     const windowMask = animatedCanvas?.querySelector(".brand-guide-window-mask");
     const windowFrame = animatedCanvas?.querySelector(".brand-guide-arch");
@@ -646,20 +646,21 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-swipe-ready-ms", "2140");
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage.is-loading .is-initial-canvas")).toBeInTheDocument();
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-window-mask")?.getAttribute("src")).toContain("guide-window-mask.webp");
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-arch")?.getAttribute("src")).toContain("guide-arch.webp");
-    expect(container.querySelector(".motion-stage-fallback .brand-guide-foreground-top")?.getAttribute("src")).toContain("guide-foreground-top.webp");
+    expect(container.querySelector(".motion-stage.is-loading .is-initial-canvas")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-character-open")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-window-mask")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-arch")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-foreground-top")).not.toBeInTheDocument();
     expect(container.querySelector(".motion-stage-fallback .brand-guide-paper")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage-fallback .brand-guide-fallback")?.getAttribute("src")).toContain("guide-final-fallback-v3.webp");
     expect(container.querySelector(".brand-guide-first-frame")).not.toBeInTheDocument();
     expect(container.querySelector(".is-animated-canvas .brand-guide-final-frame")).not.toBeInTheDocument();
     expect(container.querySelector(".is-animated-canvas .brand-guide-initial-frame")).not.toBeInTheDocument();
     expect(container.querySelector(".is-animated-canvas .brand-guide-base")?.getAttribute("src")).toContain("guide-background.webp");
-    expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).not.toBeInTheDocument();
+    expect(container.querySelector(".motion-stage.is-loading .brand-guide-fallback")).toBeInTheDocument();
     await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
     await waitFor(() => expect(page).toHaveClass("is-ready"));
-    expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).toBeInTheDocument();
+    expect(container.querySelector(".motion-stage.is-ready .is-initial-canvas")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
     await waitFor(() => expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled(), { timeout: 3000 });
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
@@ -667,10 +668,10 @@ describe("multi-page H5 interactions", () => {
     consoleError.mockRestore();
   });
 
-  it("switches from the complete layered first frame to the final fallback when a critical guide asset fails", async () => {
+  it("keeps the complete final fallback when a critical guide asset fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container } = render(<BrandGuide/>);
-    const loadingWindowMask = container.querySelector(".motion-stage-fallback .brand-guide-window-mask");
+    const loadingWindowMask = container.querySelector(".is-animated-canvas .brand-guide-window-mask");
     expect(loadingWindowMask).toBeInTheDocument();
     fireEvent.error(loadingWindowMask as Element);
     await act(async () => pendingImages.forEach(({ reject }) => reject()));

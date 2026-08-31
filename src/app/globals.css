@@ -26,7 +26,7 @@
   --font-body: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --h5-content-width: 750px;
   --guide-entry-hint-width: 43.4%;
-  --guide-entry-hint-bottom: 2.7%;
+  --guide-entry-hint-bottom: 3.3%;
   --guide-entry-hint-float-duration: 1700ms;
   --guide-entry-feedback-duration: 420ms;
   --guide-swipe-accepted-duration: 420ms;
@@ -304,23 +304,14 @@ button, a { font: inherit; }
 .brand-guide.is-dragging .brand-guide-stage, .brand-guide.is-dragging .brand-guide-destination-preview { will-change: transform, opacity; }
 .brand-guide.is-settling .brand-guide-stage, .brand-guide.is-settling .brand-guide-destination-preview { transition: transform 240ms cubic-bezier(.22,1,.36,1), opacity 220ms ease-out; will-change: transform, opacity; }
 .brand-guide-artwork { container-type: size; position: absolute; z-index: 1; top: 0; bottom: 0; left: 50%; width: min(100%,var(--h5-content-width)); overflow: hidden; translate: -50% 0; backface-visibility: hidden; contain: layout paint style; }
-.brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene { position: absolute; top: 50%; left: 50%; aspect-ratio: 6 / 13; translate: -50% -50%; }
-.brand-guide-portrait-edge-bleed { z-index: 0; overflow: visible; pointer-events: none; }
-.brand-guide-portrait-edge-bleed-copy { position: absolute; top: 0; width: 100%; height: 100%; transform: scaleX(-1); transform-origin: center; backface-visibility: hidden; }
-.brand-guide-portrait-edge-bleed-copy.is-left { left: calc(-100% + 1px); }
-.brand-guide-portrait-edge-bleed-copy.is-right { left: calc(100% - 1px); }
-.brand-guide-portrait-edge-bleed-layer { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center; backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.brand-guide-portrait-edge-bleed-layer.is-guide-background { z-index: 0; }
-.brand-guide-portrait-scene { z-index: 1; overflow: hidden; }
+.brand-guide-portrait-scene { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; overflow: hidden; }
 .brand-guide-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
 .brand-guide-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide.has-destination-fallback .brand-guide-stage { opacity: 1; transform: translate3d(0,0,0); }
 .brand-guide.has-destination-fallback .brand-guide-destination-preview { visibility: hidden; opacity: 0; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
-.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: translate3d(0,0,0); backface-visibility: hidden; }
-.brand-guide-bootstrap-frame { position: absolute; z-index: 45; inset: 0; display: block; width: 100%; height: 100%; }
-.brand-guide-bootstrap-reduced { z-index: 45; visibility: hidden; opacity: 0; }
+.brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; object-position: center; transform: translate3d(0,0,0); backface-visibility: hidden; }
 .brand-guide-base { z-index: 10; }
 .brand-guide-arch { z-index: 27; visibility: visible; opacity: 1; pointer-events: none; }
 .brand-guide-paper { z-index: 34; animation-duration: var(--guide-paper-duration), 300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04), ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset, 0ms)), calc(var(--guide-paper-start) + var(--paper-offset, 0ms)); animation-fill-mode: both, both; transform-origin: center; backface-visibility: hidden; }
@@ -343,6 +334,8 @@ button, a { font: inherit; }
 .brand-guide.is-reduced .brand-guide-fallback { visibility: visible; opacity: 1; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
 .brand-guide.has-no-fallback .brand-guide-fallback-message { display: block; }
+.brand-guide.is-loading .brand-guide-fallback { visibility: visible; opacity: 1; }
+.brand-guide.is-loading .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
 .brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed { animation-play-state: paused; }
 .brand-guide.is-motion-disabled .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-fallback { visibility: visible; opacity: 1; }
@@ -354,10 +347,10 @@ button, a { font: inherit; }
 .guide-landscape-composition { position: absolute; inset: 0; display: none; overflow: hidden; background-color: transparent; }
 .guide-landscape-crop { position: absolute; overflow: hidden; }
 .guide-landscape-crop-master { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.guide-landscape-logo { z-index: 1; top: 4%; left: 4%; width: 36%; aspect-ratio: 520 / 210; }
+.guide-landscape-logo { z-index: 5; top: 4%; left: 4%; width: 36%; aspect-ratio: 520 / 210; }
 .guide-landscape-logo .guide-landscape-crop-master { top: -42.8571%; left: -23.0769%; width: 144.2308%; height: 773.8095%; }
-.guide-landscape-character { z-index: 2; bottom: 2%; left: 2%; width: 54%; aspect-ratio: 750 / 530; }
-.guide-landscape-character .guide-landscape-crop-master { top: -56.6038%; left: 0; width: 100%; height: 306.6038%; }
+.guide-landscape-character { z-index: 2; bottom: 2%; left: 2%; width: 54%; aspect-ratio: 750 / 600; }
+.guide-landscape-character .guide-landscape-crop-master { top: -50%; left: 0; width: 100%; height: 270.8333%; }
 .guide-landscape-envelope { z-index: 3; right: 2%; bottom: 3%; width: 42%; aspect-ratio: 697 / 641; }
 .guide-landscape-envelope .guide-landscape-crop-master { top: -145.086%; left: -7.604%; width: 107.604%; height: 253.510%; }
 .guide-landscape-hint { position: absolute; z-index: 4; right: 4%; bottom: 1%; display: block; width: clamp(150px,27%,200px); height: auto; max-width: none; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
@@ -365,7 +358,7 @@ button, a { font: inherit; }
 .brand-guide-enter-action { position: absolute; z-index: 50; left: 50%; bottom: max(.6rem, env(safe-area-inset-bottom)); width: min(58vw, 14rem); height: max(3rem, 8dvh); padding: 0; translate: -50% 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .brand-guide-enter-action:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
 .brand-guide-transition-error { position: absolute; z-index: 55; left: 50%; bottom: max(3.6rem,calc(env(safe-area-inset-bottom) + 3rem)); width: min(calc(100% - 2rem),22rem); margin: 0; padding: .55rem .8rem; translate: -50% 0; border-radius: var(--radius-md); color: #5a3827; text-align: center; font-size: .78rem; line-height: 1.45; background: rgb(255 250 240 / .92); box-shadow: var(--shadow-paper); }
-@keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }
+@keyframes guide-blink-closed { 0%, 100% { opacity: 0; } 35%, 65% { opacity: 1; } }
 /* 单曲线平滑落入（保留原起止坐标），去掉多段缓动切换造成的速度突变=卡顿 */
 @keyframes guide-paper-from-top { from { transform: translate3d(-1.1%,-18%,0) rotate(-3.2deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-from-left { from { transform: translate3d(-31%,-1.1%,0) rotate(-3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
@@ -403,7 +396,7 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 .h5-guide-route-guide-panel { z-index: 1; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: var(--guide-route-start-guide-opacity,1); transform: translate3d(0,var(--guide-route-start-guide-y,0px),0); }
 .h5-guide-route-destination-panel { z-index: 2; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; opacity: var(--guide-route-start-destination-opacity,0); transform: translate3d(0,var(--guide-route-start-destination-y,26dvh),0); }
 .h5-guide-route-snapshot { container-type: size; position: absolute; top: 0; bottom: 0; left: 50%; display: block; width: min(100%,var(--h5-content-width)); overflow: hidden; translate: -50% 0; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
-.h5-guide-route-portrait-snapshot { position: absolute; top: 50%; left: 50%; display: block; max-width: none; aspect-ratio: 6 / 13; object-fit: fill; translate: -50% -50%; user-select: none; -webkit-user-drag: none; }
+.h5-guide-route-portrait-snapshot { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; user-select: none; -webkit-user-drag: none; }
 .h5-guide-route-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
 .h5-guide-route-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
 .h5-guide-route-buffer.is-committing .h5-guide-route-guide-panel { opacity: .08; transform: translate3d(0,var(--guide-route-end-guide-y,-26dvh),0); }
@@ -412,28 +405,14 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 .h5-guide-route-buffer.has-destination-fallback.is-committing .h5-guide-route-guide-panel { opacity: 1; transform: translate3d(0,0,0); }
 .h5-guide-route-buffer.has-destination-fallback .h5-guide-route-destination-panel { visibility: hidden; opacity: 0; }
 
-@media (orientation: portrait) and (max-aspect-ratio: 6 / 13) {
-  .guide-loading-buffer-stage { width: min(100%,var(--h5-content-width)); height: auto; }
-  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { width: 100%; height: calc(100cqw * 13 / 6); }
-}
-
-@media (orientation: portrait) and (min-aspect-ratio: 6 / 13) {
-  .guide-loading-buffer-stage { width: auto; max-width: var(--h5-content-width); height: 100%; }
-  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { width: calc(100cqh * 6 / 13); height: 100%; }
-  .brand-guide-window-mask, .brand-guide-arch {
-    -webkit-mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),rgba(0,0,0,.3) clamp(5px,1.8cqw,9px),#000 clamp(16px,6cqw,30px),#000 calc(100% - clamp(16px,6cqw,30px)),rgba(0,0,0,.3) calc(100% - clamp(5px,1.8cqw,9px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),rgba(0,0,0,.3) clamp(5px,1.8cqw,9px),#000 clamp(16px,6cqw,30px),#000 calc(100% - clamp(16px,6cqw,30px)),rgba(0,0,0,.3) calc(100% - clamp(5px,1.8cqw,9px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
-  }
-  .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced, .h5-guide-route-portrait-snapshot {
-    -webkit-mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),#000 clamp(10px,4cqw,20px),#000 calc(100% - clamp(10px,4cqw,20px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),#000 clamp(10px,4cqw,20px),#000 calc(100% - clamp(10px,4cqw,20px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
-  }
+@media (orientation: portrait) {
+  .guide-loading-buffer-stage { width: min(100%,var(--h5-content-width)); max-width: var(--h5-content-width); height: 100%; aspect-ratio: auto; }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
   .guide-loading-buffer-stage { width: min(100%,var(--h5-content-width)); max-width: var(--h5-content-width); height: 100%; aspect-ratio: auto; }
   .guide-loading-buffer-gif, .guide-loading-buffer-poster { object-fit: cover; object-position: center; }
-  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { display: none; }
+  .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { display: none; }
   .guide-landscape-composition { display: block; }
   .brand-guide-artwork, .h5-guide-route-snapshot { width: min(100%,var(--h5-content-width)); }
 }
@@ -1082,7 +1061,6 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .category-page-final[data-route-entry="reports-archive"][data-route-ready="true"], .category-page-final[data-route-entry="reports-archive-buffer"][data-route-ready="true"] { animation: category-route-continuity-fade 180ms ease both; }
   .archive-category-hotspot { opacity: 1; transform: none; transition: none; }
   .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
-  .brand-guide-bootstrap-frame .brand-guide-bootstrap-reduced { visibility: visible; opacity: 1; }
   .brand-guide.is-ready .brand-guide-fallback, .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; transition: none; }
   .archive-module-one { opacity: 1; transform: none; transition: none; }
   .archive-module-circle, .archive-module-result-passed { clip-path: inset(0); opacity: 1; animation: none !important; }

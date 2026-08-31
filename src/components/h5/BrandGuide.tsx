@@ -80,50 +80,38 @@ function GuideEntryHint({ onError }: { onError: (name: string) => void }) {
   return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(max-width: 750px) 43.4vw, 326px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>;
 }
 
-function GuidePortraitEdgeBleed({ onError }: { onError: (name: string) => void }) {
-  const edgeLayerNames = ["guide-background.webp"] as const;
-  const edge = (side: "left" | "right") => <div className={`brand-guide-portrait-edge-bleed-copy is-${side}`}>
-    {edgeLayerNames.map((name) => <Image
+function GuideLandscapeCrop({ name, src, onError }: { name: "logo" | "envelope"; src: string; onError: (name: string) => void }) {
+  return <div className={`guide-landscape-crop guide-landscape-${name}`} data-guide-landmark={name}>
+    <Image className="guide-landscape-crop-master" src={src} alt="" aria-hidden="true" width={750} height={1625} sizes="(max-width: 750px) 100vw, 750px" priority unoptimized decoding="async" onError={() => onError(src.split("/").at(-1) ?? src)}/>
+  </div>;
+}
+
+function GuideLandscapeCharacter({ onError }: { onError: (name: string) => void }) {
+  const layers = ["guide-arch.webp", "guide-character-open.webp", "guide-foreground-top.webp"] as const;
+  return <div className="guide-landscape-crop guide-landscape-character" data-guide-landmark="character">
+    {layers.map((name) => <Image
       key={name}
-      className={`brand-guide-portrait-edge-bleed-layer is-${name.replace(".webp", "")}`}
+      className={`guide-landscape-crop-master is-${name.replace(".webp", "")}`}
       src={assetUrl(name)}
       alt=""
       aria-hidden="true"
       width={750}
       height={1625}
-      sizes="(max-width: 750px) 100vw, 750px"
+      sizes="(max-width: 750px) 54vw, 405px"
       priority
       unoptimized
       decoding="async"
       onError={() => onError(name)}
     />)}
   </div>;
-
-  return <div className="brand-guide-portrait-edge-bleed" aria-hidden="true" data-guide-portrait-edge-bleed>
-    {edge("left")}
-    {edge("right")}
-  </div>;
-}
-
-function GuideLandscapeCrop({ name, src, onError }: { name: "logo" | "character" | "envelope"; src: string; onError: (name: string) => void }) {
-  return <div className={`guide-landscape-crop guide-landscape-${name}`} data-guide-landmark={name}>
-    <Image className="guide-landscape-crop-master" src={src} alt="" aria-hidden="true" width={750} height={1625} sizes="(max-width: 750px) 100vw, 750px" priority unoptimized decoding="async" onError={() => onError(src.split("/").at(-1) ?? src)}/>
-  </div>;
 }
 
 function GuideLandscapeComposition({ onError }: { onError: (name: string) => void }) {
   return <div className="guide-landscape-composition" aria-hidden="true">
     <GuideLandscapeCrop name="logo" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
-    <GuideLandscapeCrop name="character" src={assetUrl("guide-final-fallback-v3.webp")} onError={onError}/>
+    <GuideLandscapeCharacter onError={onError}/>
     <GuideLandscapeCrop name="envelope" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
     <Image className="guide-landscape-hint" data-guide-landmark="hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(orientation: landscape) 27vw, 1px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>
-  </div>;
-}
-
-function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerError: (name: string) => void; onFinalFallbackError: () => void }) {
-  return <div className="brand-guide-bootstrap-frame">
-    <GuideLayers animated={false} onError={onLayerError}/>
-    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="100vw" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
   </div>;
 }
 
@@ -413,8 +401,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setAnimationStarted(true);
   }, []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const bootstrapFrame = <GuideBootstrapFrame onLayerError={handleLayerError} onFinalFallbackError={handleFallbackError}/>;
-  const firstFrame = <GuideLayers animated={false} onError={handleLayerError}/>;
   const mountMotionStage = motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
@@ -479,13 +465,12 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     <div className="brand-guide-swipe-track">
       <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={transitionSwipeReady ? "ready" : "locked"} data-gesture-state={transitionGestureReady ? "ready" : "locked"} data-destination-state={destinationStatus} data-swipe-distance-px={GUIDE_SWIPE_DISTANCE_PX} data-swipe-commit-progress={GUIDE_SWIPE_COMMIT_PROGRESS} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
         <div className="brand-guide-artwork">
-          <GuidePortraitEdgeBleed onError={handleLayerError}/>
           <div className="brand-guide-portrait-scene">
             {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
-              <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
+              <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={fallback} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
                 <GuideLayers animated onError={handleLayerError}/>
               </MotionStage>
-            </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
+            </MotionBoundary> : fallback}
             <GuideEntryHint onError={handleLayerError}/>
           </div>
           <GuideLandscapeComposition onError={handleLayerError}/>

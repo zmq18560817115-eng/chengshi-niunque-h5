@@ -57,6 +57,62 @@ async function expectStageFillsSafeContentBox(root: Locator, stage: Locator) {
   expect(stageBox.height).toBeCloseTo(rootBox.height - padding.top - padding.bottom, 0);
 }
 
+async function measureGuideReferenceDifference(page: import("@playwright/test").Page) {
+  const screenshot = await page.screenshot({ animations: "disabled" });
+  return page.evaluate(async ({ actualUrl, referenceUrl }) => {
+    const load = async (src: string) => {
+      const image = new Image();
+      image.src = src;
+      await image.decode();
+      return image;
+    };
+    const [actual, reference] = await Promise.all([load(actualUrl), load(referenceUrl)]);
+    const canvas = document.createElement("canvas");
+    canvas.width = actual.naturalWidth;
+    canvas.height = actual.naturalHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("2d canvas is unavailable");
+    context.drawImage(reference, 0, 0, canvas.width, canvas.height);
+    const baseline = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(actual, 0, 0);
+    const rendered = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const sampleStep = Math.max(1, Math.round(devicePixelRatio));
+    const badgeSize = 72 * devicePixelRatio;
+    let total = 0;
+    let count = 0;
+    const histogram = new Array<number>(256).fill(0);
+    for (let y = 0; y < canvas.height; y += sampleStep) {
+      for (let x = 0; x < canvas.width; x += sampleStep) {
+        if (x < badgeSize && y > canvas.height - badgeSize) continue;
+        const offset = (y * canvas.width + x) * 4;
+        const difference = Math.round((
+          Math.abs(rendered[offset] - baseline[offset])
+          + Math.abs(rendered[offset + 1] - baseline[offset + 1])
+          + Math.abs(rendered[offset + 2] - baseline[offset + 2])
+        ) / 3);
+        histogram[difference] += 1;
+        total += difference;
+        count += 1;
+      }
+    }
+    const percentileTarget = count * .95;
+    let running = 0;
+    let p95 = 255;
+    for (let value = 0; value < histogram.length; value += 1) {
+      running += histogram[value] ?? 0;
+      if (running >= percentileTarget) {
+        p95 = value;
+        break;
+      }
+    }
+    return { mean: total / Math.max(1, count), p95 };
+  }, {
+    actualUrl: `data:image/png;base64,${screenshot.toString("base64")}`,
+    referenceUrl: "/design/guide/guide-final-fallback-v3.webp",
+  });
+}
+
 for (const device of devices) {
   test(`${device.name} completes guide to archive at ${device.width}x${device.height}`, async ({ page }) => {
     const runtimeErrors: string[] = [];
@@ -88,12 +144,11 @@ for (const device of devices) {
       ".brand-guide-window-mask",
       ".brand-guide-foreground-top",
       ".brand-guide-fallback",
-      ".brand-guide-bootstrap-reduced",
     ].join(", "));
     await expect.poll(async () => fullCanvasLayers.evaluateAll(
       (elements) => elements.length > 0 && elements.every((element) => {
         const style = window.getComputedStyle(element);
-        return element.isConnected && style.objectFit === "cover" && style.objectPosition === "50% 50%";
+        return element.isConnected && style.objectFit === "fill" && style.objectPosition === "50% 50%";
       }),
     )).toBe(true);
     await expect.poll(async () => fullCanvasLayers.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
@@ -107,47 +162,20 @@ for (const device of devices) {
 
     if (device.width <= device.height) {
       const portraitScene = page.locator(".brand-guide-portrait-scene");
-      const edgeBleed = page.locator(".brand-guide-portrait-edge-bleed");
-      const leftEdgeBleed = edgeBleed.locator(".brand-guide-portrait-edge-bleed-copy.is-left");
-      const rightEdgeBleed = edgeBleed.locator(".brand-guide-portrait-edge-bleed-copy.is-right");
       await expect(portraitScene).toBeVisible();
-      await expect(edgeBleed).toBeVisible();
       await expect(page.locator(".guide-landscape-composition")).toBeHidden();
-      const [portraitBox, bleedBox, leftBleedBox, rightBleedBox] = await Promise.all([
-        portraitScene.boundingBox(), edgeBleed.boundingBox(), leftEdgeBleed.boundingBox(), rightEdgeBleed.boundingBox(),
-      ]);
+      await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
+      const portraitBox = await portraitScene.boundingBox();
       expect(portraitBox).not.toBeNull();
-      expect(bleedBox).not.toBeNull();
-      expect(leftBleedBox).not.toBeNull();
-      expect(rightBleedBox).not.toBeNull();
-      if (!portraitBox || !bleedBox || !leftBleedBox || !rightBleedBox) throw new Error("portrait coordinate stage or edge bleed has no layout box");
-      const scale = Math.min(frameBox.width / 750, device.height / 1625);
-      expect(portraitBox.width).toBeCloseTo(750 * scale, 0);
-      expect(portraitBox.height).toBeCloseTo(1625 * scale, 0);
-      expect(portraitBox.width / frameBox.width).toBeGreaterThanOrEqual(0.8);
-      expect(portraitBox.height / device.height).toBeGreaterThanOrEqual(0.95);
-      expect(bleedBox.x).toBeCloseTo(portraitBox.x, 1);
-      expect(bleedBox.y).toBeCloseTo(portraitBox.y, 1);
-      expect(bleedBox.width).toBeCloseTo(portraitBox.width, 1);
-      expect(bleedBox.height).toBeCloseTo(portraitBox.height, 1);
-      expect(leftBleedBox.x).toBeLessThanOrEqual(frameBox.x);
-      expect(leftBleedBox.x + leftBleedBox.width).toBeGreaterThanOrEqual(portraitBox.x + 0.5);
-      expect(rightBleedBox.x).toBeLessThanOrEqual(portraitBox.x + portraitBox.width - 0.5);
-      expect(rightBleedBox.x + rightBleedBox.width).toBeGreaterThanOrEqual(frameBox.x + frameBox.width);
-      expect(leftBleedBox.width / leftBleedBox.height).toBeCloseTo(6 / 13, 3);
-      expect(rightBleedBox.width / rightBleedBox.height).toBeCloseTo(6 / 13, 3);
-      await expect(leftEdgeBleed.locator("img")).toHaveCount(1);
-      await expect(rightEdgeBleed.locator("img")).toHaveCount(1);
-      await expect.poll(async () => leftEdgeBleed.evaluate((element) => {
+      if (!portraitBox) throw new Error("portrait coordinate stage has no layout box");
+      expect(portraitBox.x).toBeCloseTo(frameBox.x, 0);
+      expect(portraitBox.y).toBeCloseTo(frameBox.y, 0);
+      expect(portraitBox.width).toBeCloseTo(frameBox.width, 0);
+      expect(portraitBox.height).toBeCloseTo(device.height, 0);
+      await expect.poll(async () => portraitScene.evaluate((element) => {
         const style = getComputedStyle(element);
-        const images = Array.from(element.querySelectorAll("img"));
-        return images.every((image) => image.complete && image.naturalWidth === 750 && image.naturalHeight === 1625 && getComputedStyle(image).objectFit === "cover") && new DOMMatrixReadOnly(style.transform).a < 0;
-      })).toBe(true);
-      await expect.poll(async () => rightEdgeBleed.evaluate((element) => {
-        const style = getComputedStyle(element);
-        const images = Array.from(element.querySelectorAll("img"));
-        return images.every((image) => image.complete && image.naturalWidth === 750 && image.naturalHeight === 1625 && getComputedStyle(image).objectFit === "cover") && new DOMMatrixReadOnly(style.transform).a < 0;
-      })).toBe(true);
+        return [style.webkitMaskImage, style.maskImage];
+      })).toEqual(["none", "none"]);
     } else {
       const composition = page.locator(".brand-guide-artwork > .guide-landscape-composition");
       await expect(composition).toBeVisible();
@@ -155,8 +183,8 @@ for (const device of devices) {
       const landmarks = composition.locator("[data-guide-landmark]");
       await expect(landmarks).toHaveCount(4);
       await expect.poll(async () => landmarks.evaluateAll((elements) => elements.every((element) => {
-        const image = element instanceof HTMLImageElement ? element : element.querySelector("img");
-        return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
+        const images = element instanceof HTMLImageElement ? [element] : Array.from(element.querySelectorAll("img"));
+        return images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0);
       })), { timeout: 15_000 }).toBe(true);
       const boxes = await landmarks.evaluateAll((elements) => elements.map((element) => {
         const box = element.getBoundingClientRect();
@@ -310,7 +338,7 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
 });
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }]) {
-  test(`short portrait route snapshot softens its side edges at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`short portrait route snapshot keeps the complete canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
     const enter = page.getByRole("button", { name: "进入档案" });
@@ -318,13 +346,71 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
     await enter.click({ noWaitAfter: true });
     const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-portrait-snapshot");
     await expect(snapshot).toBeVisible({ timeout: 10000 });
-    await expect.poll(async () => snapshot.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return style.webkitMaskImage || style.maskImage;
-    })).not.toBe("none");
+    const snapshotBox = await snapshot.boundingBox();
+    expect(snapshotBox).not.toBeNull();
+    expect(snapshotBox?.width).toBeCloseTo(viewport.width, 0);
+    expect(snapshotBox?.height).toBeCloseTo(viewport.height, 0);
+    await expect(snapshot).toHaveCSS("object-fit", "fill");
     await page.screenshot({ path: `artifacts/portrait-route-snapshot-${viewport.width}x${viewport.height}.png` });
   });
 }
+
+for (const viewport of [{ width: 408, height: 740 }, { width: 408, height: 805 }]) {
+  test(`real-device portrait uses one edge-to-edge coordinate canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/go", { waitUntil: "domcontentloaded" });
+    const stage = page.locator(".brand-guide-stage");
+    await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
+    const [frameBox, sceneBox] = await Promise.all([
+      page.locator(".brand-guide-artwork").boundingBox(),
+      page.locator(".brand-guide-portrait-scene").boundingBox(),
+    ]);
+    expect(frameBox).not.toBeNull();
+    expect(sceneBox).not.toBeNull();
+    expect(sceneBox?.x).toBeCloseTo(frameBox?.x ?? 0, 0);
+    expect(sceneBox?.width).toBeCloseTo(frameBox?.width ?? 0, 0);
+    await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
+  });
+}
+
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 375, height: 812 },
+  { width: 408, height: 740 },
+  { width: 440, height: 820 },
+]) {
+  test(`portrait visual baseline stays aligned at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/go", { waitUntil: "domcontentloaded" });
+    const stage = page.locator(".brand-guide-stage");
+    await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
+    const difference = await measureGuideReferenceDifference(page);
+    expect(difference.mean).toBeLessThan(12);
+    expect(difference.p95).toBeLessThan(55);
+  });
+}
+
+test("cold-cache guide keeps the complete fallback until every motion layer decodes", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const delayedNames = new Set([
+    "guide-background.webp", "guide-arch.webp", "guide-character-open.webp", "guide-character-closed.webp",
+    "guide-window-mask.webp", "guide-foreground-top.webp", "report-paper-top.webp", "report-paper-left.webp",
+    "report-paper-right.webp", "report-paper-bottom.webp",
+  ]);
+  await page.route("**/design/guide/**", async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").at(-1) ?? "";
+    if (delayedNames.has(name)) await new Promise((resolve) => setTimeout(resolve, 900));
+    await route.continue();
+  });
+  await page.goto("/go", { waitUntil: "domcontentloaded" });
+  const stage = page.locator(".brand-guide-stage");
+  await expect(stage).toHaveAttribute("data-load-state", "loading");
+  await expect(page.locator(".motion-stage-fallback .brand-guide-fallback")).toBeVisible();
+  await expect(page.locator(".brand-guide-entry-hint")).toBeHidden();
+  await page.screenshot({ path: "artifacts/design-qa/guide-cold-cache-fallback-375x812.png" });
+  await expect(stage).toHaveAttribute("data-load-state", "ready", { timeout: 15000 });
+  await expect(page.locator(".motion-stage-content .brand-guide-dynamic-stage")).toBeVisible();
+});
 
 test("guide keeps the complete source fallback when the destination preview cannot decode", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });

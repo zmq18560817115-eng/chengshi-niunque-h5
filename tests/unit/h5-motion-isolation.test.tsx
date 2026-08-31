@@ -101,10 +101,11 @@ describe("H5 motion isolation", () => {
     expect(css).toMatch(/\.brand-guide-swipe-track\s*\{[^}]*height:\s*100%;/);
     expect(css).toMatch(/\.brand-guide-stage,\s*\.brand-guide-destination-preview\s*\{[^}]*position:\s*absolute;[^}]*width:\s*100%;[^}]*height:\s*100%;/);
     expect(css).toMatch(/\.brand-guide-artwork\s*\{[^}]*width:\s*min\(100%,var\(--h5-content-width\)\);/);
-    expect(css).toMatch(/\.brand-guide-portrait-scene\s*\{[^}]*aspect-ratio:\s*6\s*\/\s*13;/);
-    expect(css).toMatch(/\.brand-guide-base,\s*\.brand-guide-arch,[^{]+\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
-    expect(css).toContain("@media (orientation: portrait) and (min-aspect-ratio: 6 / 13)");
-    expect(css).toContain("@media (orientation: portrait) and (max-aspect-ratio: 6 / 13)");
+    expect(css).toMatch(/\.brand-guide-portrait-scene\s*\{[^}]*inset:\s*0;[^}]*width:\s*100%;[^}]*height:\s*100%;/);
+    expect(css).toMatch(/\.brand-guide-base,\s*\.brand-guide-arch,[^{]+\{[^}]*object-fit:\s*fill;[^}]*object-position:\s*center;/);
+    expect(css).toContain("@media (orientation: portrait)");
+    expect(css).not.toContain("@media (orientation: portrait) and (min-aspect-ratio: 6 / 13)");
+    expect(css).not.toContain("@media (orientation: portrait) and (max-aspect-ratio: 6 / 13)");
     expect(css).toMatch(/@media \(orientation: landscape\) and \(max-height: 500px\)[\s\S]*?\.guide-landscape-composition\s*\{\s*display:\s*block;/);
     expect(css).toContain(".guide-landscape-logo");
     expect(css).toContain(".guide-landscape-character");
@@ -120,21 +121,12 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".brand-guide-base { z-index: 10; }");
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
     expect(css).toContain(".brand-guide-window-mask { z-index: 25;");
-    expect(css).toMatch(/\.brand-guide-portrait-edge-bleed-copy\s*\{[^}]*transform:\s*scaleX\(-1\);/);
-    expect(css).toContain(".brand-guide-portrait-edge-bleed-copy.is-left { left: calc(-100% + 1px); }");
-    expect(css).toContain(".brand-guide-portrait-edge-bleed-copy.is-right { left: calc(100% - 1px); }");
-    expect(css).toMatch(/\.brand-guide-portrait-edge-bleed-layer\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);
-    expect(guide).toContain("GuidePortraitEdgeBleed");
-    expect(guide).toContain('const edgeLayerNames = ["guide-background.webp"] as const;');
-    expect(guide).not.toMatch(/edgeLayerNames[^;]+guide-arch/);
-    expect(guide).not.toMatch(/edgeLayerNames[^;]+guide-window-mask/);
-    expect(guide).not.toMatch(/edgeLayerNames[^;]+guide-character/);
-    expect(guide).not.toMatch(/edgeLayerNames[^;]+guide-foreground-top/);
-    expect(css).toMatch(/@media \(orientation: portrait\) and \(min-aspect-ratio: 6 \/ 13\)[\s\S]*?\.brand-guide-paper, \.brand-guide-character, \.brand-guide-foreground-top,[^{]+\{[^}]*mask-image:\s*linear-gradient/);
-    expect(css).toMatch(/\.brand-guide-bootstrap-reduced, \.h5-guide-route-portrait-snapshot\s*\{[^}]*mask-image:\s*linear-gradient/);
-    expect(css).not.toMatch(/\.brand-guide-base[^{}]*\{[^}]*mask-image:/);
-    expect(css).toMatch(/\.brand-guide-window-mask, \.brand-guide-arch\s*\{[^}]*mask-image:\s*linear-gradient/);
-    expect(guide).not.toContain("brand-guide-portrait-edge-bleed-image is-stretched");
+    expect(css).not.toContain("brand-guide-portrait-edge-bleed");
+    expect(guide).not.toContain("GuidePortraitEdgeBleed");
+    expect(css).toMatch(/\.h5-guide-route-portrait-snapshot\s*\{[^}]*inset:\s*0;[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*object-fit:\s*fill;/);
+    expect(css).not.toMatch(/\.brand-guide-portrait-scene[^{}]*\{[^}]*mask-image:/);
+    expect(css).not.toMatch(/\.brand-guide-window-mask, \.brand-guide-arch\s*\{[^}]*mask-image:/);
+    expect(css).not.toMatch(/\.brand-guide-paper, \.brand-guide-character, \.brand-guide-foreground-top[^{}]*\{[^}]*mask-image:/);
     expect(css).not.toContain("--guide-swipe-offset");
     expect(css).not.toContain(".brand-guide-surround");
     expect(guide).not.toContain("brand-guide-surround");
@@ -147,7 +139,7 @@ describe("H5 motion isolation", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     expect(css).toContain("--guide-entry-hint-width: 43.4%;");
-    expect(css).toContain("--guide-entry-hint-bottom: 2.7%;");
+    expect(css).toContain("--guide-entry-hint-bottom: 3.3%;");
     expect(css).toContain(".brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom);");
     expect(guide).toContain('src={assetUrl("swipe-up-hint-v2.png")}');
     expect(guide).toContain("width={868} height={260}");
@@ -159,14 +151,19 @@ describe("H5 motion isolation", () => {
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("covers a %ix%i guide viewport without distorting the 750x1625 canvas", (width, height) => {
-    const stageWidth = width;
-    const scale = Math.max(stageWidth / 750, height / 1625);
-    const layerWidth = 750 * scale;
-    const layerHeight = 1625 * scale;
-    expect(layerWidth).toBeGreaterThanOrEqual(stageWidth - 1e-9);
-    expect(layerHeight).toBeGreaterThanOrEqual(height - 1e-9);
-    expect(layerWidth / layerHeight).toBeCloseTo(750 / 1625, 8);
+  ])("maps every %ix%i portrait to the complete normalized guide canvas", (width, height) => {
+    const landmarks = [
+      { left: 136 / 750, top: 116 / 1625, right: 625 / 750, bottom: 268 / 1625 },
+      { left: 56 / 750, top: 380 / 1625, right: 738 / 750, bottom: 1074 / 1625 },
+      { left: 60.4 / 750, top: 968.6 / 1625, right: 1, bottom: 1572.8 / 1625 },
+      { left: 212 / 750, top: 1473 / 1625, right: 538 / 750, bottom: 1571 / 1625 },
+    ];
+    for (const landmark of landmarks) {
+      expect(landmark.left * width).toBeGreaterThanOrEqual(0);
+      expect(landmark.top * height).toBeGreaterThanOrEqual(0);
+      expect(landmark.right * width).toBeLessThanOrEqual(width);
+      expect(landmark.bottom * height).toBeLessThanOrEqual(height);
+    }
   });
 
   it("starts the light guide-hint loop only after entry unlocks", () => {
@@ -178,7 +175,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("@keyframes guide-entry-hint-accepted");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-fallback { visibility: visible; opacity: 1; }");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-entry-hint,");
-    expect(css).toContain("@keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }");
+    expect(css).toContain("@keyframes guide-blink-closed { 0%, 100% { opacity: 0; } 35%, 65% { opacity: 1; } }");
   });
 
   it("keeps the guide-to-archive handoff continuous and reveals homepage layers in reference order", () => {
@@ -416,9 +413,9 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".brand-guide-arch { z-index: 27;");
     expect(css).toContain(".brand-guide-foreground-top { z-index: 35;");
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
-    expect(guide).toContain("const firstFrame = <GuideLayers animated={false}");
-    expect(guide).toContain("<GuideLayers animated={false} onError={onLayerError}/>");
-    expect(guide).not.toContain("guide-first-frame.webp");
+    expect(guide).toContain("loadingFallback={fallback}");
+    expect(guide).not.toContain("const firstFrame = <GuideLayers");
+    expect(guide).toContain('assetUrl("guide-final-fallback-v3.webp")');
     expect(css).not.toContain("brand-guide-paper-arm-occlusion");
     expect(css).not.toContain("brand-guide-paper-right-occlusion");
     expect(css).not.toContain("guide-right-arm-mask.webp");
