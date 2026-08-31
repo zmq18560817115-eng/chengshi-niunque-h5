@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { H5HierarchyTracker } from "@/components/h5/H5HierarchyTracker";
 
 export const metadata: Metadata = {
   title: "诚实纽雀｜首页检测报告",
@@ -15,5 +16,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body>{children}<div id="h5-guide-route-buffer-host" aria-hidden="true" /><div id="h5-category-route-buffer-host" aria-hidden="true" /></body></html>;
+  return <html lang="zh-CN"><body><H5HierarchyTracker/>{children}<div id="h5-guide-route-buffer-host" aria-hidden="true" /><div id="h5-category-route-buffer-host" aria-hidden="true" /></body></html>;
 }

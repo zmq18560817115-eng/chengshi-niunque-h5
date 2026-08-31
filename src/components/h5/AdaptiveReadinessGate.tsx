@@ -97,7 +97,6 @@ export function AdaptiveReadinessGate({
   }, [phase]);
 
   const contentReady = phase === "leaving" || phase === "ready";
-  if (phase === "ready") return <AdaptiveReadinessContext.Provider value>{children}</AdaptiveReadinessContext.Provider>;
   return <>
     {mountChildrenWhileLoading || contentReady ? <AdaptiveReadinessContext.Provider value={contentReady}>{children}</AdaptiveReadinessContext.Provider> : null}
     {phase === "loading" || phase === "leaving" ? <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/> : null}

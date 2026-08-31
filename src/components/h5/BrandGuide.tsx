@@ -1,25 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAdaptiveReadiness } from "./AdaptiveReadinessGate";
-import { preloadHomepageAssets } from "./homepage-preload";
 import { replaceHierarchyRoute } from "./hierarchy-navigation";
-import { MotionBoundary } from "./motion/MotionBoundary";
-import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
 import {
   guideRouteDestinationSrc,
   guideRouteNavigationDelayMs,
   getGuideTransitionVisualState,
   navigateWithGuideContinuity,
+  primeGuideRouteContinuity,
   prepareGuideRouteContinuity,
 } from "./guide-route-transition";
 
 type AssetStatus = "loading" | "ready" | "failed" | "reduced" | "disabled";
 type GuideMotionPreference = "unknown" | "allowed" | "reduced";
 type GuideDestinationStatus = "loading" | "ready" | "fallback";
+type GuideLayoutProfile = "unknown" | "portrait-standard" | "portrait-compact" | "landscape";
 const GUIDE_SWIPE_DISTANCE_PX = 24;
 const GUIDE_SWIPE_COMMIT_PROGRESS = 0.12;
 const GUIDE_SWIPE_FAST_VELOCITY = 0.55;
@@ -39,57 +37,85 @@ type GuideGesture = {
 
 const clampProgress = (value: number) => Math.min(1, Math.max(0, value));
 
-const guideAssetNames = [
-  "guide-background.webp", "guide-arch.webp",
-  "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-foreground-top.webp",
-  "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
-  "swipe-up-hint-v2.png",
-] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
-const guideAssets = guideAssetNames.map(assetUrl);
-export const guideWarmAssets = [...guideAssets, assetUrl("guide-final-fallback-v3.webp")] as const;
+const standardLayerNames = [
+  "guide-character-open.webp", "guide-character-closed.webp", "guide-arch.webp",
+  "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
+  "guide-foreground-top.webp",
+] as const;
+const standardReadyKeys = [...standardLayerNames, "standard-hint"] as const;
+const compactReadyKeys = [
+  "compact-paper-top", "compact-paper-left", "compact-paper-right", "compact-paper-bottom",
+  "compact-logo", "compact-arch", "compact-character-open", "compact-character-closed",
+  "compact-character-overlay", "compact-envelope", "compact-hint",
+] as const;
+const landscapeReadyKeys = [
+  "landscape-logo", "landscape-character-arch", "landscape-character-open",
+  "landscape-character-foreground", "landscape-envelope", "landscape-hint",
+] as const;
+
+function markImageDecoded(image: HTMLImageElement, key: string, onReady: (key: string) => void, onError: (name: string) => void) {
+  const ready = () => onReady(key);
+  if (typeof image.decode === "function") void image.decode().then(ready, () => onError(key));
+  else ready();
+}
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
     {!unavailable && (
-      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="100vw" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+      <Image className="brand-guide-fallback" src={assetUrl("guide-static-foreground.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
     )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>上滑查看完整营养信息</span>
   </>;
 }
 
-function GuideLayers({ animated, onError }: { animated: boolean; onError: (name: string) => void }) {
-  const image = (name: (typeof guideAssetNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" width={750} height={1625} sizes="100vw" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onError={() => onError(name)}/>;
-  return <div className={`brand-guide-dynamic-stage ${animated ? "is-animated-canvas" : "is-initial-canvas"}`}>
-    {image("guide-background.webp", "brand-guide-base", true)}
+function GuideLayers({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
+  const image = (name: (typeof standardLayerNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, name, onReady, onError)} onError={() => onError(name)}/>;
+  return <div className="brand-guide-dynamic-stage is-animated-canvas">
     {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
-    {animated && image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
-    {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
+    {image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
     {image("guide-arch.webp", "brand-guide-arch", true)}
-    {animated && <>
-      {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top", true)}
-      {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left", true)}
-      {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right", true)}
-      {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom", true)}
-    </>}
+    {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top", true)}
+    {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left", true)}
+    {image("report-paper-right.webp", "brand-guide-paper brand-guide-paper-right", true)}
+    {image("report-paper-bottom.webp", "brand-guide-paper brand-guide-paper-bottom", true)}
     {image("guide-foreground-top.webp", "brand-guide-foreground-top", true)}
   </div>;
 }
 
-function GuideEntryHint({ onError }: { onError: (name: string) => void }) {
-  return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(max-width: 750px) 43.4vw, 326px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>;
+function GuideEntryHint({ readyKey = "standard-hint", compact = false, onReady, onError }: { readyKey?: string; compact?: boolean; onReady: (key: string) => void; onError: (name: string) => void }) {
+  return <Image className={compact ? "guide-compact-hint" : "brand-guide-entry-hint"} src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes={compact ? "46vw" : "(max-width: 750px) 43.4vw, 326px"} priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, readyKey, onReady, onError)} onError={() => onError("swipe-up-hint-v2.png")}/>;
 }
 
-function GuideLandscapeCrop({ name, src, onError }: { name: "logo" | "envelope"; src: string; onError: (name: string) => void }) {
-  return <div className={`guide-landscape-crop guide-landscape-${name}`} data-guide-landmark={name}>
-    <Image className="guide-landscape-crop-master" src={src} alt="" aria-hidden="true" width={750} height={1625} sizes="(max-width: 750px) 100vw, 750px" priority unoptimized decoding="async" onError={() => onError(src.split("/").at(-1) ?? src)}/>
+function GuideCompactPortraitComposition({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
+  const image = (filename: string, key: string, className: string, width: number, height: number) => <Image key={key} className={className} src={assetUrl(filename)} alt="" aria-hidden="true" width={width} height={height} sizes="100vw" priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, key, onReady, onError)} onError={() => onError(filename)}/>;
+  return <div className="guide-compact-portrait-composition" aria-hidden="true" data-guide-profile="portrait-compact">
+    {image("guide-compact-paper-top.webp", "compact-paper-top", "guide-compact-paper guide-compact-paper-top", 416, 227)}
+    {image("guide-compact-paper-left.webp", "compact-paper-left", "guide-compact-paper guide-compact-paper-left", 184, 346)}
+    {image("guide-compact-paper-right.webp", "compact-paper-right", "guide-compact-paper guide-compact-paper-right", 244, 410)}
+    {image("guide-compact-paper-bottom.webp", "compact-paper-bottom", "guide-compact-paper guide-compact-paper-bottom", 378, 246)}
+    {image("guide-compact-logo.webp", "compact-logo", "guide-compact-logo", 489, 152)}
+    <div className="guide-compact-character" data-guide-landmark="character">
+      {image("guide-compact-character-open.webp", "compact-character-open", "guide-compact-character-layer guide-compact-character-open", 750, 848)}
+      {image("guide-compact-character-closed.webp", "compact-character-closed", "guide-compact-character-layer guide-compact-character-closed", 750, 848)}
+      {image("guide-compact-arch.webp", "compact-arch", "guide-compact-character-layer guide-compact-arch", 750, 848)}
+      {image("guide-compact-character-overlay.webp", "compact-character-overlay", "guide-compact-character-layer guide-compact-character-overlay", 750, 848)}
+    </div>
+    {image("guide-compact-envelope.webp", "compact-envelope", "guide-compact-envelope", 692, 609)}
+    <GuideEntryHint readyKey="compact-hint" compact onReady={onReady} onError={onError}/>
   </div>;
 }
 
-function GuideLandscapeCharacter({ onError }: { onError: (name: string) => void }) {
+function GuideLandscapeCrop({ name, src, readyKey, onReady, onError }: { name: "logo" | "envelope"; src: string; readyKey: string; onReady: (key: string) => void; onError: (name: string) => void }) {
+  return <div className={`guide-landscape-crop guide-landscape-${name}`} data-guide-landmark={name}>
+    <Image className="guide-landscape-crop-master" src={src} alt="" aria-hidden="true" width={750} height={1625} sizes="(orientation: landscape) 100vw, 1px" priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, readyKey, onReady, onError)} onError={() => onError(src.split("/").at(-1) ?? src)}/>
+  </div>;
+}
+
+function GuideLandscapeCharacter({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
   const layers = ["guide-arch.webp", "guide-character-open.webp", "guide-foreground-top.webp"] as const;
   return <div className="guide-landscape-crop guide-landscape-character" data-guide-landmark="character">
-    {layers.map((name) => <Image
+    {layers.map((name, index) => <Image
       key={name}
       className={`guide-landscape-crop-master is-${name.replace(".webp", "")}`}
       src={assetUrl(name)}
@@ -101,17 +127,18 @@ function GuideLandscapeCharacter({ onError }: { onError: (name: string) => void 
       priority
       unoptimized
       decoding="async"
+      onLoad={(event) => markImageDecoded(event.currentTarget, ["landscape-character-arch", "landscape-character-open", "landscape-character-foreground"][index]!, onReady, onError)}
       onError={() => onError(name)}
     />)}
   </div>;
 }
 
-function GuideLandscapeComposition({ onError }: { onError: (name: string) => void }) {
+function GuideLandscapeComposition({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
   return <div className="guide-landscape-composition" aria-hidden="true">
-    <GuideLandscapeCrop name="logo" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
-    <GuideLandscapeCharacter onError={onError}/>
-    <GuideLandscapeCrop name="envelope" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
-    <Image className="guide-landscape-hint" data-guide-landmark="hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(orientation: landscape) 27vw, 1px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>
+    <GuideLandscapeCrop name="logo" src={assetUrl("guide-foreground-top.webp")} readyKey="landscape-logo" onReady={onReady} onError={onError}/>
+    <GuideLandscapeCharacter onReady={onReady} onError={onError}/>
+    <GuideLandscapeCrop name="envelope" src={assetUrl("guide-foreground-top.webp")} readyKey="landscape-envelope" onReady={onReady} onError={onError}/>
+    <Image className="guide-landscape-hint" data-guide-landmark="hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(orientation: landscape) 27vw, 1px" priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, "landscape-hint", onReady, onError)} onError={() => onError("swipe-up-hint-v2.png")}/>
   </div>;
 }
 
@@ -122,8 +149,8 @@ function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; on
         className="brand-guide-destination-image"
         src={guideRouteDestinationSrc}
         alt=""
-        width={1000}
-        height={5557}
+        width={750}
+        height={1625}
         sizes="(max-width: 750px) 100vw, 750px"
         priority
         fetchPriority="high"
@@ -142,21 +169,31 @@ function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; on
 
 export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; onEnter?: () => void }) {
   const router = useRouter();
-  const guideContentReady = useAdaptiveReadiness();
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
   const [assetStatus, setAssetStatus] = useState<AssetStatus>(motionEnabled ? "loading" : "disabled");
   const [motionPreference, setMotionPreference] = useState<GuideMotionPreference>("unknown");
+  const [layoutProfile, setLayoutProfile] = useState<GuideLayoutProfile>("unknown");
   const [fallbackUnavailable, setFallbackUnavailable] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
   const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const [destinationStatus, setDestinationStatus] = useState<GuideDestinationStatus>(preview ? "ready" : "loading");
+  const [continuityReady, setContinuityReady] = useState(preview);
   const [transitionError, setTransitionError] = useState(false);
   const destinationUsable = destinationStatus !== "loading";
-  const transitionSwipeReady = swipeReady && destinationUsable;
-  const transitionGestureReady = gestureReady && destinationUsable;
+  const transitionSwipeReady = swipeReady && destinationUsable && continuityReady;
+  const transitionGestureReady = gestureReady && destinationUsable && continuityReady;
+  const requiredReadyKeys = useMemo<readonly string[]>(() => {
+    if (layoutProfile === "portrait-standard") return standardReadyKeys;
+    if (layoutProfile === "portrait-compact") return compactReadyKeys;
+    if (layoutProfile === "landscape") return landscapeReadyKeys;
+    return [];
+  }, [layoutProfile]);
   const guideRoot = useRef<HTMLElement | null>(null);
+  const readyLayers = useRef(new Set<string>());
+  const readyFrames = useRef<number[]>([]);
+  const animationTimer = useRef<number | null>(null);
   const gesture = useRef<GuideGesture | null>(null);
   const swipeProgress = useRef(0);
   const queuedProgress = useRef<number | null>(null);
@@ -164,6 +201,57 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const settleFrame = useRef<number | null>(null);
   const settleTimer = useRef<number | null>(null);
   const entering = useRef(false);
+  const orientation = useRef<"portrait" | "landscape" | null>(null);
+
+  useEffect(() => {
+    const sync = () => {
+      const nextOrientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+      // Mobile browser chrome repeatedly changes the visual viewport height.
+      // Keep the selected composition stable until the device orientation itself changes.
+      if (orientation.current === nextOrientation) return;
+      orientation.current = nextOrientation;
+      if (nextOrientation === "landscape") setLayoutProfile("landscape");
+      else setLayoutProfile(window.innerWidth / Math.max(1, window.innerHeight) >= 12 / 25 ? "portrait-compact" : "portrait-standard");
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    readyLayers.current.clear();
+    readyFrames.current.forEach((frame) => window.cancelAnimationFrame(frame));
+    readyFrames.current = [];
+    if (animationTimer.current !== null) window.clearTimeout(animationTimer.current);
+    animationTimer.current = null;
+    if (motionEnabled && motionPreference === "allowed") {
+      setAssetStatus("loading");
+      setAnimationStarted(false);
+      setSwipeReady(false);
+      setGestureReady(false);
+    }
+  }, [layoutProfile, motionEnabled, motionPreference]);
+
+  const handleLayerReady = useCallback((key: string) => {
+    if (!motionEnabled || motionPreference !== "allowed" || !requiredReadyKeys.includes(key)) return;
+    readyLayers.current.add(key);
+    if (!requiredReadyKeys.every((required) => readyLayers.current.has(required))) return;
+    const firstFrame = window.requestAnimationFrame(() => {
+      const secondFrame = window.requestAnimationFrame(() => {
+        setAssetStatus("ready");
+        animationTimer.current = window.setTimeout(() => {
+          setAnimationStarted(true);
+          animationTimer.current = null;
+        }, h5MotionTiming.guide.crossfadeMs);
+      });
+      readyFrames.current.push(secondFrame);
+    });
+    readyFrames.current.push(firstFrame);
+  }, [motionEnabled, motionPreference, requiredReadyKeys]);
 
   const applyGuideProgress = useCallback((nextProgress: number) => {
     const root = guideRoot.current;
@@ -227,17 +315,14 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, [onEnter, preview, router]);
 
   useEffect(() => {
-    if (preview || !guideContentReady) return;
+    if (preview || layoutProfile === "unknown" || !destinationUsable) return;
     let cancelled = false;
-    void preloadHomepageAssets([{ src: guideRouteDestinationSrc, priority: "high" }]).then((result) => {
-      if (cancelled) return;
-      if (result.failed.length > 0) {
-        console.error(`[BrandGuide] destination preload failed: ${result.failed.join(", ")}`);
-        setDestinationStatus("fallback");
-      } else setDestinationStatus((current) => current === "fallback" ? current : "ready");
+    setContinuityReady(false);
+    void primeGuideRouteContinuity(layoutProfile, destinationStatus === "fallback").then((ready) => {
+      if (!cancelled) setContinuityReady(ready);
     });
     return () => { cancelled = true; };
-  }, [guideContentReady, preview]);
+  }, [destinationStatus, destinationUsable, layoutProfile, preview]);
 
   useEffect(() => {
     if (!animationStarted) return;
@@ -364,6 +449,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     if (progressFrame.current !== null) window.cancelAnimationFrame(progressFrame.current);
     if (settleFrame.current !== null) window.cancelAnimationFrame(settleFrame.current);
     if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
+    readyFrames.current.forEach((frame) => window.cancelAnimationFrame(frame));
+    if (animationTimer.current !== null) window.clearTimeout(animationTimer.current);
   }, []);
 
   const handleLayerError = useCallback((name: string) => {
@@ -374,7 +461,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setGestureReady(true);
   }, []);
   const handleFallbackError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-final-fallback-v3.webp");
+    console.error("[BrandGuide] asset failed: guide-static-foreground.webp");
     setFallbackUnavailable(true);
     setSwipeReady(true);
     setGestureReady(true);
@@ -383,25 +470,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     console.error(`[BrandGuide] asset failed: ${guideRouteDestinationSrc}`);
     setDestinationStatus("fallback");
   }, []);
-  const handleMotionBoundaryError = useCallback(() => {
-    setAssetStatus("failed");
-    setAnimationStarted(false);
-    setSwipeReady(true);
-    setGestureReady(true);
-  }, []);
-  const handleMotionState = useCallback((state: AssetStatus) => {
-    setAssetStatus(state);
-    if (state === "loading" || state === "failed" || state === "reduced" || state === "disabled") setAnimationStarted(false);
-    if (state === "failed" || state === "reduced" || state === "disabled") {
-      setSwipeReady(true);
-      setGestureReady(true);
-    }
-  }, []);
-  const startAnimation = useCallback(() => {
-    setAnimationStarted(true);
-  }, []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const mountMotionStage = motionEnabled && motionPreference === "allowed";
+  const mountLivePortrait = layoutProfile === "portrait-standard" && motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -409,7 +479,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     "--guide-paper-duration": `${h5MotionTiming.guide.paperDurationMs}ms`,
   } as CSSProperties;
 
-  return <main ref={guideRoot} data-motion-module="guide" data-swipe-progress="0.000" data-swipe-interaction="idle" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""} ${destinationStatus === "fallback" ? "has-destination-fallback" : ""}`}
+  return <main ref={guideRoot} data-motion-module="guide" data-guide-profile={layoutProfile} data-swipe-progress="0.000" data-swipe-interaction="idle" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""} ${destinationStatus === "fallback" ? "has-destination-fallback" : ""}`}
     onPointerDown={(event) => {
       if (event.pointerType === "touch" && gesture.current?.source === "pointer" && gesture.current.id !== event.pointerId) {
         const current = gesture.current;
@@ -464,16 +534,18 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     }}>
     <div className="brand-guide-swipe-track">
       <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={transitionSwipeReady ? "ready" : "locked"} data-gesture-state={transitionGestureReady ? "ready" : "locked"} data-destination-state={destinationStatus} data-swipe-distance-px={GUIDE_SWIPE_DISTANCE_PX} data-swipe-commit-progress={GUIDE_SWIPE_COMMIT_PROGRESS} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
-        <div className="brand-guide-artwork">
-          <div className="brand-guide-portrait-scene">
-            {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
-              <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={fallback} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
-                <GuideLayers animated onError={handleLayerError}/>
-              </MotionStage>
-            </MotionBoundary> : fallback}
-            <GuideEntryHint onError={handleLayerError}/>
-          </div>
-          <GuideLandscapeComposition onError={handleLayerError}/>
+        <div className="brand-guide-artwork" data-guide-layout={layoutProfile}>
+          {layoutProfile !== "landscape" && <>
+            <div className={`brand-guide-portrait-scene ${layoutProfile === "portrait-compact" ? "is-compact-fallback" : ""}`}>
+              {fallback}
+              {mountLivePortrait && <div className="brand-guide-live-stage">
+                <GuideLayers onReady={handleLayerReady} onError={handleLayerError}/>
+                <GuideEntryHint onReady={handleLayerReady} onError={handleLayerError}/>
+              </div>}
+            </div>
+            {layoutProfile === "portrait-compact" && <GuideCompactPortraitComposition onReady={handleLayerReady} onError={handleLayerError}/>}
+          </>}
+          {layoutProfile === "landscape" && <GuideLandscapeComposition onReady={handleLayerReady} onError={handleLayerError}/>}
         </div>
         {transitionError && <p className="brand-guide-transition-error" role="alert">档案预览加载失败，请再次上滑或点击重试</p>}
         <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
