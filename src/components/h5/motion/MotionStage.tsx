@@ -10,7 +10,6 @@ type Props = { children: ReactNode; fallback: ReactNode; loadingFallback?: React
 export function MotionStage({ children, fallback, loadingFallback, assets = [], masterWidth, masterHeight, enabled = H5_MOTION_ENABLED, crossfadeMs = 180, onStateChange, onAnimationReady }: Props) {
   const [state, setState] = useState<MotionState>(enabled ? "loading" : "disabled");
   const [motionPreference, setMotionPreference] = useState<MotionPreference>("unknown");
-  const [fallbackMounted, setFallbackMounted] = useState(true);
   const assetKey = assets.join("\n");
 
   useEffect(() => {
@@ -27,15 +26,15 @@ export function MotionStage({ children, fallback, loadingFallback, assets = [], 
   }, []);
 
   useEffect(() => {
-    if (!enabled) { setState("disabled"); setFallbackMounted(true); onStateChange?.("disabled"); return; }
+    if (!enabled) { setState("disabled"); onStateChange?.("disabled"); return; }
     if (motionPreference === "unknown") return;
-    if (motionPreference === "reduced") { setState("reduced"); setFallbackMounted(true); onStateChange?.("reduced"); return; }
+    if (motionPreference === "reduced") { setState("reduced"); onStateChange?.("reduced"); return; }
     let cancelled = false;
     let settled = false;
     const cleanupTimers: number[] = [];
     const cleanupFrames: number[] = [];
     const assetList = assetKey ? assetKey.split("\n") : [];
-    setState("loading"); setFallbackMounted(true); onStateChange?.("loading");
+    setState("loading"); onStateChange?.("loading");
     const fail = () => {
       if (cancelled || settled) return;
       settled = true;
@@ -62,7 +61,6 @@ export function MotionStage({ children, fallback, loadingFallback, assets = [], 
         setState("ready"); onStateChange?.("ready");
         const startTimer = window.setTimeout(() => cleanupFrames.push(requestAnimationFrame(() => {
           if (cancelled) return;
-          setFallbackMounted(false);
           onAnimationReady?.();
         })), crossfadeMs);
         cleanupTimers.push(startTimer);
@@ -79,6 +77,6 @@ export function MotionStage({ children, fallback, loadingFallback, assets = [], 
   if (state === "disabled" || state === "reduced" || state === "failed") return fallback;
   return <div className={`motion-stage is-${state}`} data-motion-state={state} style={{ "--motion-master-ratio": `${masterWidth} / ${masterHeight}`, "--motion-crossfade-ms": `${crossfadeMs}ms` } as CSSProperties}>
     <div className="motion-stage-content" aria-hidden={state !== "ready"}>{children}</div>
-    {fallbackMounted && <div className="motion-stage-fallback">{loadingFallback ?? fallback}</div>}
+    <div className="motion-stage-fallback" aria-hidden={state === "ready"}>{loadingFallback ?? fallback}</div>
   </div>;
 }

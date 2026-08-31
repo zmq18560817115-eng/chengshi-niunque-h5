@@ -5,12 +5,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdaptiveReadiness } from "./AdaptiveReadinessGate";
 import { preloadHomepageAssets } from "./homepage-preload";
+import { replaceHierarchyRoute } from "./hierarchy-navigation";
 import { MotionBoundary } from "./motion/MotionBoundary";
 import { MotionStage } from "./motion/MotionStage";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
 import {
   guideRouteDestinationSrc,
   guideRouteNavigationDelayMs,
+  getGuideTransitionVisualState,
   navigateWithGuideContinuity,
   prepareGuideRouteContinuity,
 } from "./guide-route-transition";
@@ -50,14 +52,14 @@ export const guideWarmAssets = [...guideAssets, assetUrl("guide-final-fallback-v
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
     {!unavailable && (
-      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" fill sizes="100vw" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+      <Image className="brand-guide-fallback" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="100vw" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
     )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>上滑查看完整营养信息</span>
   </>;
 }
 
 function GuideLayers({ animated, onError }: { animated: boolean; onError: (name: string) => void }) {
-  const image = (name: (typeof guideAssetNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" fill sizes="100vw" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onError={() => onError(name)}/>;
+  const image = (name: (typeof guideAssetNames)[number], className: string, high = false) => <Image key={name} className={className} src={assetUrl(name)} alt="" width={750} height={1625} sizes="100vw" priority={high} fetchPriority={high ? "high" : "auto"} unoptimized decoding="async" onError={() => onError(name)}/>;
   return <div className={`brand-guide-dynamic-stage ${animated ? "is-animated-canvas" : "is-initial-canvas"}`}>
     {image("guide-background.webp", "brand-guide-base", true)}
     {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
@@ -78,33 +80,75 @@ function GuideEntryHint({ onError }: { onError: (name: string) => void }) {
   return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(max-width: 750px) 43.4vw, 326px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>;
 }
 
+function GuidePortraitEdgeBleed({ onError }: { onError: (name: string) => void }) {
+  const edgeLayerNames = ["guide-background.webp"] as const;
+  const edge = (side: "left" | "right") => <div className={`brand-guide-portrait-edge-bleed-copy is-${side}`}>
+    {edgeLayerNames.map((name) => <Image
+      key={name}
+      className={`brand-guide-portrait-edge-bleed-layer is-${name.replace(".webp", "")}`}
+      src={assetUrl(name)}
+      alt=""
+      aria-hidden="true"
+      width={750}
+      height={1625}
+      sizes="(max-width: 750px) 100vw, 750px"
+      priority
+      unoptimized
+      decoding="async"
+      onError={() => onError(name)}
+    />)}
+  </div>;
+
+  return <div className="brand-guide-portrait-edge-bleed" aria-hidden="true" data-guide-portrait-edge-bleed>
+    {edge("left")}
+    {edge("right")}
+  </div>;
+}
+
+function GuideLandscapeCrop({ name, src, onError }: { name: "logo" | "character" | "envelope"; src: string; onError: (name: string) => void }) {
+  return <div className={`guide-landscape-crop guide-landscape-${name}`} data-guide-landmark={name}>
+    <Image className="guide-landscape-crop-master" src={src} alt="" aria-hidden="true" width={750} height={1625} sizes="(max-width: 750px) 100vw, 750px" priority unoptimized decoding="async" onError={() => onError(src.split("/").at(-1) ?? src)}/>
+  </div>;
+}
+
+function GuideLandscapeComposition({ onError }: { onError: (name: string) => void }) {
+  return <div className="guide-landscape-composition" aria-hidden="true">
+    <GuideLandscapeCrop name="logo" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
+    <GuideLandscapeCrop name="character" src={assetUrl("guide-final-fallback-v3.webp")} onError={onError}/>
+    <GuideLandscapeCrop name="envelope" src={assetUrl("guide-foreground-top.webp")} onError={onError}/>
+    <Image className="guide-landscape-hint" data-guide-landmark="hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(orientation: landscape) 27vw, 1px" priority unoptimized decoding="async" onError={() => onError("swipe-up-hint-v2.png")}/>
+  </div>;
+}
+
 function GuideBootstrapFrame({ onLayerError, onFinalFallbackError }: { onLayerError: (name: string) => void; onFinalFallbackError: () => void }) {
   return <div className="brand-guide-bootstrap-frame">
     <GuideLayers animated={false} onError={onLayerError}/>
-    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" fill sizes="100vw" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
+    <Image className="brand-guide-bootstrap-reduced" src={assetUrl("guide-final-fallback-v3.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="100vw" fetchPriority="high" unoptimized decoding="async" onError={onFinalFallbackError}/>
   </div>;
 }
 
 function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; onError: () => void }) {
   return <section className="brand-guide-destination-preview" aria-hidden="true">
-    <Image
-      className="brand-guide-destination-image"
-      src={guideRouteDestinationSrc}
-      alt=""
-      width={1000}
-      height={5557}
-      sizes="100vw"
-      priority
-      fetchPriority="high"
-      unoptimized
-      decoding="async"
-      onLoad={(event) => {
-        const image = event.currentTarget;
-        if (typeof image.decode === "function") void image.decode().then(onReady, onError);
-        else onReady();
-      }}
-      onError={onError}
-    />
+    <div className="brand-guide-destination-content">
+      <Image
+        className="brand-guide-destination-image"
+        src={guideRouteDestinationSrc}
+        alt=""
+        width={1000}
+        height={5557}
+        sizes="(max-width: 750px) 100vw, 750px"
+        priority
+        fetchPriority="high"
+        unoptimized
+        decoding="async"
+        onLoad={(event) => {
+          const image = event.currentTarget;
+          if (typeof image.decode === "function") void image.decode().then(onReady, onError);
+          else onReady();
+        }}
+        onError={onError}
+      />
+    </div>
   </section>;
 }
 
@@ -120,6 +164,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
   const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const [destinationStatus, setDestinationStatus] = useState<GuideDestinationStatus>(preview ? "ready" : "loading");
+  const [transitionError, setTransitionError] = useState(false);
   const destinationUsable = destinationStatus !== "loading";
   const transitionSwipeReady = swipeReady && destinationUsable;
   const transitionGestureReady = gestureReady && destinationUsable;
@@ -137,10 +182,12 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     if (!root) return;
     const progress = clampProgress(nextProgress);
     const viewportHeight = Math.max(1, root.getBoundingClientRect().height || window.visualViewport?.height || window.innerHeight);
+    const visual = getGuideTransitionVisualState(progress, viewportHeight);
     swipeProgress.current = progress;
-    root.style.setProperty("--guide-swipe-offset", `${-(progress * viewportHeight).toFixed(3)}px`);
-    root.style.setProperty("--guide-swipe-guide-opacity", `${Math.max(0.08, 1 - progress * 0.92).toFixed(4)}`);
-    root.style.setProperty("--guide-swipe-destination-opacity", `${Math.min(1, 0.18 + progress * 1.64).toFixed(4)}`);
+    root.style.setProperty("--guide-swipe-guide-y", `${visual.guideY.toFixed(3)}px`);
+    root.style.setProperty("--guide-swipe-destination-y", `${visual.destinationY.toFixed(3)}px`);
+    root.style.setProperty("--guide-swipe-guide-opacity", `${visual.guideOpacity.toFixed(4)}`);
+    root.style.setProperty("--guide-swipe-destination-opacity", `${visual.destinationOpacity.toFixed(4)}`);
     root.dataset.swipeProgress = progress.toFixed(3);
   }, []);
 
@@ -206,7 +253,10 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
 
   useEffect(() => {
     if (!animationStarted) return;
-    const timer = window.setTimeout(() => setSwipeReady(true), h5MotionTiming.guide.swipeReadyMs);
+    const timer = window.setTimeout(() => {
+      setSwipeReady(true);
+      setGestureReady(true);
+    }, h5MotionTiming.guide.swipeReadyMs);
     return () => window.clearTimeout(timer);
   }, [animationStarted]);
 
@@ -216,14 +266,27 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     entering.current = true;
     const startProgress = source === "gesture" ? clampProgress(progress) : 0;
     flushGuideProgress(startProgress);
-    if (!onEnter) prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
-    setLeaving(true);
     guideRoot.current?.classList.remove("is-dragging", "is-settling");
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => {
-      if (onEnter) onEnter();
-      else navigateWithGuideContinuity(() => router.push("/reports"));
-    }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
+    setTransitionError(false);
+    const continueToArchive = async () => {
+      if (!onEnter) {
+        const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
+        if (!prepared) {
+          entering.current = false;
+          setDestinationStatus("fallback");
+          setTransitionError(true);
+          flushGuideProgress(0);
+          return;
+        }
+      }
+      setLeaving(true);
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      window.setTimeout(() => {
+        if (onEnter) onEnter();
+        else navigateWithGuideContinuity(() => replaceHierarchyRoute(router, "/reports"));
+      }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
+    };
+    void continueToArchive();
   }, [destinationStatus, flushGuideProgress, leaving, onEnter, preview, router, transitionGestureReady, transitionSwipeReady]);
 
   const settleGuide = useCallback(() => {
@@ -348,7 +411,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   }, []);
   const startAnimation = useCallback(() => {
     setAnimationStarted(true);
-    setGestureReady(true);
   }, []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
   const bootstrapFrame = <GuideBootstrapFrame onLayerError={handleLayerError} onFinalFallbackError={handleFallbackError}/>;
@@ -417,13 +479,18 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     <div className="brand-guide-swipe-track">
       <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={transitionSwipeReady ? "ready" : "locked"} data-gesture-state={transitionGestureReady ? "ready" : "locked"} data-destination-state={destinationStatus} data-swipe-distance-px={GUIDE_SWIPE_DISTANCE_PX} data-swipe-commit-progress={GUIDE_SWIPE_COMMIT_PROGRESS} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
         <div className="brand-guide-artwork">
-          {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
-            <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
-              <GuideLayers animated onError={handleLayerError}/>
-            </MotionStage>
-          </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
-          <GuideEntryHint onError={handleLayerError}/>
+          <GuidePortraitEdgeBleed onError={handleLayerError}/>
+          <div className="brand-guide-portrait-scene">
+            {mountMotionStage ? <MotionBoundary fallback={fallback} onError={handleMotionBoundaryError}>
+              <MotionStage masterWidth={750} masterHeight={1625} assets={guideAssets} enabled crossfadeMs={h5MotionTiming.guide.crossfadeMs} fallback={fallback} loadingFallback={firstFrame} onStateChange={handleMotionState} onAnimationReady={startAnimation}>
+                <GuideLayers animated onError={handleLayerError}/>
+              </MotionStage>
+            </MotionBoundary> : motionEnabled && motionPreference === "unknown" ? bootstrapFrame : fallback}
+            <GuideEntryHint onError={handleLayerError}/>
+          </div>
+          <GuideLandscapeComposition onError={handleLayerError}/>
         </div>
+        {transitionError && <p className="brand-guide-transition-error" role="alert">档案预览加载失败，请再次上滑或点击重试</p>}
         <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
         <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
         <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={leaving || preview || !transitionSwipeReady}>进入档案</button>

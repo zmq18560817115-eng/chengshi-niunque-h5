@@ -2,8 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { replaceHierarchyRoute, type H5HierarchyHref } from "@/components/h5/hierarchy-navigation";
 
 const SWIPE_BACK_DISTANCE = 72;
+
+function ignoresSwipeBack(target: EventTarget | null) {
+  return target instanceof Element && target.closest("[data-swipe-back-ignore]") !== null;
+}
 
 export function SwipeBackPage({
   children,
@@ -15,7 +20,7 @@ export function SwipeBackPage({
 }: {
   children: ReactNode;
   className: string;
-  fallbackHref: string;
+  fallbackHref: H5HierarchyHref;
   preview?: boolean;
   showBackControl?: boolean;
 } & Omit<React.ComponentPropsWithoutRef<"main">, "children" | "className">) {
@@ -26,18 +31,21 @@ export function SwipeBackPage({
   const goBack = () => {
     if (preview || leavingBack) return;
     setLeavingBack(true);
-    window.setTimeout(() => router.push(fallbackHref), 220);
+    window.setTimeout(() => replaceHierarchyRoute(router, fallbackHref), 220);
   };
 
   const onTouchStart = (event: TouchEvent<HTMLElement>) => {
-    if (preview || leavingBack || event.touches.length !== 1) return;
+    if (preview || leavingBack || event.touches.length !== 1 || ignoresSwipeBack(event.target)) {
+      start.current = null;
+      return;
+    }
     start.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
   };
 
   const onTouchEnd = (event: TouchEvent<HTMLElement>) => {
     const origin = start.current;
     start.current = null;
-    if (!origin || preview || leavingBack || event.changedTouches.length !== 1) return;
+    if (!origin || preview || leavingBack || event.changedTouches.length !== 1 || ignoresSwipeBack(event.target)) return;
     const deltaX = event.changedTouches[0].clientX - origin.x;
     const deltaY = event.changedTouches[0].clientY - origin.y;
     if (deltaX < SWIPE_BACK_DISTANCE || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return;

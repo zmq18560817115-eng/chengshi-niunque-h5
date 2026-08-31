@@ -14,12 +14,14 @@ import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveU
 import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity } from "@/components/h5/category-route-transition";
 import {
   announceGuideRouteReady,
+  clearGuideRouteContinuity,
   guideArchiveBatchDelayMs,
   guideArchiveEntryTiming,
   guideRouteEntryAttribute,
   guideRouteStageDurationMs,
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { replaceHierarchyRoute } from "@/components/h5/hierarchy-navigation";
 
 const reportsReadinessRequests = [
   ...archiveArtworkCriticalAssets.map((src) => ({ src, priority: "high" as const })),
@@ -144,14 +146,17 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   }, [guideEntry, preview, readinessReady]);
 
   const enter = (module: PublicModule) => {
-    if (navigating.current || leaving || guideEntry || preview || document.documentElement.hasAttribute(guideRouteEntryAttribute)) return;
+    if (navigating.current || leaving || guideEntry || preview) return;
+    const guideRouteState = document.documentElement.getAttribute(guideRouteEntryAttribute);
+    if (guideRouteState && guideRouteState !== "revealing") return;
+    if (guideRouteState === "revealing") clearGuideRouteContinuity();
     navigating.current = true;
     setPressedSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
       setLeaving(true);
-      window.setTimeout(() => navigateWithCategoryContinuity(() => router.push(`/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
+      window.setTimeout(() => navigateWithCategoryContinuity(() => replaceHierarchyRoute(router, `/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
     }, archiveModuleExitDelayMs);
   };
 

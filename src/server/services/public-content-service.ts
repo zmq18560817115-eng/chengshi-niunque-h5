@@ -45,11 +45,8 @@ export function publicSiteConfig(_content: PublicContent): H5SiteConfig {
 }
 
 function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number]): string {
-  if (asset.assetType === "EXTERNAL_LINK") {
-    return asset.externalUrl ?? "";
-  }
-  const viewer = asset.assetType === "PDF" ? "pdf" : "image";
-  return `/reports/${viewer}/${asset.id}`;
+  if (asset.assetType !== "IMAGE") return "";
+  return `/reports/image/${asset.id}`;
 }
 
 export function reportButtonText(reportCount: number): string {

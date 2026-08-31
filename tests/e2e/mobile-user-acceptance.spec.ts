@@ -14,6 +14,8 @@ const devices = [
   { name: "iphone-17-pro-max", width: 440, height: 956 },
   { name: "iphone-17-pro-max-embedded-short", width: 440, height: 820 },
   { name: "iphone-se-landscape", width: 667, height: 375 },
+  { name: "compact-tablet-landscape", width: 844, height: 390 },
+  { name: "large-phone-landscape", width: 956, height: 440 },
 ] as const;
 
 const evidenceRoot = "docs/audit-2026-08-18-mobile-user";
@@ -58,16 +60,26 @@ async function expectStageFillsSafeContentBox(root: Locator, stage: Locator) {
 for (const device of devices) {
   test(`${device.name} completes guide to archive at ${device.width}x${device.height}`, async ({ page }) => {
     const runtimeErrors: string[] = [];
+    const failedDesignResponses: string[] = [];
     page.on("pageerror", (error) => runtimeErrors.push(error.message));
+    page.on("response", (response) => {
+      if (response.url().includes("/design/") && response.status() >= 400) failedDesignResponses.push(`${response.status()} ${response.url()}`);
+    });
     await page.setViewportSize({ width: device.width, height: device.height });
     await page.goto("/go");
     await expect(page.getByRole("region", { name: "品牌引导页" })).toBeVisible();
     await expect(page.getByRole("button", { name: "进入档案" })).toBeVisible();
     const guideRoot = page.locator(".brand-guide");
     const guideStage = page.locator(".brand-guide-stage");
+    const contentFrame = page.locator(".brand-guide-artwork");
     await expectStageFillsSafeContentBox(guideRoot, guideStage);
     await expect(guideStage).toHaveCSS("aspect-ratio", "auto");
     await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
+    const frameBox = await contentFrame.boundingBox();
+    expect(frameBox).not.toBeNull();
+    if (!frameBox) throw new Error("guide content frame has no layout box");
+    expect(frameBox.width).toBeCloseTo(Math.min(device.width, 750), 0);
+    expect(frameBox.x).toBeCloseTo((device.width - frameBox.width) / 2, 0);
     const fullCanvasLayers = page.locator([
       ".brand-guide-base",
       ".brand-guide-arch",
@@ -78,16 +90,11 @@ for (const device of devices) {
       ".brand-guide-fallback",
       ".brand-guide-bootstrap-reduced",
     ].join(", "));
-    const useTopAlignedCover = device.width <= device.height && device.width / device.height >= 15 / 31;
-    const useLandscapeContain = device.width > device.height && device.height <= 500;
     await expect.poll(async () => fullCanvasLayers.evaluateAll(
-      (elements, expected: { landscapeContain: boolean; topAligned: boolean }) => elements.length > 0 && elements.every((element) => {
+      (elements) => elements.length > 0 && elements.every((element) => {
         const style = window.getComputedStyle(element);
-        const fit = expected.landscapeContain && !element.classList.contains("brand-guide-base") ? "contain" : "cover";
-        const position = expected.topAligned ? "50% 0%" : "50% 50%";
-        return element.isConnected && style.objectFit === fit && style.objectPosition === position;
+        return element.isConnected && style.objectFit === "cover" && style.objectPosition === "50% 50%";
       }),
-      { landscapeContain: useLandscapeContain, topAligned: useTopAlignedCover },
     )).toBe(true);
     await expect.poll(async () => fullCanvasLayers.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
       return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
@@ -97,6 +104,92 @@ for (const device of devices) {
     await expect.poll(async () => destinationImage.evaluate((element) => {
       return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000 && element.naturalHeight === 5557;
     })).toBe(true);
+
+    if (device.width <= device.height) {
+      const portraitScene = page.locator(".brand-guide-portrait-scene");
+      const edgeBleed = page.locator(".brand-guide-portrait-edge-bleed");
+      const leftEdgeBleed = edgeBleed.locator(".brand-guide-portrait-edge-bleed-copy.is-left");
+      const rightEdgeBleed = edgeBleed.locator(".brand-guide-portrait-edge-bleed-copy.is-right");
+      await expect(portraitScene).toBeVisible();
+      await expect(edgeBleed).toBeVisible();
+      await expect(page.locator(".guide-landscape-composition")).toBeHidden();
+      const [portraitBox, bleedBox, leftBleedBox, rightBleedBox] = await Promise.all([
+        portraitScene.boundingBox(), edgeBleed.boundingBox(), leftEdgeBleed.boundingBox(), rightEdgeBleed.boundingBox(),
+      ]);
+      expect(portraitBox).not.toBeNull();
+      expect(bleedBox).not.toBeNull();
+      expect(leftBleedBox).not.toBeNull();
+      expect(rightBleedBox).not.toBeNull();
+      if (!portraitBox || !bleedBox || !leftBleedBox || !rightBleedBox) throw new Error("portrait coordinate stage or edge bleed has no layout box");
+      const scale = Math.min(frameBox.width / 750, device.height / 1625);
+      expect(portraitBox.width).toBeCloseTo(750 * scale, 0);
+      expect(portraitBox.height).toBeCloseTo(1625 * scale, 0);
+      expect(portraitBox.width / frameBox.width).toBeGreaterThanOrEqual(0.8);
+      expect(portraitBox.height / device.height).toBeGreaterThanOrEqual(0.95);
+      expect(bleedBox.x).toBeCloseTo(portraitBox.x, 1);
+      expect(bleedBox.y).toBeCloseTo(portraitBox.y, 1);
+      expect(bleedBox.width).toBeCloseTo(portraitBox.width, 1);
+      expect(bleedBox.height).toBeCloseTo(portraitBox.height, 1);
+      expect(leftBleedBox.x).toBeLessThanOrEqual(frameBox.x);
+      expect(leftBleedBox.x + leftBleedBox.width).toBeGreaterThanOrEqual(portraitBox.x + 0.5);
+      expect(rightBleedBox.x).toBeLessThanOrEqual(portraitBox.x + portraitBox.width - 0.5);
+      expect(rightBleedBox.x + rightBleedBox.width).toBeGreaterThanOrEqual(frameBox.x + frameBox.width);
+      expect(leftBleedBox.width / leftBleedBox.height).toBeCloseTo(6 / 13, 3);
+      expect(rightBleedBox.width / rightBleedBox.height).toBeCloseTo(6 / 13, 3);
+      await expect(leftEdgeBleed.locator("img")).toHaveCount(1);
+      await expect(rightEdgeBleed.locator("img")).toHaveCount(1);
+      await expect.poll(async () => leftEdgeBleed.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const images = Array.from(element.querySelectorAll("img"));
+        return images.every((image) => image.complete && image.naturalWidth === 750 && image.naturalHeight === 1625 && getComputedStyle(image).objectFit === "cover") && new DOMMatrixReadOnly(style.transform).a < 0;
+      })).toBe(true);
+      await expect.poll(async () => rightEdgeBleed.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const images = Array.from(element.querySelectorAll("img"));
+        return images.every((image) => image.complete && image.naturalWidth === 750 && image.naturalHeight === 1625 && getComputedStyle(image).objectFit === "cover") && new DOMMatrixReadOnly(style.transform).a < 0;
+      })).toBe(true);
+    } else {
+      const composition = page.locator(".brand-guide-artwork > .guide-landscape-composition");
+      await expect(composition).toBeVisible();
+      await expect(page.locator(".brand-guide-portrait-scene")).toBeHidden();
+      const landmarks = composition.locator("[data-guide-landmark]");
+      await expect(landmarks).toHaveCount(4);
+      await expect.poll(async () => landmarks.evaluateAll((elements) => elements.every((element) => {
+        const image = element instanceof HTMLImageElement ? element : element.querySelector("img");
+        return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
+      })), { timeout: 15_000 }).toBe(true);
+      const boxes = await landmarks.evaluateAll((elements) => elements.map((element) => {
+        const box = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        const image = element instanceof HTMLImageElement ? element : element.querySelector("img");
+        return {
+          name: element.getAttribute("data-guide-landmark"),
+          x: box.x,
+          y: box.y,
+          right: box.right,
+          bottom: box.bottom,
+          width: box.width,
+          height: box.height,
+          fit: image ? window.getComputedStyle(image).objectFit : style.objectFit,
+          loaded: image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+          visibleRatio: Math.max(0, Math.min(box.right, innerWidth) - Math.max(box.left, 0)) * Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0)) / Math.max(1, box.width * box.height),
+        };
+      }));
+      expect(boxes.every((box) => (box.name === "hint" || box.fit !== "contain") && box.loaded && box.visibleRatio >= 0.95)).toBe(true);
+      const byName = Object.fromEntries(boxes.map((box) => [box.name, box]));
+      expect(byName.logo.width / frameBox.width).toBeGreaterThanOrEqual(0.28);
+      expect(byName.character.width / frameBox.width).toBeGreaterThanOrEqual(0.42);
+      expect(byName.envelope.width / frameBox.width).toBeGreaterThanOrEqual(0.32);
+      expect(byName.hint.width / frameBox.width).toBeGreaterThanOrEqual(0.2);
+      const union = {
+        left: Math.min(...boxes.map((box) => box.x)),
+        top: Math.min(...boxes.map((box) => box.y)),
+        right: Math.max(...boxes.map((box) => box.right)),
+        bottom: Math.max(...boxes.map((box) => box.bottom)),
+      };
+      expect((union.right - union.left) / frameBox.width).toBeGreaterThanOrEqual(0.9);
+      expect((union.bottom - union.top) / device.height).toBeGreaterThanOrEqual(0.82);
+    }
     await expectNoHorizontalOverflow(page, device.width);
     await page.waitForTimeout(2300);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-guide.png` });
@@ -110,6 +203,7 @@ for (const device of devices) {
     await expectNoHorizontalOverflow(page, device.width);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-archive.png` });
     expect(runtimeErrors).toEqual([]);
+    expect(failedDesignResponses).toEqual([]);
   });
 }
 
@@ -123,69 +217,43 @@ test("375x812 upward drag moves and crossfades the guide continuously before com
   const stage = page.locator(".brand-guide-stage");
   await expect(stage).toHaveAttribute("data-gesture-state", "ready", { timeout: 7000 });
 
-  // Start inside the transparent bottom action so tap and swipe paths cannot
-  // block each other on touch-first mobile browsers.
-  await page.mouse.move(188, 770);
+  await page.screenshot({ path: "artifacts/design-qa/guide-progress-000-375x812.png" });
+  // Start at the lower edge so the held gesture can cover the full transition.
+  const startY = 811;
+  await page.mouse.move(188, startY);
   await page.mouse.down();
-  await page.mouse.move(188, 590, { steps: 6 });
-  await expect.poll(async () => Number(await root.getAttribute("data-swipe-progress"))).toBeGreaterThan(0.2);
+  for (const progress of [0.25, 0.5, 0.75]) {
+    await page.mouse.move(188, startY - 812 * progress, { steps: 8 });
+    await expect.poll(async () => Number(await root.getAttribute("data-swipe-progress"))).toBeCloseTo(progress, 1);
+    const visualState = await page.evaluate(() => {
+      const guide = document.querySelector<HTMLElement>(".brand-guide-stage");
+      const destination = document.querySelector<HTMLElement>(".brand-guide-destination-preview");
+      if (!guide || !destination) return null;
+      const guideBox = guide.getBoundingClientRect();
+      const destinationBox = destination.getBoundingClientRect();
+      return {
+        guideOpacity: Number(getComputedStyle(guide).opacity),
+        destinationOpacity: Number(getComputedStyle(destination).opacity),
+        overlap: Math.max(0, Math.min(guideBox.bottom, destinationBox.bottom) - Math.max(guideBox.top, destinationBox.top)),
+      };
+    });
+    expect(visualState).not.toBeNull();
+    if (!visualState) throw new Error("guide transition panels are unavailable");
+    expect(visualState.guideOpacity + visualState.destinationOpacity).toBeGreaterThanOrEqual(0.99);
+    expect(visualState.overlap / 812).toBeGreaterThanOrEqual(0.73);
+    await page.screenshot({ path: `artifacts/design-qa/guide-progress-${Math.round(progress * 100).toString().padStart(3, "0")}-375x812.png` });
+  }
 
-  const dragState = await page.evaluate(() => {
-    const rootElement = document.querySelector<HTMLElement>(".brand-guide");
-    const trackElement = document.querySelector<HTMLElement>(".brand-guide-swipe-track");
-    const artworkElement = document.querySelector<HTMLElement>(".brand-guide-artwork");
-    const destinationElement = document.querySelector<HTMLElement>(".brand-guide-destination-image");
-    const stageElement = document.querySelector<HTMLElement>(".brand-guide-stage");
-    if (!rootElement || !trackElement || !artworkElement || !destinationElement || !stageElement) return null;
-    const trackMatrix = new DOMMatrixReadOnly(getComputedStyle(trackElement).transform);
-    return {
-      progress: Number(rootElement.dataset.swipeProgress),
-      offsetY: trackMatrix.m42,
-      stageTop: stageElement.getBoundingClientRect().top,
-      guideOpacity: Number(getComputedStyle(artworkElement).opacity),
-      destinationOpacity: Number(getComputedStyle(destinationElement).opacity),
-    };
-  });
-  expect(dragState).not.toBeNull();
-  if (!dragState) throw new Error("guide drag state is unavailable");
-  expect(dragState.offsetY).toBeLessThan(-160);
-  expect(dragState.guideOpacity).toBeLessThan(0.85);
-  expect(dragState.destinationOpacity).toBeGreaterThan(0.5);
-  await page.screenshot({ path: "artifacts/design-qa/guide-drag-progress-375x812.png" });
-
-  await page.evaluate(() => {
-    const heldWindow = window as typeof window & {
-      __guideRafHold?: { original: typeof window.requestAnimationFrame; callbacks: FrameRequestCallback[] };
-    };
-    const original = window.requestAnimationFrame.bind(window);
-    const callbacks: FrameRequestCallback[] = [];
-    heldWindow.__guideRafHold = { original, callbacks };
-    window.requestAnimationFrame = (callback) => {
-      callbacks.push(callback);
-      return 900000 + callbacks.length;
-    };
-  });
   await page.mouse.up();
   const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
-  await expect(routeBuffer).toBeVisible();
-  const continuityTop = await routeBuffer.locator(".h5-guide-route-snapshot").evaluate((snapshot) => snapshot.getBoundingClientRect().top);
-  expect(Math.abs(continuityTop - dragState.stageTop)).toBeLessThanOrEqual(2);
-  await page.evaluate(() => {
-    const heldWindow = window as typeof window & {
-      __guideRafHold?: { original: typeof window.requestAnimationFrame; callbacks: FrameRequestCallback[] };
-    };
-    const hold = heldWindow.__guideRafHold;
-    if (!hold) return;
-    window.requestAnimationFrame = hold.original;
-    delete heldWindow.__guideRafHold;
-    hold.callbacks.forEach((callback) => hold.original(callback));
-  });
   await page.waitForURL(/\/reports$/);
+  await expect(routeBuffer).toBeVisible();
   await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toBeVisible();
   await expect.poll(async () => routeBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
     return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000;
   })).toBe(true);
-  await page.screenshot({ path: "artifacts/design-qa/guide-drag-commit-375x812.png" });
+  await expect(routeBuffer.locator(".h5-guide-route-destination-panel")).toHaveCSS("opacity", "1", { timeout: 2000 });
+  await page.screenshot({ path: "artifacts/design-qa/guide-progress-100-375x812.png" });
   await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
   expect(runtimeErrors).toEqual([]);
 });
@@ -206,7 +274,9 @@ test("375x812 user can open every category and a published report", async ({ pag
   await page.goto("/reports/inspection-projects/items/seed-card-inspection-nutrition/reports");
   await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "核心营养含量" })).toBeVisible();
-  await expect(page.locator(".report-file-card, .image-report")).not.toHaveCount(0);
+  await expect(page.locator(".image-report")).not.toHaveCount(0);
+  await expect(page.locator(".report-file-card")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /查看原 PDF|打开外部资料/ })).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 375);
   await page.screenshot({ path: `${evidenceRoot}/flow-published-report-375x812.png` });
   expect(runtimeErrors).toEqual([]);
@@ -239,7 +309,24 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
   await expect(page.locator(".reports-archive-final")).toBeVisible();
 });
 
-test("guide uses a textured transition fallback when the destination preview cannot decode", async ({ page }) => {
+for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }]) {
+  test(`short portrait route snapshot softens its side edges at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/go", { waitUntil: "domcontentloaded" });
+    const enter = page.getByRole("button", { name: "进入档案" });
+    await expect(enter).toBeEnabled({ timeout: 10000 });
+    await enter.click({ noWaitAfter: true });
+    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-portrait-snapshot");
+    await expect(snapshot).toBeVisible({ timeout: 10000 });
+    await expect.poll(async () => snapshot.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.webkitMaskImage || style.maskImage;
+    })).not.toBe("none");
+    await page.screenshot({ path: `artifacts/portrait-route-snapshot-${viewport.width}x${viewport.height}.png` });
+  });
+}
+
+test("guide keeps the complete source fallback when the destination preview cannot decode", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route("**/design/final-v1/archive-reference.webp", (route) => route.abort());
   await page.goto("/go", { waitUntil: "domcontentloaded" });
@@ -250,7 +337,9 @@ test("guide uses a textured transition fallback when the destination preview can
   await enter.click();
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
   await expect(guideBuffer).toHaveClass(/has-destination-fallback/);
-  await expect(guideBuffer.locator(".h5-guide-route-destination-panel")).toHaveCSS("background-image", /archive-paper-texture\.webp/);
+  await expect(guideBuffer.locator(".h5-guide-route-guide-panel")).toHaveCSS("opacity", "1");
+  await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toBeVisible();
+  await expect(guideBuffer.locator(".h5-guide-route-destination-panel")).toBeHidden();
   await page.waitForURL(/\/reports$/);
   await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
 });

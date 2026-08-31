@@ -37,9 +37,10 @@
   --guide-route-travel-distance: 100dvh;
   --guide-route-exit-distance: -100dvh;
   --guide-route-remaining-distance: var(--guide-route-travel-distance);
-  --guide-swipe-offset: 0px;
+  --guide-swipe-guide-y: 0px;
+  --guide-swipe-destination-y: 26dvh;
   --guide-swipe-guide-opacity: 1;
-  --guide-swipe-destination-opacity: .18;
+  --guide-swipe-destination-opacity: 0;
   --guide-loading-exit-duration: 260ms;
   --category-route-exit-duration: 420ms;
   --category-route-entry-duration: 520ms;
@@ -290,24 +291,31 @@ button, a { font: inherit; }
 .runtime-loading-layer.is-leaving { pointer-events: none; }
 .guide-loading-buffer { container-type: size; display: block; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-loading-exit-duration) var(--h5-route-transition-easing), transform var(--guide-loading-exit-duration) var(--h5-route-transition-easing); }
 .guide-loading-buffer.is-leaving { opacity: 0; transform: translate3d(0,-6dvh,0); pointer-events: none; }
-.guide-loading-buffer-stage { position: relative; width: 100%; max-width: none; height: 100%; aspect-ratio: auto; overflow: hidden; background-color: transparent; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
-.guide-loading-buffer-gif, .guide-loading-buffer-poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.guide-loading-buffer-stage { position: relative; width: 100%; max-width: var(--h5-content-width); height: 100%; margin-inline: auto; aspect-ratio: 6 / 13; overflow: hidden; background-color: transparent; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
+.guide-loading-buffer-gif, .guide-loading-buffer-poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; object-position: center; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .guide-loading-buffer-poster { visibility: visible; }
 .brand-guide { container-type: size; position: relative; isolation: isolate; display: block; width: 100%; max-width: none; height: 100vh; height: 100svh; height: 100dvh; height: var(--h5-visible-viewport-height, 100dvh); margin-inline: auto; overflow: hidden; color: var(--color-ink); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: 1; transform: translate3d(0,0,0); cursor: default; touch-action: none; overscroll-behavior: none; }
 .brand-guide::-webkit-scrollbar { width: 0; height: 0; }
 .brand-guide.is-leaving { pointer-events: none; }
-.brand-guide-swipe-track { position: absolute; z-index: 1; inset: 0; width: 100%; height: 200%; transform: translate3d(0,var(--guide-swipe-offset),0); backface-visibility: hidden; contain: layout paint style; }
-.brand-guide.is-dragging .brand-guide-swipe-track { will-change: transform; }
-.brand-guide.is-settling .brand-guide-swipe-track { transition: transform 240ms cubic-bezier(.22,1,.36,1); will-change: transform; }
-.brand-guide-stage { position: relative; isolation: isolate; width: 100%; max-width: none; height: 50%; aspect-ratio: auto; overflow: hidden; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
-.brand-guide-artwork { position: absolute; z-index: 1; inset: 0; overflow: hidden; opacity: var(--guide-swipe-guide-opacity); transform: translate3d(0,0,0); backface-visibility: hidden; contain: layout paint style; }
-.brand-guide.is-dragging .brand-guide-artwork { will-change: opacity; }
-.brand-guide.is-settling .brand-guide-artwork { transition: opacity 220ms ease-out; }
-.brand-guide-destination-preview { container-type: inline-size; position: relative; width: 100%; height: 50%; overflow: hidden; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; }
-.brand-guide-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: var(--guide-swipe-destination-opacity); transform: translate3d(0,0,0); backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.brand-guide.is-dragging .brand-guide-destination-image { will-change: opacity; }
-.brand-guide.is-settling .brand-guide-destination-image { transition: opacity 220ms ease-out; }
-.brand-guide.has-destination-fallback .brand-guide-destination-image { display: none; }
+.brand-guide-swipe-track { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; contain: layout paint style; }
+.brand-guide-stage, .brand-guide-destination-preview { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; backface-visibility: hidden; }
+.brand-guide-stage { z-index: 1; isolation: isolate; max-width: none; aspect-ratio: auto; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: var(--guide-swipe-guide-opacity); transform: translate3d(0,var(--guide-swipe-guide-y),0); }
+.brand-guide-destination-preview { z-index: 2; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; opacity: var(--guide-swipe-destination-opacity); transform: translate3d(0,var(--guide-swipe-destination-y),0); pointer-events: none; }
+.brand-guide.is-dragging .brand-guide-stage, .brand-guide.is-dragging .brand-guide-destination-preview { will-change: transform, opacity; }
+.brand-guide.is-settling .brand-guide-stage, .brand-guide.is-settling .brand-guide-destination-preview { transition: transform 240ms cubic-bezier(.22,1,.36,1), opacity 220ms ease-out; will-change: transform, opacity; }
+.brand-guide-artwork { container-type: size; position: absolute; z-index: 1; top: 0; bottom: 0; left: 50%; width: min(100%,var(--h5-content-width)); overflow: hidden; translate: -50% 0; backface-visibility: hidden; contain: layout paint style; }
+.brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene { position: absolute; top: 50%; left: 50%; aspect-ratio: 6 / 13; translate: -50% -50%; }
+.brand-guide-portrait-edge-bleed { z-index: 0; overflow: visible; pointer-events: none; }
+.brand-guide-portrait-edge-bleed-copy { position: absolute; top: 0; width: 100%; height: 100%; transform: scaleX(-1); transform-origin: center; backface-visibility: hidden; }
+.brand-guide-portrait-edge-bleed-copy.is-left { left: calc(-100% + 1px); }
+.brand-guide-portrait-edge-bleed-copy.is-right { left: calc(100% - 1px); }
+.brand-guide-portrait-edge-bleed-layer { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center; backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.brand-guide-portrait-edge-bleed-layer.is-guide-background { z-index: 0; }
+.brand-guide-portrait-scene { z-index: 1; overflow: hidden; }
+.brand-guide-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
+.brand-guide-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.brand-guide.has-destination-fallback .brand-guide-stage { opacity: 1; transform: translate3d(0,0,0); }
+.brand-guide.has-destination-fallback .brand-guide-destination-preview { visibility: hidden; opacity: 0; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-dynamic-stage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; opacity: 1; }
 .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: translate3d(0,0,0); backface-visibility: hidden; }
@@ -343,9 +351,20 @@ button, a { font: inherit; }
 .brand-guide.is-motion-disabled .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-paper,
 .brand-guide.is-motion-disabled .brand-guide-character-closed { animation-play-state: paused !important; }
+.guide-landscape-composition { position: absolute; inset: 0; display: none; overflow: hidden; background-color: transparent; }
+.guide-landscape-crop { position: absolute; overflow: hidden; }
+.guide-landscape-crop-master { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.guide-landscape-logo { z-index: 1; top: 4%; left: 4%; width: 36%; aspect-ratio: 520 / 210; }
+.guide-landscape-logo .guide-landscape-crop-master { top: -42.8571%; left: -23.0769%; width: 144.2308%; height: 773.8095%; }
+.guide-landscape-character { z-index: 2; bottom: 2%; left: 2%; width: 54%; aspect-ratio: 750 / 530; }
+.guide-landscape-character .guide-landscape-crop-master { top: -56.6038%; left: 0; width: 100%; height: 306.6038%; }
+.guide-landscape-envelope { z-index: 3; right: 2%; bottom: 3%; width: 42%; aspect-ratio: 697 / 641; }
+.guide-landscape-envelope .guide-landscape-crop-master { top: -145.086%; left: -7.604%; width: 107.604%; height: 253.510%; }
+.guide-landscape-hint { position: absolute; z-index: 4; right: 4%; bottom: 1%; display: block; width: clamp(150px,27%,200px); height: auto; max-width: none; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .brand-guide-accessible-copy { position: absolute; z-index: 50; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; white-space: nowrap; }
 .brand-guide-enter-action { position: absolute; z-index: 50; left: 50%; bottom: max(.6rem, env(safe-area-inset-bottom)); width: min(58vw, 14rem); height: max(3rem, 8dvh); padding: 0; translate: -50% 0; border: 0; color: transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .brand-guide-enter-action:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
+.brand-guide-transition-error { position: absolute; z-index: 55; left: 50%; bottom: max(3.6rem,calc(env(safe-area-inset-bottom) + 3rem)); width: min(calc(100% - 2rem),22rem); margin: 0; padding: .55rem .8rem; translate: -50% 0; border-radius: var(--radius-md); color: #5a3827; text-align: center; font-size: .78rem; line-height: 1.45; background: rgb(255 250 240 / .92); box-shadow: var(--shadow-paper); }
 @keyframes guide-blink-closed { from { opacity: 0; } to { opacity: 1; } }
 /* 单曲线平滑落入（保留原起止坐标），去掉多段缓动切换造成的速度突变=卡顿 */
 @keyframes guide-paper-from-top { from { transform: translate3d(-1.1%,-18%,0) rotate(-3.2deg); } to { transform: translate3d(0,0,0) rotate(0); } }
@@ -376,31 +395,48 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 #h5-guide-route-buffer-host { position: fixed; z-index: 2147482500; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-guide-route-buffer-host:empty { display: none; }
 .h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; backface-visibility: hidden; }
+.h5-guide-route-buffer.is-preparing { visibility: hidden; }
 .h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--guide-route-buffer-release-duration) ease-out; will-change: opacity; }
 .h5-guide-route-buffer, .h5-guide-route-buffer * { pointer-events: none !important; }
-.h5-guide-route-track { position: absolute; inset: 0; width: 100%; height: 200%; transform: translate3d(0,var(--guide-route-start-offset,0px),0); transition: transform var(--guide-route-commit-duration,520ms) var(--guide-route-transition-easing); backface-visibility: hidden; will-change: transform; }
-.h5-guide-route-buffer.is-committing .h5-guide-route-track { transform: translate3d(0,var(--guide-route-exit-distance),0); }
-.h5-guide-route-panel { position: relative; width: 100%; height: 50%; overflow: hidden; }
-.h5-guide-route-guide-panel { background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; }
-.h5-guide-route-destination-panel { container-type: inline-size; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; }
-.h5-guide-route-snapshot { position: absolute; display: block; max-width: none; object-fit: cover; object-position: center; opacity: var(--guide-route-start-guide-opacity,1); transition: opacity var(--guide-route-commit-duration,520ms) ease-out; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; will-change: opacity; }
-.h5-guide-route-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: var(--guide-route-start-destination-opacity,.18); transition: opacity var(--guide-route-commit-duration,520ms) ease-out; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; will-change: opacity; }
+.h5-guide-route-track { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; }
+.h5-guide-route-panel { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; backface-visibility: hidden; transition: transform var(--guide-route-commit-duration,520ms) var(--guide-route-transition-easing), opacity var(--guide-route-commit-duration,520ms) ease-out; will-change: transform, opacity; }
+.h5-guide-route-guide-panel { z-index: 1; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: var(--guide-route-start-guide-opacity,1); transform: translate3d(0,var(--guide-route-start-guide-y,0px),0); }
+.h5-guide-route-destination-panel { z-index: 2; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: top center; background-size: cover; opacity: var(--guide-route-start-destination-opacity,0); transform: translate3d(0,var(--guide-route-start-destination-y,26dvh),0); }
+.h5-guide-route-snapshot { container-type: size; position: absolute; top: 0; bottom: 0; left: 50%; display: block; width: min(100%,var(--h5-content-width)); overflow: hidden; translate: -50% 0; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
+.h5-guide-route-portrait-snapshot { position: absolute; top: 50%; left: 50%; display: block; max-width: none; aspect-ratio: 6 / 13; object-fit: fill; translate: -50% -50%; user-select: none; -webkit-user-drag: none; }
+.h5-guide-route-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
+.h5-guide-route-destination-image { position: absolute; left: 0; top: -21.6cqw; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 1000 / 5557; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
+.h5-guide-route-buffer.is-committing .h5-guide-route-guide-panel { opacity: .08; transform: translate3d(0,var(--guide-route-end-guide-y,-26dvh),0); }
+.h5-guide-route-buffer.is-committing .h5-guide-route-destination-panel { opacity: 1; transform: translate3d(0,0,0); }
+.h5-guide-route-buffer.has-destination-fallback .h5-guide-route-guide-panel,
+.h5-guide-route-buffer.has-destination-fallback.is-committing .h5-guide-route-guide-panel { opacity: 1; transform: translate3d(0,0,0); }
+.h5-guide-route-buffer.has-destination-fallback .h5-guide-route-destination-panel { visibility: hidden; opacity: 0; }
 
-@media (orientation: portrait) and (min-aspect-ratio: 15 / 31) {
-  .guide-loading-buffer, .guide-loading-buffer-stage { background-position: center top; }
-  .guide-loading-buffer-gif, .guide-loading-buffer-poster,
-  .brand-guide-base, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
-  .h5-guide-route-snapshot { object-position: center top; }
+@media (orientation: portrait) and (max-aspect-ratio: 6 / 13) {
+  .guide-loading-buffer-stage { width: min(100%,var(--h5-content-width)); height: auto; }
+  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { width: 100%; height: calc(100cqw * 13 / 6); }
+}
+
+@media (orientation: portrait) and (min-aspect-ratio: 6 / 13) {
+  .guide-loading-buffer-stage { width: auto; max-width: var(--h5-content-width); height: 100%; }
+  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { width: calc(100cqh * 6 / 13); height: 100%; }
+  .brand-guide-window-mask, .brand-guide-arch {
+    -webkit-mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),rgba(0,0,0,.3) clamp(5px,1.8cqw,9px),#000 clamp(16px,6cqw,30px),#000 calc(100% - clamp(16px,6cqw,30px)),rgba(0,0,0,.3) calc(100% - clamp(5px,1.8cqw,9px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),rgba(0,0,0,.3) clamp(5px,1.8cqw,9px),#000 clamp(16px,6cqw,30px),#000 calc(100% - clamp(16px,6cqw,30px)),rgba(0,0,0,.3) calc(100% - clamp(5px,1.8cqw,9px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
+  }
+  .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced, .h5-guide-route-portrait-snapshot {
+    -webkit-mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),#000 clamp(10px,4cqw,20px),#000 calc(100% - clamp(10px,4cqw,20px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0,transparent clamp(2px,.8cqw,4px),#000 clamp(10px,4cqw,20px),#000 calc(100% - clamp(10px,4cqw,20px)),transparent calc(100% - clamp(2px,.8cqw,4px)),transparent 100%);
+  }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .guide-loading-buffer-gif, .guide-loading-buffer-poster,
-  .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-window-mask, .brand-guide-foreground-top, .brand-guide-fallback, .brand-guide-bootstrap-reduced,
-  .h5-guide-route-snapshot { object-fit: contain; object-position: center; }
+  .guide-loading-buffer-stage { width: min(100%,var(--h5-content-width)); max-width: var(--h5-content-width); height: 100%; aspect-ratio: auto; }
+  .guide-loading-buffer-gif, .guide-loading-buffer-poster { object-fit: cover; object-position: center; }
+  .brand-guide-portrait-edge-bleed, .brand-guide-portrait-scene, .h5-guide-route-portrait-snapshot { display: none; }
+  .guide-landscape-composition { display: block; }
+  .brand-guide-artwork, .h5-guide-route-snapshot { width: min(100%,var(--h5-content-width)); }
 }
-.h5-guide-route-buffer.is-committing .h5-guide-route-snapshot { opacity: .08; }
-.h5-guide-route-buffer.is-committing .h5-guide-route-destination-image { opacity: 1; }
-.h5-guide-route-buffer.has-destination-fallback .h5-guide-route-destination-image { display: none; }
 #h5-category-route-buffer-host { position: fixed; z-index: 2147483640; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-category-route-buffer-host:empty { display: none; }
 .h5-category-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: transform; }
@@ -1002,11 +1038,12 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 .report-page-controls button { min-height: 40px; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-ink); background: white; }
 .report-page-controls button:last-child { justify-self: stretch; }.report-page-controls button:disabled { opacity: .42; }
 .report-page-controls span { min-width: 4rem; text-align: center; color: var(--color-muted); font-size: .78rem; }
-.report-image-stage { position: relative; width: 100%; height: clamp(22rem,68vh,46rem); height: clamp(22rem,68svh,46rem); overflow: auto; contain: layout paint; overscroll-behavior: contain; background: #eee8de; cursor: grab; touch-action: none; -webkit-overflow-scrolling: touch; }
+.report-image-stage { position: relative; width: 100%; height: auto; overflow: visible; background: #eee8de; cursor: default; touch-action: pan-y; }
+.report-image-stage.is-zoomed { height: clamp(22rem,68vh,46rem); height: clamp(22rem,68svh,46rem); overflow: auto; contain: layout paint; overscroll-behavior: contain; cursor: grab; touch-action: none; -webkit-overflow-scrolling: touch; }
 .report-image-stage.is-dragging { cursor: grabbing; user-select: none; }
 .report-image-stage.is-pinching img { transition: none; }
 .report-image-scroll { width: 100%; min-width: 100%; }
-.report-image-stage img { display: block; max-width: none; height: auto; transition: width .15s ease; }
+.report-image-stage img { display: block; max-width: none; height: auto; }
 .report-image-stage.is-loading img { visibility: hidden; }
 .report-image-skeleton { position: absolute; inset: 0; min-height: 22rem; background: linear-gradient(100deg, #eee7dc 20%, #fffaf0 42%, #eee7dc 65%); background-size: 220% 100%; animation: report-skeleton 1.3s ease-in-out infinite; }
 @keyframes report-skeleton { to { background-position: -220% 0; } }
@@ -1028,7 +1065,7 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .guide-loading-buffer, .brand-guide, .brand-guide-swipe-track, .brand-guide-artwork, .brand-guide-destination-image, .h5-guide-route-track, .h5-guide-route-snapshot, .h5-guide-route-destination-image, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
+  .guide-loading-buffer, .brand-guide, .brand-guide-stage, .brand-guide-destination-preview, .brand-guide-artwork, .brand-guide-destination-image, .h5-guide-route-panel, .h5-guide-route-snapshot, .h5-guide-route-destination-image, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
   .guide-loading-buffer-gif { visibility: hidden; }
   .guide-loading-buffer-poster { visibility: visible; }
   .brand-guide { transition: opacity 150ms ease; }
@@ -1068,14 +1105,14 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
   .report-page-content { padding-left: max(var(--space-3), env(safe-area-inset-left)); padding-right: max(var(--space-3), env(safe-area-inset-right)); }
   .report-file-card { align-items: stretch; flex-direction: column; }
   .report-file-card a { width: 100%; }
-  .report-image-stage { height: clamp(18rem,64vh,34rem); height: clamp(18rem,64svh,34rem); }
+  .report-image-stage.is-zoomed { height: clamp(18rem,64vh,34rem); height: clamp(18rem,64svh,34rem); }
   .report-page-controls { padding-inline: var(--space-2); }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
   .brand-guide-enter-action { height: max(2.75rem,18dvh); }
   .report-page-title { padding-top: max(var(--space-4), env(safe-area-inset-top)); padding-bottom: var(--space-4); }
-  .report-image-stage { height: min(70vh,26rem); height: min(70svh,26rem); }
+  .report-image-stage.is-zoomed { height: min(70vh,26rem); height: min(70svh,26rem); }
 }
 
 @keyframes reports-fade-in { from { opacity: 0; } to { opacity: 1; } }

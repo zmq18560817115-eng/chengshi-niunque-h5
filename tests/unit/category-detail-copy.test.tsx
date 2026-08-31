@@ -160,6 +160,7 @@ describe("CategoryDetail dynamic card copy", () => {
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
     expect(firstCard).not.toBeNull();
     fireEvent.click(firstCard!);
-    expect(navigation.push).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
+    expect(navigation.replace).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 });

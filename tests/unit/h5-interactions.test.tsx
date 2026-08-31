@@ -6,7 +6,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { archiveModuleExitDelayMs } from "@/components/h5/category-route-transition";
-import { guideRouteNavigationDelayMs } from "@/components/h5/guide-route-transition";
+import { guideRouteEntryAttribute, guideRouteNavigationDelayMs } from "@/components/h5/guide-route-transition";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
@@ -46,6 +46,13 @@ async function resolvePendingImages(predicate: (image: PendingImage) => boolean)
     });
     await Promise.resolve();
   }
+}
+
+async function unlockGuideGesture() {
+  await act(async () => { await resolvePendingImages(() => true); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs + 32); });
+  await act(async () => { await vi.runOnlyPendingTimersAsync(); });
+  await act(async () => { await vi.runOnlyPendingTimersAsync(); });
 }
 
 const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
@@ -110,6 +117,22 @@ describe("multi-page H5 interactions", () => {
     act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs));
     expect(archive).toHaveClass("is-leaving");
     expect(archive).toHaveAttribute("data-exit-slug", "review-assurance");
+  });
+
+  it("does not drop a category click while the completed guide reveal marker awaits cleanup", () => {
+    vi.useFakeTimers();
+    const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
+    const { container } = render(<ReportsArchive modules={modules}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>('[data-mascot-slug="inspection-projects"]')!;
+    const archive = container.querySelector(".reports-archive");
+    document.documentElement.setAttribute(guideRouteEntryAttribute, "revealing");
+
+    fireEvent.click(hotspot);
+
+    expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", "inspection-projects");
+    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs));
+    expect(archive).toHaveClass("is-leaving");
   });
 
   it("maps the supplied click cue to inspection and covers the complete brown board", () => {
@@ -420,9 +443,8 @@ describe("multi-page H5 interactions", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(16);
-    });
+    await act(async () => { await vi.runOnlyPendingTimersAsync(); });
+    await act(async () => { await vi.runOnlyPendingTimersAsync(); });
     expect(stage).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 300 }] });
     await act(async () => {
@@ -447,27 +469,29 @@ describe("multi-page H5 interactions", () => {
     ["short upward", { x: 200, y: 260 }, { x: 198, y: 237 }],
     ["mostly horizontal diagonal", { x: 260, y: 320 }, { x: 165, y: 255 }],
   ])("does not enter after a %s gesture", async (_label, start, end) => {
+    vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    await unlockGuideGesture();
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: start.x, clientY: start.y }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: end.x, clientY: end.y }] });
     fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: end.x, clientY: end.y }] });
     expect(page).toHaveAttribute("data-swipe-interaction", "settling");
-    await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 320)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(320); });
     expect(page).toHaveAttribute("data-swipe-interaction", "idle");
     expect(page).toHaveAttribute("data-swipe-progress", "0.000");
     expect(onEnter).not.toHaveBeenCalled();
   });
 
   it("does not finish the tracked touch when an unrelated finger ends", async () => {
+    vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    await unlockGuideGesture();
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
     fireEvent.touchEnd(page, { changedTouches: [{ identifier: 2, clientX: 240, clientY: 260 }] });
@@ -478,11 +502,12 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("cancels a touch-only gesture when a second finger joins", async () => {
+    vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    await unlockGuideGesture();
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 320 }] });
     fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 210 }] });
     expect(page).toHaveClass("is-dragging");
@@ -498,6 +523,7 @@ describe("multi-page H5 interactions", () => {
   });
 
   it("cancels a primary pointer gesture when a second touch pointer joins", async () => {
+    vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
     const page = screen.getByRole("main");
@@ -506,8 +532,8 @@ describe("multi-page H5 interactions", () => {
       Object.entries(values).forEach(([name, value]) => Object.defineProperty(event, name, { value }));
       fireEvent(page, event);
     };
-    await act(async () => pendingImages.forEach(({ resolve }) => resolve()));
-    await waitFor(() => expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready"));
+    await unlockGuideGesture();
+    expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-gesture-state", "ready");
     dispatchTouchPointer("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 200, clientY: 320 });
     dispatchTouchPointer("pointermove", { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 198, clientY: 210 });
     expect(page).toHaveClass("is-dragging");
@@ -540,6 +566,30 @@ describe("multi-page H5 interactions", () => {
     fireEvent.touchStart(page, { touches: [{ clientX: 20, clientY: 200 }] });
     fireEvent.touchEnd(page, { changedTouches: [{ clientX: 120, clientY: 206 }] });
     expect(page).toHaveClass("is-swipe-back");
+  });
+
+  it("does not treat a zoomed report pan as page-level swipe back", () => {
+    vi.useFakeTimers();
+    const asset = { id: "asset-1", title: "营养检测报告", description: null, type: "IMAGE" as const, href: "/reports/image/asset-1", openMode: "same_tab" as const, pages: [{ id: "page-1", pageNumber: 1, href: "/reports/image/page/page-1" }] };
+    const { container } = render(<SwipeBackPage className="h5-page-transition" fallbackHref="/reports" showBackControl={false}><ImageReportViewer asset={asset} /></SwipeBackPage>);
+    const page = screen.getByRole("main");
+    const stage = container.querySelector(".report-image-stage") as HTMLElement;
+    fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
+    expect(stage).toHaveAttribute("data-swipe-back-ignore", "true");
+    fireEvent.touchStart(stage, { touches: [{ clientX: 20, clientY: 200 }] });
+    fireEvent.touchMove(stage, { touches: [{ clientX: 120, clientY: 206 }] });
+    fireEvent.touchEnd(stage, { touches: [], changedTouches: [{ clientX: 120, clientY: 206 }] });
+    expect(page).not.toHaveClass("is-swipe-back");
+  });
+
+  it("cancels a pending page swipe when a second touch joins", () => {
+    vi.useFakeTimers();
+    render(<SwipeBackPage className="h5-page-transition" fallbackHref="/reports" showBackControl={false}><p>资料内容</p></SwipeBackPage>);
+    const page = screen.getByRole("main");
+    fireEvent.touchStart(page, { touches: [{ clientX: 20, clientY: 200 }] });
+    fireEvent.touchStart(page, { touches: [{ clientX: 20, clientY: 200 }, { clientX: 60, clientY: 200 }] });
+    fireEvent.touchEnd(page, { touches: [{ clientX: 60, clientY: 200 }], changedTouches: [{ clientX: 120, clientY: 206 }] });
+    expect(page).not.toHaveClass("is-swipe-back");
   });
 
   it("does not restore the cancelled fullscreen report interaction", () => {

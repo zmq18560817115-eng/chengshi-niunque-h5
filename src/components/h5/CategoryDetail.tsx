@@ -7,6 +7,7 @@ import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/Ada
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
+import { replaceHierarchyRoute } from "@/components/h5/hierarchy-navigation";
 import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteMountedEvent, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
@@ -140,8 +141,8 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
           <button key={cardId} type="button" className="category-card-hotspot" data-index={index} style={style} data-card-id={cardId} data-placeholder={!card || undefined} aria-label={label} disabled={leaving} onClick={() => {
             if (leaving) return;
             setLeaving(true);
-            const destination = `/reports/${module.slug}/items/${cardId}/reports`;
-            router.push(destination);
+            const destination = `/reports/${module.slug}/items/${cardId}/reports` as const;
+            replaceHierarchyRoute(router, destination);
           }}>{copy}</button>;
       })}
       </section>

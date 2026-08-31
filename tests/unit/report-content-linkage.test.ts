@@ -62,4 +62,18 @@ describe("multi-page report content linkage", () => {
     expect(removed.version).not.toBe(initial.version);
     expect(removed.modules[0]?.cards[0]?.buttonText).toBe("查看1份报告");
   });
+
+  it("does not publish PDF or external navigation targets to the H5", async () => {
+    const updatedAt = new Date("2026-08-21T08:00:00.000Z");
+    const repository = {
+      listSettings: vi.fn().mockResolvedValue([]),
+      listModules: vi.fn().mockResolvedValue([{ id: "module", slug: "review", title: "复核", description: null, updatedAt, cards: [{ id: "card", title: "资料", description: null, footerNote: null, updatedAt, assets: [
+        { id: "pdf", title: "PDF", description: null, assetType: "PDF", openMode: "SAME_TAB", externalUrl: null, updatedAt, pages: [] },
+        { id: "external", title: "外链", description: null, assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", updatedAt, pages: [] },
+      ] }] }]),
+    } as unknown as PublicContentRepository;
+
+    const assets = (await new PublicContentService(repository).getContent()).modules[0]?.cards[0]?.assets;
+    expect(assets?.map((asset) => asset.href)).toEqual(["", ""]);
+  });
 });
