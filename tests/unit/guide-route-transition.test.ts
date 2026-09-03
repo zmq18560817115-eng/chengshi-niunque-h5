@@ -81,9 +81,11 @@ describe("guide route transition priming", () => {
   it("primes compact and landscape buffers from semantic responsive layers", async () => {
     await expect(primeGuideRouteContinuity("portrait-compact", false)).resolves.toBe(true);
     let buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)!;
-    expect(buffer.querySelector(".guide-compact-portrait-composition")).not.toBeNull();
-    expect(buffer.querySelector(".guide-compact-character-overlay")).not.toBeNull();
-    expect(buffer.querySelector(".guide-compact-envelope")).not.toBeNull();
+    expect(buffer.dataset.guideProfile).toBe("portrait-compact");
+    expect(buffer.dataset.guideOrientation).toBe("portrait");
+    expect(buffer.querySelector(".guide-compact-portrait-composition")).toBeNull();
+    expect(buffer.querySelector(".h5-guide-route-snapshot")?.classList.contains("is-compact")).toBe(false);
+    expect(buffer.querySelector(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", guideRouteSnapshotSrc);
 
     await expect(primeGuideRouteContinuity("landscape", false)).resolves.toBe(true);
     buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)!;

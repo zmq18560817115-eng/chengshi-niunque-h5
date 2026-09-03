@@ -97,6 +97,55 @@ async function expectImagesDecodedWithoutStretch(images: Locator) {
   }
 }
 
+const portraitCanvasLayerSelector = [
+  ".brand-guide-arch",
+  ".brand-guide-paper",
+  ".brand-guide-character",
+  ".brand-guide-foreground-top",
+].join(", ");
+
+async function expectSharedPortraitScene(
+  page: Page,
+  frame: { x: number; y: number; width: number; height: number },
+) {
+  const scene = page.locator(".brand-guide-portrait-scene");
+  const liveStage = scene.locator(".brand-guide-live-stage");
+  const canvasLayers = liveStage.locator(portraitCanvasLayerSelector);
+
+  await expect(scene).toBeVisible();
+  await expect(scene).not.toHaveClass(/is-compact-fallback/);
+  await expect(liveStage).toBeVisible();
+  await expect(page.locator(".guide-compact-portrait-composition, .guide-landscape-composition")).toHaveCount(0);
+  await expect(canvasLayers).toHaveCount(8);
+
+  const sceneBox = await scene.boundingBox();
+  expect(sceneBox).not.toBeNull();
+  if (!sceneBox) throw new Error("portrait coordinate stage has no layout box");
+  expect(sceneBox.width / sceneBox.height).toBeCloseTo(6 / 13, 3);
+  expect(sceneBox.x + sceneBox.width / 2).toBeCloseTo(frame.x + frame.width / 2, 0);
+  expect(sceneBox.y + sceneBox.height / 2).toBeCloseTo(frame.y + frame.height / 2, 0);
+  expect(sceneBox.width).toBeLessThanOrEqual(frame.width + 1);
+  expect(sceneBox.height).toBeLessThanOrEqual(frame.height + 1);
+  expect(Math.max(sceneBox.width / frame.width, sceneBox.height / frame.height)).toBeGreaterThanOrEqual(.99);
+
+  await expect.poll(async () => canvasLayers.evaluateAll((elements, expectedScene) => elements.every((element) => {
+    if (!(element instanceof HTMLImageElement)) return false;
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return element.complete
+      && element.naturalWidth === 750
+      && element.naturalHeight === 1625
+      && Math.abs(box.left - expectedScene.x) <= 1
+      && Math.abs(box.top - expectedScene.y) <= 1
+      && Math.abs(box.width - expectedScene.width) <= 1
+      && Math.abs(box.height - expectedScene.height) <= 1
+      && style.objectFit === "fill"
+      && style.objectPosition === "50% 50%";
+  }), sceneBox)).toBe(true);
+  await expectImagesDecodedWithoutStretch(liveStage.locator("img"));
+  return sceneBox;
+}
+
 async function expectLandmarkCoverage(
   landmarks: Locator,
   frame: { x: number; y: number; width: number; height: number },
@@ -172,25 +221,6 @@ for (const device of devices) {
     if (!frameBox) throw new Error("guide content frame has no layout box");
     expect(frameBox.width).toBeCloseTo(Math.min(device.width, 750), 0);
     expect(frameBox.x).toBeCloseTo((device.width - frameBox.width) / 2, 0);
-    const fullCanvasLayers = page.locator([
-      ".brand-guide-arch",
-      ".brand-guide-paper",
-      ".brand-guide-character",
-      ".brand-guide-foreground-top",
-      ".brand-guide-fallback",
-    ].join(", "));
-    // Only the 750x1625 portrait-standard canvas is intentionally stretched
-    // to the responsive 6:13 scene. Compact and landscape use cropped,
-    // aspect-preserving component layers, so requiring object-fit: fill there
-    // would reject the current responsive-touch-v3 composition.
-    if (profile === "portrait-standard") {
-      await expect.poll(async () => fullCanvasLayers.evaluateAll(
-        (elements) => elements.length > 0 && elements.every((element) => {
-          const style = window.getComputedStyle(element);
-          return element.isConnected && style.objectFit === "fill" && style.objectPosition === "50% 50%";
-        }),
-      )).toBe(true);
-    }
     await expect(guideStage).toHaveAttribute("data-destination-state", "ready");
     const destinationImage = page.locator(".brand-guide-destination-image");
     await expect.poll(async () => destinationImage.evaluate((element) => {
@@ -198,31 +228,9 @@ for (const device of devices) {
     })).toBe(true);
     await expectImagesDecodedWithoutStretch(destinationImage);
 
-    if (profile === "portrait-standard") {
-      const portraitScene = page.locator(".brand-guide-portrait-scene");
-      await expect(portraitScene).toBeVisible();
-      await expect(portraitScene).not.toHaveClass(/is-compact-fallback/);
-      await expect(page.locator(".guide-compact-portrait-composition, .guide-landscape-composition")).toHaveCount(0);
+    if (profile === "portrait-standard" || profile === "portrait-compact") {
       await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
-      const portraitBox = await portraitScene.boundingBox();
-      expect(portraitBox).not.toBeNull();
-      if (!portraitBox) throw new Error("portrait coordinate stage has no layout box");
-      expect(portraitBox.width / portraitBox.height).toBeCloseTo(6 / 13, 3);
-      expect(portraitBox.x + portraitBox.width / 2).toBeCloseTo(frameBox.x + frameBox.width / 2, 0);
-      expect(portraitBox.y + portraitBox.height / 2).toBeCloseTo(frameBox.y + frameBox.height / 2, 0);
-      expect(portraitBox.width / frameBox.width).toBeGreaterThanOrEqual(.94);
-      expect(portraitBox.height / frameBox.height).toBeGreaterThanOrEqual(.94);
-      await expectImagesDecodedWithoutStretch(page.locator(".brand-guide-live-stage img"));
-    } else if (profile === "portrait-compact") {
-      const portraitScene = page.locator(".brand-guide-portrait-scene.is-compact-fallback");
-      const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
-      await expect(portraitScene).toBeVisible();
-      await expect(composition).toBeVisible();
-      await expect(page.locator(".guide-landscape-composition")).toHaveCount(0);
-      const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
-      await expect(landmarks).toHaveCount(4);
-      await expectLandmarkCoverage(landmarks, frameBox, .9, .82);
-      await expectImagesDecodedWithoutStretch(composition.locator("img"));
+      await expectSharedPortraitScene(page, frameBox);
     } else {
       const composition = page.locator(".brand-guide-artwork > .guide-landscape-composition");
       await expect(composition).toBeVisible();
@@ -360,35 +368,40 @@ test("guide handoff reuses the predecoded route buffer until homepage artwork is
 });
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }]) {
-  test(`short portrait route snapshot keeps the compact composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`short portrait route snapshot keeps the shared 6:13 canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".brand-guide")).toHaveAttribute("data-guide-profile", "portrait-compact");
     const enter = page.getByRole("button", { name: "进入档案" });
     await expect(enter).toBeEnabled({ timeout: 10000 });
     const buffer = await expectPrimedGuideBuffer(page, "portrait-compact");
-    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot.is-compact");
-    await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveCount(0);
-    const composition = snapshot.locator(".guide-compact-portrait-composition");
-    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
-    await expect(landmarks).toHaveCount(4);
+    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot");
+    const snapshotImage = snapshot.locator(".h5-guide-route-portrait-snapshot");
+    await expect(snapshotImage).toHaveCount(1);
+    await expect(snapshot.locator(".guide-compact-portrait-composition")).toHaveCount(0);
 
-    // Measure the decoded prime before commit. Sampling snapshotBox and its
-    // landmarks after click was racy because the 520ms parent transform kept
-    // moving between the two Playwright calls.
+    // Measure the decoded prime before commit. Both portrait profiles reuse
+    // the exact 750x1625 reference plane and contain it as a centered 6:13
+    // canvas, so the handoff cannot jump to a separately cropped composition.
     const snapshotBox = await snapshot.boundingBox();
     expect(snapshotBox).not.toBeNull();
-    if (!snapshotBox) throw new Error("compact route snapshot has no layout box");
-    expect(snapshotBox.x).toBeCloseTo((viewport.width - Math.min(viewport.width, 750)) / 2, 0);
-    expect(snapshotBox.y).toBeCloseTo(0, 0);
-    expect(snapshotBox?.width).toBeCloseTo(viewport.width, 0);
-    expect(snapshotBox?.height).toBeCloseTo(viewport.height, 0);
-    await expectLandmarkCoverage(landmarks, snapshotBox, .9, .82);
-    await expectImagesDecodedWithoutStretch(composition.locator("img"));
+    if (!snapshotBox) throw new Error("portrait route snapshot has no layout box");
+    expect(snapshotBox.width / snapshotBox.height).toBeCloseTo(6 / 13, 3);
+    expect(snapshotBox.x + snapshotBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
+    expect(snapshotBox.y + snapshotBox.height / 2).toBeCloseTo(viewport.height / 2, 0);
+    expect(snapshotBox.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(snapshotBox.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(Math.max(snapshotBox.width / viewport.width, snapshotBox.height / viewport.height)).toBeGreaterThanOrEqual(.99);
+    await expect.poll(async () => snapshotImage.evaluate((element) => element instanceof HTMLImageElement
+      && element.complete
+      && element.naturalWidth === 750
+      && element.naturalHeight === 1625
+      && getComputedStyle(element).objectFit === "fill")).toBe(true);
+    await expectImagesDecodedWithoutStretch(snapshotImage);
 
     // Reveal the already primed tree and seek the real CSS transitions. Both
-    // full-viewport panels must overlap at every acceptance frame; the compact
-    // character and envelope remain visible while the destination takes over.
+    // full-viewport panels must overlap at every acceptance frame; the shared
+    // portrait snapshot remains painted while the destination takes over.
     await buffer.evaluate((element) => {
       element.classList.remove("is-preparing");
       void element.getBoundingClientRect();
@@ -399,8 +412,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
       const metrics = await buffer.evaluate((element, value) => {
         const guidePanel = element.querySelector<HTMLElement>(".h5-guide-route-guide-panel")!;
         const destinationPanel = element.querySelector<HTMLElement>(".h5-guide-route-destination-panel")!;
-        const character = element.querySelector<HTMLElement>(".guide-compact-character")!;
-        const envelope = element.querySelector<HTMLElement>(".guide-compact-envelope")!;
+        const portraitSnapshot = element.querySelector<HTMLElement>(".h5-guide-route-portrait-snapshot")!;
         const seek = (panel: HTMLElement) => {
           for (const animation of panel.getAnimations()) {
             animation.pause();
@@ -423,15 +435,13 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
           guideOpacity: Number(getComputedStyle(guidePanel).opacity),
           destinationOpacity: Number(getComputedStyle(destinationPanel).opacity),
           overlap: Math.max(0, Math.min(guideBox.bottom, destinationBox.bottom) - Math.max(guideBox.top, destinationBox.top)),
-          characterVisibleRatio: visibleRatio(character),
-          envelopeVisibleRatio: visibleRatio(envelope),
+          snapshotVisibleRatio: visibleRatio(portraitSnapshot),
           destinationDecoded: Boolean(destination?.complete && destination.naturalWidth > 0),
         };
       }, progress);
       expect(metrics.guideOpacity + metrics.destinationOpacity).toBeGreaterThanOrEqual(.99);
       expect(metrics.overlap / viewport.height).toBeGreaterThanOrEqual(.73);
-      expect(metrics.characterVisibleRatio).toBeGreaterThanOrEqual(.78);
-      expect(metrics.envelopeVisibleRatio).toBeGreaterThanOrEqual(.94);
+      expect(metrics.snapshotVisibleRatio).toBeGreaterThanOrEqual(.7);
       expect(metrics.destinationDecoded).toBe(true);
       await page.screenshot({ path: `artifacts/portrait-route-snapshot-${viewport.width}x${viewport.height}-${Math.round(progress * 100).toString().padStart(3, "0")}.png` });
     }
@@ -440,50 +450,41 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
 }
 
 for (const viewport of [{ width: 408, height: 740 }, { width: 408, height: 805 }]) {
-  test(`real-device portrait uses the compact composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`real-device compact portrait uses the shared reference canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
     const root = page.locator(".brand-guide");
     const stage = page.locator(".brand-guide-stage");
     await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
     await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
-    const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
-    await expect(composition).toBeVisible();
-    const [frameBox, fallbackBox] = await Promise.all([
-      page.locator(".brand-guide-artwork").boundingBox(),
-      page.locator(".brand-guide-portrait-scene.is-compact-fallback").boundingBox(),
-    ]);
+    const frameBox = await page.locator(".brand-guide-artwork").boundingBox();
     expect(frameBox).not.toBeNull();
-    expect(fallbackBox).not.toBeNull();
-    if (!frameBox || !fallbackBox) throw new Error("compact guide frame has no layout box");
-    expect(fallbackBox.x).toBeCloseTo(frameBox.x, 0);
-    expect(fallbackBox.width).toBeCloseTo(frameBox.width, 0);
-    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
-    await expectLandmarkCoverage(landmarks, frameBox, .9, .82);
-    await expectImagesDecodedWithoutStretch(composition.locator("img"));
+    if (!frameBox) throw new Error("compact guide frame has no layout box");
+    await expectSharedPortraitScene(page, frameBox);
     await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
     await expectNoHorizontalOverflow(page, viewport.width);
   });
 }
 
-test("mobile browser toolbar height change keeps the selected compact profile and subject ratios", async ({ page }) => {
+test("mobile browser toolbar height change keeps the selected compact profile and shared 6:13 plane", async ({ page }) => {
   await page.setViewportSize({ width: 408, height: 740 });
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const root = page.locator(".brand-guide");
   const stage = page.locator(".brand-guide-stage");
   await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
   await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
-  const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
-  const character = composition.locator(".guide-compact-character");
-  const before = await character.boundingBox();
+  const scene = page.locator(".brand-guide-portrait-scene");
+  const before = await scene.boundingBox();
   expect(before).not.toBeNull();
 
   await page.setViewportSize({ width: 408, height: 805 });
   await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
-  const after = await character.boundingBox();
+  const after = await scene.boundingBox();
   expect(after).not.toBeNull();
-  expect((after?.width ?? 0) / Math.max(1, after?.height ?? 1)).toBeCloseTo((before?.width ?? 0) / Math.max(1, before?.height ?? 1), 3);
-  await expectImagesDecodedWithoutStretch(composition.locator("img"));
+  expect((before?.width ?? 0) / Math.max(1, before?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+  expect((after?.width ?? 0) / Math.max(1, after?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+  await expectImagesDecodedWithoutStretch(scene.locator(".brand-guide-live-stage img"));
+  await expect(page.locator(".guide-compact-portrait-composition, .brand-guide-portrait-scene.is-compact-fallback")).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 408);
 });
 
@@ -501,17 +502,10 @@ for (const viewport of [
     await expect(page.locator(".brand-guide")).toHaveAttribute("data-guide-profile", profile);
     const stage = page.locator(".brand-guide-stage");
     await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
-    if (profile === "portrait-standard") {
-      const scene = page.locator(".brand-guide-portrait-scene");
-      const sceneBox = await scene.boundingBox();
-      expect(sceneBox).not.toBeNull();
-      expect((sceneBox?.width ?? 0) / Math.max(1, sceneBox?.height ?? 1)).toBeCloseTo(6 / 13, 3);
-      await expectImagesDecodedWithoutStretch(page.locator(".brand-guide-live-stage img"));
-    } else {
-      const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
-      await expect(composition).toBeVisible();
-      await expectImagesDecodedWithoutStretch(composition.locator("img"));
-    }
+    const frameBox = await page.locator(".brand-guide-artwork").boundingBox();
+    expect(frameBox).not.toBeNull();
+    if (!frameBox) throw new Error("portrait visual-contract frame has no layout box");
+    await expectSharedPortraitScene(page, frameBox);
     await expectNoHorizontalOverflow(page, viewport.width);
     await page.screenshot({ path: `artifacts/design-qa/guide-visual-contract-${viewport.width}x${viewport.height}.png`, animations: "disabled" });
   });

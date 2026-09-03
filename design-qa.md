@@ -2,62 +2,46 @@
 
 ## Comparison target
 
-- Source visual truth: user-supplied `codex-clipboard-f888d6d1-ceba-47ce-957e-d162d0a1ca53.jpg` attachment (local reference, not committed).
-- Source dimensions: 2000×4333 pixels.
-- Implementation route: `/go` in the optimized local production build.
-- Primary implementation capture: `artifacts/design-qa/guide-responsive-v2/375x812-initial.png`.
-- Implementation dimensions: 1125×2436 pixels from a 375×812 CSS viewport at device scale factor 3.
-- Density normalization: the source was resized to the same 1125×2436 comparison canvas before judging; browser chrome and device framing were excluded.
-- State: decoded initial guide, motion paused for capture. Additional evidence covers cold cache, failed image decoding, and 0/25/50/75/100 handoff progress.
+- Source visual truth: user-supplied `C:/Users/bu/AppData/Local/Temp/codex-clipboard-223bb4ab-5934-4e9b-9464-e5212e8c160d.jpg` (local reference only; not committed).
+- Source dimensions: 2000×4333 pixels, normalized to the repository's 750×1625 guide coordinate plane (the same 6:13 ratio).
+- Implementation route: `http://127.0.0.1:3420/go` from the optimized local production build.
+- Implementation capture: Codex in-app browser visual capture of `/go`; browser/device chrome excluded from comparison.
+- States inspected: decoded guide at rest, the guide-to-home click handoff, and the settled `/reports` page.
 
-## Evidence
+## Evidence and findings
 
-- Full-view same-canvas comparison: `artifacts/design-qa/guide-reference-vs-375x812.png`.
-- Focused logo/character comparison: `artifacts/design-qa/guide-reference-vs-375x812-top.png`.
-- Focused report/envelope comparison: `artifacts/design-qa/guide-reference-vs-375x812-envelope.png`.
-- Short portrait captures: `artifacts/design-qa/guide-responsive-v2/320x568-initial.png` and `440x820-initial.png`.
-- Landscape captures: `artifacts/design-qa/guide-responsive-v2/667x375-initial.png`, `844x390-initial.png`, and `956x440-initial.png`.
-- Handoff frames: `artifacts/design-qa/guide-responsive-v2/375x812-progress-000.png`, `375x812-progress-025.png`, `375x812-progress-050.png`, `375x812-progress-075.png`, and `375x812-progress-100.png`.
-- Cold-cache fallback: `artifacts/design-qa/guide-responsive-v2/375x812-cold-cache-fallback.png`.
-- Compact route handoff: `artifacts/design-qa/guide-responsive-v2/320x568-handoff.png` and `440x820-handoff.png`.
-
-## Findings
-
-- No actionable P0/P1/P2 visual mismatch remains in the requested scope.
-- Fonts and typography: the brand logo, Chinese brand name, report lettering, arrow, and instruction remain source raster artwork; no substitute font, HTML recreation, reflow, or missing copy was introduced.
-- Spacing and layout rhythm: 375×812 preserves the source 6:13 coordinate system. Short portraits use the same semantic assets with explicit compact placement so logo, character, envelope, heart, arrow, and instruction remain visible without side seams, bottom gaps, or horizontal overflow. Landscape uses a dedicated composition rather than narrowing or stretching the portrait canvas.
-- Colors and tokens: the original yellow paper palette and dark-brown instruction treatment are retained. The runtime texture appears slightly stronger than the compressed JPEG reference in some regions; this is a P3 tonal variance and does not change hierarchy, legibility, or brand color family.
-- Image quality and asset fidelity: all visible artwork comes from the supplied repository assets or semantic crops of those assets. Natural image ratios are preserved; no whole-page `contain`, non-proportional full-canvas stretch, CSS drawing, placeholder, or invented illustration is used. The decoded fallback remains visible until every required live layer is ready, and remains on any resource failure.
-- Copy and content: visible copy matches the approved source. No navigation button or unrelated page copy was added.
-- Interaction: gesture progress directly controls overlapping guide/archive `translate` and `opacity`. Every 0/25/50/75/100 frame retains visible subject matter; cold cache and decode failure do not expose a white or texture-only frame.
-- Hierarchy: `/go` is replaced by `/reports`; archive→category→report entries carry verified canonical-parent metadata. System Back and right-swipe resolve to the same parent hierarchy, while a direct deep link replaces itself with its canonical parent instead of trusting unrelated visit history. No visible back button was added.
+- The reference and implementation were judged as the same full-frame composition, with particular attention to the logo, loose papers, character, report envelope, heart, arrow, and bottom instruction.
+- Both portrait layout profiles now use the same centered 750×1625 scene. Runtime measurement showed a 750×1625 scene with zero horizontal document overflow; every full-canvas layer reported a 750×1625 natural size and the same rendered bounds.
+- The prior compact-only crop layout is no longer mounted. It had independently repositioned the character and envelope, which caused the visible mismatch and a geometry jump during route handoff.
+- Typography and copy remain original raster artwork. No substitute type, HTML reconstruction, crop, or invented graphic was introduced.
+- Color and texture remain the repository's original guide assets. Images are proportionally contained as one 6:13 canvas rather than stretched to fill a non-matching viewport.
+- The live guide layers and the predecoded route snapshot now share the same coordinate plane, so the transition does not switch to a differently positioned composition.
+- The right-side loose paper animation now finishes at its registered source coordinate (`translate3d(0,0,0)`), avoiding a second position jump when animation ends.
+- The click handoff reached `/reports`, settled with the continuity buffer removed, had zero horizontal overflow, and produced no browser warning/error logs. No white or texture-only frame was observed in the in-app browser walk-through.
 
 ## Comparison history
 
-1. Earlier implementation: one long portrait canvas was scaled to every viewport. This visibly widened the artwork on short screens, collapsed landscape into a narrow strip, and allowed an undecoded transition layer to expose texture/white frames.
-   - Fix: split rendering into standard portrait, compact portrait, and landscape semantic compositions; preserve the 6:13 coordinate system only where it fits; predecode the exact route buffer; keep a complete fallback until all required layers decode.
-   - Post-fix evidence: the seven initial viewport captures, cold-cache capture, and five handoff progress frames listed above.
-2. First compact handoff QA: the hidden preloaded route snapshot could be sampled while its 520 ms release animation was already moving, making a stale test frame look partially clipped.
-   - Fix: verification now checks the decoded 0% primed geometry first, then atomically seeks the real CSS transition to 0/25/50/75/100 and measures overlap, opacity continuity, landmark visibility, and decoded destination state.
-   - Post-fix evidence: `320x568-handoff.png`, `440x820-handoff.png`, and the compact handoff progress screenshots under `artifacts/`.
-3. Hierarchy return QA: repeated production runs exposed a race where category unmount cleanup could overwrite a just-saved scroll position with zero.
-   - Fix: report navigation is marked before route change, so readiness remounts may persist scroll on the same category but route-exit cleanup cannot overwrite the saved reading position.
-   - Post-fix evidence: repeated hierarchy E2E covers both platform Back and right-swipe return.
+1. Pre-fix compact portrait: logo, character, envelope, and instruction were separate crops with viewport-relative positions. Against the supplied 6:13 reference, the character and envelope were visibly too high and the envelope covered the character at the wrong layer.
+2. First fix: removed the compact crop composition and reused the original full-canvas semantic layers for both portrait profiles.
+3. Handoff fix: replaced the compact route crop snapshot with the same 750×1625 static portrait snapshot and made the right paper animation end at its source coordinate.
+4. Post-fix check: the implementation visually follows the supplied full-frame reference, keeps all layers registered to one canvas, and remains centered without distortion or horizontal overflow.
 
-## Open questions
+## Responsive contract
 
-- No separate authored compact-portrait or landscape mock was supplied. Those breakpoints preserve and rearrange the existing semantic artwork rather than inventing new material; final brand-art-direction approval can be treated as a P3 follow-up.
+- Reference canvas: 750×1625 (6:13).
+- Portrait sizing: `width: min(100cqw, 46.153846cqh)` with `aspect-ratio: 6 / 13`, centered on both axes.
+- Wider or shorter portrait viewports may show narrow background-texture gutters. This preserves the complete original artwork and prevents the layer displacement caused by stretching/cropping.
+- Landscape retains its existing dedicated semantic composition; this change does not invent a new landscape layout.
 
 ## Verification
 
-- Target sizes: 320×568, 375×812, 393×852, 440×820, 667×375, 844×390, and 956×440.
-- Additional mobile matrix: 14 portrait/landscape device sizes, including 408×740→408×805 browser-toolbar resizing.
-- Handoff checkpoints: 0%, 25%, 50%, 75%, and 100%.
-- Failure states: cold cache, delayed decode, individual guide-layer failure, destination preview failure, and static design-resource 4xx/5xx monitoring.
-- Primary interactions: upward drag, click entry, archive→category→report, platform Back, right-swipe, deep-link fallback, and category reading-position restoration.
-- Browser runtime errors and failed design responses were asserted in Playwright.
-- Production browser matrix: 46/46 passed. The category reading-position case additionally passed 10/10 serial repetitions covering both platform Back and report right-swipe Back.
-- Required code gates passed: `pnpm lint`, `pnpm typecheck`, `pnpm test` (27 files, 170 tests), `pnpm prisma:validate`, and `pnpm build`.
-- No push or deployment was performed.
+- Automated unit coverage checks shared portrait-layer rendering, route-snapshot continuity, removal of compact-only DOM/CSS, source-layer dimensions, and the zero-offset animation endpoint.
+- Browser walk-through: `/go` decoded and became swipe-ready; click entry reached `/reports`; the continuity buffer and route-entry attribute cleaned up after settling; browser warnings/errors: none.
+- `pnpm lint`: passed.
+- `pnpm typecheck`: passed.
+- `pnpm test`: 35 files, 207 tests passed.
+- `pnpm prisma:validate`: passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
 
 final result: passed

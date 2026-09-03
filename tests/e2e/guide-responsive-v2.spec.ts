@@ -72,29 +72,17 @@ for (const viewport of portraitViewports) {
     await expectNoViewportOverflow(page, viewport.width);
     await expectVisibleImagesDecodedWithoutStretch(page);
 
-    if (viewport.profile === "portrait-standard") {
-      const scene = page.locator(".brand-guide-portrait-scene");
-      const box = await scene.boundingBox();
-      expect(box).not.toBeNull();
-      expect((box?.width ?? 0) / Math.max(1, box?.height ?? 1)).toBeCloseTo(6 / 13, 3);
-      await expect(page.locator(".guide-compact-portrait-composition")).toHaveCount(0);
-    } else {
-      const compact = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
-      await expect(compact).toBeVisible();
-      const landmarks = compact.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
-      await expect(landmarks).toHaveCount(4);
-      const union = await landmarks.evaluateAll((elements) => {
-        const boxes = elements.map((element) => element.getBoundingClientRect());
-        return {
-          left: Math.min(...boxes.map((box) => box.left)),
-          top: Math.min(...boxes.map((box) => box.top)),
-          right: Math.max(...boxes.map((box) => box.right)),
-          bottom: Math.max(...boxes.map((box) => box.bottom)),
-        };
-      });
-      expect((union.right - union.left) / viewport.width).toBeGreaterThan(.92);
-      expect((union.bottom - union.top) / viewport.height).toBeGreaterThan(.84);
-    }
+    const scene = page.locator(".brand-guide-portrait-scene");
+    await expect(scene).toBeVisible();
+    await expect(scene.locator(".brand-guide-live-stage")).toBeVisible();
+    await expect(scene.locator(".brand-guide-paper")).toHaveCount(4);
+    await expect(scene.locator(".brand-guide-character")).toHaveCount(2);
+    const box = await scene.boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.width ?? 0) / Math.max(1, box?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+    expect(box?.width).toBeCloseTo(Math.min(viewport.width, viewport.height * 6 / 13), 0);
+    expect(box?.height).toBeCloseTo(Math.min(viewport.height, viewport.width * 13 / 6), 0);
+    await expect(page.locator(".guide-compact-portrait-composition")).toHaveCount(0);
 
     await page.screenshot({ path: `${evidenceRoot}/${viewport.width}x${viewport.height}-initial.png` });
     expect(errors).toEqual([]);
@@ -229,13 +217,19 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
     await page.goto("/go", { waitUntil: "domcontentloaded" });
     await waitForGuide(page);
     await page.getByRole("button", { name: "进入档案" }).click({ noWaitAfter: true });
-    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot.is-compact");
+    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot");
     await expect(snapshot).toBeVisible();
+    await expect(snapshot).not.toHaveClass(/is-compact/);
+    await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
     const box = await snapshot.boundingBox();
     expect(box).not.toBeNull();
-    expect(box?.x).toBeCloseTo(0, 0);
-    expect(box?.width).toBeCloseTo(viewport.width, 0);
-    expect(box?.height).toBeCloseTo(viewport.height, 0);
+    const expectedWidth = Math.min(viewport.width, viewport.height * 6 / 13);
+    const expectedHeight = Math.min(viewport.height, viewport.width * 13 / 6);
+    expect((box?.width ?? 0) / Math.max(1, box?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+    expect(box?.x).toBeCloseTo((viewport.width - expectedWidth) / 2, 0);
+    expect(box?.y).toBeCloseTo((viewport.height - expectedHeight) / 2, 0);
+    expect(box?.width).toBeCloseTo(expectedWidth, 0);
+    expect(box?.height).toBeCloseTo(expectedHeight, 0);
     await page.screenshot({ path: `${evidenceRoot}/${viewport.width}x${viewport.height}-handoff.png` });
   });
 }

@@ -507,15 +507,17 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
   });
 
-  it("mounts only the selected compact or landscape composition", async () => {
+  it("keeps compact portrait on the normalized full-canvas layers and mounts landscape separately", async () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 568 });
     const compact = render(<BrandGuide />);
     await waitFor(() => expect(compact.container.querySelector(".brand-guide")).toHaveAttribute("data-guide-profile", "portrait-compact"));
-    expect(compact.container.querySelector(".guide-compact-portrait-composition")).toBeInTheDocument();
-    expect(compact.container.querySelectorAll(".guide-compact-paper")).toHaveLength(4);
-    expect(compact.container.querySelectorAll(".guide-compact-character-layer")).toHaveLength(4);
-    expect(compact.container.querySelector(".brand-guide-live-stage")).not.toBeInTheDocument();
+    expect(compact.container.querySelector(".brand-guide-portrait-scene")).toBeInTheDocument();
+    expect(compact.container.querySelector(".brand-guide-live-stage")).toBeInTheDocument();
+    expect(compact.container.querySelectorAll(".brand-guide-paper")).toHaveLength(4);
+    expect(compact.container.querySelectorAll(".brand-guide-character")).toHaveLength(2);
+    expect(compact.container.querySelector(".brand-guide-entry-hint")).toBeInTheDocument();
+    expect(compact.container.querySelector(".guide-compact-portrait-composition")).not.toBeInTheDocument();
     expect(compact.container.querySelector(".guide-landscape-composition")).not.toBeInTheDocument();
     compact.unmount();
     clearGuideRouteContinuity();

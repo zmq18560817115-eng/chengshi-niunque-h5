@@ -309,7 +309,6 @@ button, a { font: inherit; }
 .brand-guide.is-settling .brand-guide-stage, .brand-guide.is-settling .brand-guide-destination-preview { transition: transform 240ms cubic-bezier(.22,1,.36,1), opacity 220ms ease-out; will-change: transform, opacity; }
 .brand-guide-artwork { container-type: size; position: absolute; z-index: 1; inset-block: 0; left: 50%; width: min(100%,var(--h5-content-width)); overflow: hidden; translate: -50% 0; backface-visibility: hidden; contain: layout paint style; }
 .brand-guide-portrait-scene { position: absolute; z-index: 1; top: 50%; left: 50%; width: min(100cqw,46.153846cqh); aspect-ratio: 6 / 13; overflow: hidden; translate: -50% -50%; }
-.brand-guide-portrait-scene.is-compact-fallback { inset: 0; width: 100%; height: 100%; aspect-ratio: auto; translate: 0 0; }
 .brand-guide-live-stage { position: absolute; z-index: 2; inset: 0; opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide.is-ready .brand-guide-live-stage { opacity: 1; }
 .brand-guide-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
@@ -333,7 +332,6 @@ button, a { font: inherit; }
 .brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom); display: block; width: var(--guide-entry-hint-width); height: auto; translate: -50% 0; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translate3d(0,0,0); }
 .brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint { animation: guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out infinite; will-change: transform; }
 .brand-guide-fallback { z-index: 1; visibility: visible; opacity: 1; transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
-.brand-guide-portrait-scene.is-compact-fallback .brand-guide-fallback { object-fit: cover; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; }
@@ -352,34 +350,6 @@ button, a { font: inherit; }
 .brand-guide.is-motion-disabled .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-paper,
 .brand-guide.is-motion-disabled .brand-guide-character-closed { animation-play-state: paused !important; }
-.guide-compact-portrait-composition { position: absolute; z-index: 3; inset: 0; overflow: hidden; opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
-.brand-guide.is-ready .guide-compact-portrait-composition,
-.brand-guide.is-reduced .guide-compact-portrait-composition,
-.brand-guide.is-motion-disabled .guide-compact-portrait-composition,
-.h5-guide-route-snapshot .guide-compact-portrait-composition { opacity: 1; }
-.brand-guide.is-failed .guide-compact-portrait-composition { visibility: hidden; opacity: 0; }
-.guide-compact-logo, .guide-compact-envelope, .guide-compact-hint, .guide-compact-paper { position: absolute; display: block; height: auto; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.guide-compact-paper { z-index: 5; animation-duration: var(--guide-paper-duration),300ms; animation-timing-function: cubic-bezier(.2,.72,.3,1.04),ease-out; animation-delay: calc(var(--guide-paper-start) + var(--paper-offset,0ms)),calc(var(--guide-paper-start) + var(--paper-offset,0ms)); animation-fill-mode: both,both; }
-.guide-compact-paper-top { --paper-offset: 0ms; top: -2%; right: -1%; width: 56%; animation-name: guide-paper-from-top,guide-paper-fade; }
-.guide-compact-paper-left { --paper-offset: 80ms; top: 12%; left: -2%; width: 25%; animation-name: guide-paper-from-left,guide-paper-fade; }
-.guide-compact-paper-right { --paper-offset: 150ms; top: 23%; right: -2%; width: 33%; animation-name: guide-paper-from-right,guide-paper-fade; }
-.guide-compact-paper-bottom { --paper-offset: 220ms; bottom: -2%; left: -2%; width: 50%; animation-name: guide-paper-from-bottom,guide-paper-fade; }
-.guide-compact-logo { z-index: 35; top: 3%; left: 50%; width: 68%; translate: -50% 0; }
-.guide-compact-character { position: absolute; z-index: 20; top: 14%; left: 50%; width: 102%; aspect-ratio: 750 / 848; translate: -50% 0; }
-.guide-compact-character-layer { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; transform: translate3d(0,0,0); pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.guide-compact-character-closed { opacity: 0; animation: guide-blink-closed var(--guide-blink-duration) ease-in-out var(--guide-blink-start) both; }
-.guide-compact-arch { z-index: 27; }
-.guide-compact-character-overlay { z-index: 35; }
-.guide-compact-envelope { z-index: 36; bottom: 7%; left: 50%; width: 96%; translate: -50% 0; }
-.guide-compact-hint { z-index: 40; bottom: 1.5%; left: 50%; width: 46%; translate: -50% 0; }
-.brand-guide-stage[data-swipe-state="ready"] .guide-compact-hint { animation: guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out infinite; }
-.brand-guide:not(.is-animating) .guide-compact-paper,
-.brand-guide:not(.is-animating) .guide-compact-character-closed { animation-play-state: paused; }
-.brand-guide.is-animating .guide-compact-paper,
-.brand-guide.is-animating .guide-compact-character-closed { will-change: transform,opacity; }
-.h5-guide-route-snapshot .guide-compact-paper,
-.h5-guide-route-snapshot .guide-compact-character-closed,
-.h5-guide-route-snapshot .guide-compact-hint { animation: none; }
 .guide-landscape-composition { position: absolute; inset: 0; display: block; overflow: hidden; background-color: transparent; opacity: 0; transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide.is-ready .guide-landscape-composition,
 .brand-guide.is-reduced .guide-landscape-composition,
@@ -403,7 +373,7 @@ button, a { font: inherit; }
 /* 单曲线平滑落入（保留原起止坐标），去掉多段缓动切换造成的速度突变=卡顿 */
 @keyframes guide-paper-from-top { from { transform: translate3d(-1.1%,-18%,0) rotate(-3.2deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-from-left { from { transform: translate3d(-31%,-1.1%,0) rotate(-3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
-@keyframes guide-paper-from-right { from { transform: translate3d(49.133333%,-2.246154%,0) rotate(3.4deg); } to { transform: translate3d(10.133333%,-1.046154%,0) rotate(0); } }
+@keyframes guide-paper-from-right { from { transform: translate3d(39%,-1.2%,0) rotate(3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-from-bottom { from { transform: translate3d(1.2%,21%,0) rotate(3deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-entry-hint-float { 0%, 100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-4px,0); } }
@@ -437,7 +407,6 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 .h5-guide-route-guide-panel { z-index: 1; background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; opacity: var(--guide-route-start-guide-opacity,1); transform: translate3d(0,var(--guide-route-start-guide-y,0px),0); }
 .h5-guide-route-destination-panel { z-index: 2; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp"); background-position: top center; background-size: cover; opacity: var(--guide-route-start-destination-opacity,0); transform: translate3d(0,var(--guide-route-start-destination-y,26dvh),0); }
 .h5-guide-route-snapshot { container-type: size; position: absolute; top: 50%; left: 50%; display: block; width: min(100cqw,46.153846cqh); aspect-ratio: 6 / 13; overflow: hidden; translate: -50% -50%; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
-.h5-guide-route-snapshot.is-compact { top: 0; right: auto; bottom: 0; left: 50%; width: min(100%,var(--h5-content-width)); height: 100%; aspect-ratio: auto; translate: -50% 0; }
 .h5-guide-route-portrait-snapshot { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; user-select: none; -webkit-user-drag: none; }
 .h5-guide-route-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
 .h5-guide-route-destination-image { position: absolute; top: 0; left: 0; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 6 / 13; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }

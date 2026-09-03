@@ -121,35 +121,6 @@ function createGuideLandscapeComposition() {
   return composition;
 }
 
-function createGuideCompactComposition() {
-  const composition = document.createElement("div");
-  composition.className = "guide-compact-portrait-composition";
-  composition.setAttribute("aria-hidden", "true");
-  const image = (filename: string, className: string) => createTransitionImage(`/design/guide/${filename}`, className);
-  composition.append(
-    image("guide-compact-paper-top.webp", "guide-compact-paper guide-compact-paper-top"),
-    image("guide-compact-paper-left.webp", "guide-compact-paper guide-compact-paper-left"),
-    image("guide-compact-paper-right.webp", "guide-compact-paper guide-compact-paper-right"),
-    image("guide-compact-paper-bottom.webp", "guide-compact-paper guide-compact-paper-bottom"),
-    image("guide-compact-logo.webp", "guide-compact-logo"),
-  );
-  const character = document.createElement("div");
-  character.className = "guide-compact-character";
-  character.dataset.guideLandmark = "character";
-  character.append(
-    image("guide-compact-character-open.webp", "guide-compact-character-layer guide-compact-character-open"),
-    image("guide-compact-character-closed.webp", "guide-compact-character-layer guide-compact-character-closed"),
-    image("guide-compact-arch.webp", "guide-compact-character-layer guide-compact-arch"),
-    image("guide-compact-character-overlay.webp", "guide-compact-character-layer guide-compact-character-overlay"),
-  );
-  composition.append(
-    character,
-    image("guide-compact-envelope.webp", "guide-compact-envelope"),
-    createTransitionImage(guideRouteHintSrc, "guide-compact-hint"),
-  );
-  return composition;
-}
-
 function resolveGuideRouteProfile(profile: GuideRouteProfile): ResolvedGuideRouteProfile {
   return profile === "portrait" ? "portrait-standard" : profile;
 }
@@ -160,12 +131,10 @@ function guideRouteOrientation(profile: ResolvedGuideRouteProfile): GuideRouteOr
 
 function createGuideSnapshot(profile: ResolvedGuideRouteProfile) {
   const snapshot = document.createElement("div");
-  snapshot.className = `h5-guide-route-snapshot${profile === "portrait-compact" ? " is-compact" : ""}`;
+  snapshot.className = "h5-guide-route-snapshot";
   snapshot.setAttribute("aria-hidden", "true");
-  if (profile === "portrait-standard") {
+  if (profile !== "landscape") {
     snapshot.append(createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot"));
-  } else if (profile === "portrait-compact") {
-    snapshot.append(createGuideCompactComposition());
   } else {
     snapshot.append(createGuideLandscapeComposition());
   }

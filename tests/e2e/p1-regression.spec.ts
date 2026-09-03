@@ -240,25 +240,39 @@ async function expectGuideSubjectOccupancy(page: Page) {
     if (!compositionBox) throw new Error("landscape composition has no layout box");
     expect(compositionBox.width).toBeCloseTo(stageBox.width, 0);
     expect(compositionBox.height).toBeCloseTo(stageBox.height, 0);
-  } else if (profile === "portrait-compact") {
-    const composition = artwork.locator(":scope > .guide-compact-portrait-composition");
-    await expect(composition).toBeVisible();
-    await expectDecodedImages(composition, "img", 11);
-    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
-    await expect(landmarks).toHaveCount(4);
-    const occupied = await landmarks.evaluateAll((elements) => {
-      const boxes = elements.map((element) => element.getBoundingClientRect());
-      return {
-        left: Math.min(...boxes.map((box) => box.left)),
-        top: Math.min(...boxes.map((box) => box.top)),
-        right: Math.max(...boxes.map((box) => box.right)),
-        bottom: Math.max(...boxes.map((box) => box.bottom)),
-      };
-    });
-    expect((occupied.right - occupied.left) / stageBox.width).toBeGreaterThanOrEqual(0.92);
-    expect((occupied.bottom - occupied.top) / stageBox.height).toBeGreaterThanOrEqual(0.84);
   } else {
-    expect(profile).toBe("portrait-standard");
+    expect(["portrait-standard", "portrait-compact"]).toContain(profile);
+    const scene = artwork.locator(":scope > .brand-guide-portrait-scene");
+    const liveStage = scene.locator(":scope > .brand-guide-live-stage");
+    const canvasLayers = liveStage.locator(".brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top");
+    await expect(scene).toBeVisible();
+    await expect(scene).not.toHaveClass(/is-compact-fallback/);
+    await expect(artwork.locator(":scope > .guide-compact-portrait-composition")).toHaveCount(0);
+    await expectDecodedImages(liveStage, "img", 9);
+    await expect(canvasLayers).toHaveCount(8);
+    const sceneBox = await scene.boundingBox();
+    expect(sceneBox).not.toBeNull();
+    if (!sceneBox) throw new Error("portrait scene has no layout box");
+    expect(sceneBox.width / sceneBox.height).toBeCloseTo(6 / 13, 3);
+    expect(sceneBox.x + sceneBox.width / 2).toBeCloseTo(stageBox.x + stageBox.width / 2, 0);
+    expect(sceneBox.y + sceneBox.height / 2).toBeCloseTo(stageBox.y + stageBox.height / 2, 0);
+    expect(sceneBox.width).toBeLessThanOrEqual(stageBox.width + 1);
+    expect(sceneBox.height).toBeLessThanOrEqual(stageBox.height + 1);
+    expect(Math.max(sceneBox.width / stageBox.width, sceneBox.height / stageBox.height)).toBeGreaterThanOrEqual(.99);
+    await expect.poll(async () => canvasLayers.evaluateAll((elements, expectedScene) => elements.every((element) => {
+      if (!(element instanceof HTMLImageElement)) return false;
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return element.complete
+        && element.naturalWidth === 750
+        && element.naturalHeight === 1625
+        && Math.abs(box.left - expectedScene.x) <= 1
+        && Math.abs(box.top - expectedScene.y) <= 1
+        && Math.abs(box.width - expectedScene.width) <= 1
+        && Math.abs(box.height - expectedScene.height) <= 1
+        && style.objectFit === "fill"
+        && style.objectPosition === "50% 50%";
+    }), sceneBox)).toBe(true);
     const character = artwork.locator(".brand-guide-character-open");
     const envelope = artwork.locator(".brand-guide-paper-bottom");
     await expect(character).toBeAttached();
@@ -278,9 +292,7 @@ async function expectGuideSubjectOccupancy(page: Page) {
 
   const hintSelector = profile === "landscape"
     ? ":scope > .guide-landscape-composition .guide-landscape-hint"
-    : profile === "portrait-compact"
-      ? ":scope > .guide-compact-portrait-composition .guide-compact-hint"
-      : ".brand-guide-entry-hint";
+    : ".brand-guide-entry-hint";
   const hint = artwork.locator(hintSelector);
   await expect(hint).toBeVisible();
   const hintBox = await hint.boundingBox();
@@ -327,9 +339,7 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     // regression being guarded was a fully painted frame whose only visible
     // pixels were the two paper textures while both page subjects vanished.
     const profile = root.dataset.guideProfile;
-    const guideSubjectSelectors = profile === "portrait-compact"
-      ? [".brand-guide-artwork > .guide-compact-portrait-composition"]
-      : profile === "landscape"
+    const guideSubjectSelectors = profile === "landscape"
         ? [".brand-guide-artwork > .guide-landscape-composition"]
         : [".brand-guide-artwork .brand-guide-character-open", ".brand-guide-artwork .brand-guide-paper-bottom"];
     const subjectElements = [
@@ -393,7 +403,6 @@ async function startHandoffCoverageProbe(page: Page) {
       const candidates = [
         ".brand-guide-artwork .brand-guide-character-open",
         ".brand-guide-artwork .brand-guide-paper-bottom",
-        ".brand-guide-artwork > .guide-compact-portrait-composition",
         ".brand-guide-fallback",
         ".brand-guide-artwork > .guide-landscape-composition",
         ".brand-guide-destination-image",
@@ -499,9 +508,31 @@ for (const viewport of targetViewports) {
     await dispatchSingleTouch(root, "touchend", startX, 0);
     const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
     await expect(routeBuffer).toBeVisible({ timeout: 5_000 });
-    await expect(routeBuffer).toHaveAttribute("data-guide-profile", await root.getAttribute("data-guide-profile") ?? "portrait-standard");
+    const routeProfile = await root.getAttribute("data-guide-profile") ?? "portrait-standard";
+    await expect(routeBuffer).toHaveAttribute("data-guide-profile", routeProfile);
     await expect(routeBuffer).toHaveAttribute("data-commit-state", /^(prepared|committing)$/);
     await expectDecodedImages(routeBuffer, "img", 2);
+    if (routeProfile === "portrait-standard" || routeProfile === "portrait-compact") {
+      const routeSnapshot = routeBuffer.locator(".h5-guide-route-snapshot");
+      const routeSnapshotImage = routeSnapshot.locator(".h5-guide-route-portrait-snapshot");
+      await expect(routeSnapshotImage).toHaveCount(1);
+      await expect(routeSnapshot.locator(".guide-compact-portrait-composition")).toHaveCount(0);
+      const routeSnapshotBox = await routeSnapshot.boundingBox();
+      expect(routeSnapshotBox).not.toBeNull();
+      if (!routeSnapshotBox) throw new Error("portrait route snapshot has no layout box");
+      expect(routeSnapshotBox.width / routeSnapshotBox.height).toBeCloseTo(6 / 13, 3);
+      expect(routeSnapshotBox.x + routeSnapshotBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
+      expect(routeSnapshotBox.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(routeSnapshotBox.height).toBeLessThanOrEqual(viewport.height + 1);
+      expect(Math.max(routeSnapshotBox.width / viewport.width, routeSnapshotBox.height / viewport.height)).toBeGreaterThanOrEqual(.99);
+      await expect.poll(async () => routeSnapshotImage.evaluate((element) => element instanceof HTMLImageElement
+        && element.complete
+        && element.naturalWidth === 750
+        && element.naturalHeight === 1625
+        && getComputedStyle(element).objectFit === "fill")).toBe(true);
+    } else {
+      await expect(routeBuffer.locator(".h5-guide-route-portrait-snapshot")).toHaveCount(0);
+    }
     await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toHaveAttribute("data-decode-state", "ready");
     const routeDestinationBox = await routeBuffer.locator(".h5-guide-route-destination-image").boundingBox();
     expect(routeDestinationBox).not.toBeNull();

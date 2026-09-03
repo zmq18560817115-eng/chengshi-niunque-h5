@@ -44,11 +44,6 @@ const standardLayerNames = [
   "guide-foreground-top.webp",
 ] as const;
 const standardReadyKeys = [...standardLayerNames, "standard-hint"] as const;
-const compactReadyKeys = [
-  "compact-paper-top", "compact-paper-left", "compact-paper-right", "compact-paper-bottom",
-  "compact-logo", "compact-arch", "compact-character-open", "compact-character-closed",
-  "compact-character-overlay", "compact-envelope", "compact-hint",
-] as const;
 const landscapeReadyKeys = [
   "landscape-logo", "landscape-character-arch", "landscape-character-open",
   "landscape-character-foreground", "landscape-envelope", "landscape-hint",
@@ -83,27 +78,8 @@ function GuideLayers({ onReady, onError }: { onReady: (key: string) => void; onE
   </div>;
 }
 
-function GuideEntryHint({ readyKey = "standard-hint", compact = false, onReady, onError }: { readyKey?: string; compact?: boolean; onReady: (key: string) => void; onError: (name: string) => void }) {
-  return <Image className={compact ? "guide-compact-hint" : "brand-guide-entry-hint"} src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes={compact ? "46vw" : "(max-width: 750px) 43.4vw, 326px"} priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, readyKey, onReady, onError)} onError={() => onError("swipe-up-hint-v2.png")}/>;
-}
-
-function GuideCompactPortraitComposition({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
-  const image = (filename: string, key: string, className: string, width: number, height: number) => <Image key={key} className={className} src={assetUrl(filename)} alt="" aria-hidden="true" width={width} height={height} sizes="100vw" priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, key, onReady, onError)} onError={() => onError(filename)}/>;
-  return <div className="guide-compact-portrait-composition" aria-hidden="true" data-guide-profile="portrait-compact">
-    {image("guide-compact-paper-top.webp", "compact-paper-top", "guide-compact-paper guide-compact-paper-top", 416, 227)}
-    {image("guide-compact-paper-left.webp", "compact-paper-left", "guide-compact-paper guide-compact-paper-left", 184, 346)}
-    {image("guide-compact-paper-right.webp", "compact-paper-right", "guide-compact-paper guide-compact-paper-right", 244, 410)}
-    {image("guide-compact-paper-bottom.webp", "compact-paper-bottom", "guide-compact-paper guide-compact-paper-bottom", 378, 246)}
-    {image("guide-compact-logo.webp", "compact-logo", "guide-compact-logo", 489, 152)}
-    <div className="guide-compact-character" data-guide-landmark="character">
-      {image("guide-compact-character-open.webp", "compact-character-open", "guide-compact-character-layer guide-compact-character-open", 750, 848)}
-      {image("guide-compact-character-closed.webp", "compact-character-closed", "guide-compact-character-layer guide-compact-character-closed", 750, 848)}
-      {image("guide-compact-arch.webp", "compact-arch", "guide-compact-character-layer guide-compact-arch", 750, 848)}
-      {image("guide-compact-character-overlay.webp", "compact-character-overlay", "guide-compact-character-layer guide-compact-character-overlay", 750, 848)}
-    </div>
-    {image("guide-compact-envelope.webp", "compact-envelope", "guide-compact-envelope", 692, 609)}
-    <GuideEntryHint readyKey="compact-hint" compact onReady={onReady} onError={onError}/>
-  </div>;
+function GuideEntryHint({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
+  return <Image className="brand-guide-entry-hint" src={assetUrl("swipe-up-hint-v2.png")} alt="" aria-hidden="true" width={868} height={260} sizes="(max-width: 750px) 43.4vw, 326px" priority unoptimized decoding="async" onLoad={(event) => markImageDecoded(event.currentTarget, "standard-hint", onReady, onError)} onError={() => onError("swipe-up-hint-v2.png")}/>;
 }
 
 function GuideLandscapeCrop({ name, src, readyKey, onReady, onError }: { name: "logo" | "envelope"; src: string; readyKey: string; onReady: (key: string) => void; onError: (name: string) => void }) {
@@ -185,8 +161,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const transitionSwipeReady = swipeReady && destinationUsable && continuityReady;
   const transitionGestureReady = gestureReady && destinationUsable && continuityReady;
   const requiredReadyKeys = useMemo<readonly string[]>(() => {
-    if (layoutProfile === "portrait-standard") return standardReadyKeys;
-    if (layoutProfile === "portrait-compact") return compactReadyKeys;
+    if (layoutProfile === "portrait-standard" || layoutProfile === "portrait-compact") return standardReadyKeys;
     if (layoutProfile === "landscape") return landscapeReadyKeys;
     return [];
   }, [layoutProfile]);
@@ -471,7 +446,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setDestinationStatus("fallback");
   }, []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
-  const mountLivePortrait = layoutProfile === "portrait-standard" && motionEnabled && motionPreference === "allowed";
+  const mountLivePortrait = layoutProfile !== "landscape" && layoutProfile !== "unknown" && motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
     "--guide-blink-duration": `${h5MotionTiming.guide.blinkDurationMs}ms`,
@@ -536,14 +511,13 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       <section className="brand-guide-stage" style={motionStyle} aria-label="品牌引导页" data-load-state={assetStatus} data-animation-state={motionEnabled ? (animationStarted ? "running" : "paused") : "disabled"} data-swipe-state={transitionSwipeReady ? "ready" : "locked"} data-gesture-state={transitionGestureReady ? "ready" : "locked"} data-destination-state={destinationStatus} data-swipe-distance-px={GUIDE_SWIPE_DISTANCE_PX} data-swipe-commit-progress={GUIDE_SWIPE_COMMIT_PROGRESS} data-blink-start-ms={h5MotionTiming.guide.blinkStartMs} data-blink-hold-ms={h5MotionTiming.guide.blinkHoldMs} data-blink-duration-ms={h5MotionTiming.guide.blinkDurationMs} data-paper-start-ms={h5MotionTiming.guide.paperStartMs} data-paper-duration-ms={h5MotionTiming.guide.paperDurationMs} data-swipe-ready-ms={h5MotionTiming.guide.swipeReadyMs}>
         <div className="brand-guide-artwork" data-guide-layout={layoutProfile}>
           {layoutProfile !== "landscape" && <>
-            <div className={`brand-guide-portrait-scene ${layoutProfile === "portrait-compact" ? "is-compact-fallback" : ""}`}>
+            <div className="brand-guide-portrait-scene">
               {fallback}
               {mountLivePortrait && <div className="brand-guide-live-stage">
                 <GuideLayers onReady={handleLayerReady} onError={handleLayerError}/>
                 <GuideEntryHint onReady={handleLayerReady} onError={handleLayerError}/>
               </div>}
             </div>
-            {layoutProfile === "portrait-compact" && <GuideCompactPortraitComposition onReady={handleLayerReady} onError={handleLayerError}/>}
           </>}
           {layoutProfile === "landscape" && <GuideLandscapeComposition onReady={handleLayerReady} onError={handleLayerError}/>}
         </div>
