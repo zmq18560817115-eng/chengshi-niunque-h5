@@ -92,6 +92,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const [fallbackImageMounted, setFallbackImageMounted] = useState(true);
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
   const navigating = useRef(false);
+  const enteredFromGuide = useRef(false);
   const archiveCanvas = useRef<HTMLDivElement | null>(null);
   const artworkFailed = readinessFailed || layerArtworkFailed;
   const artworkComplete = artworkReady && !artworkFailed;
@@ -141,6 +142,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       announceGuideRouteReady();
       return;
     }
+    enteredFromGuide.current = true;
     setGuideEntry(true);
     let revealFrame = 0;
     let paintedFrame = 0;
@@ -260,7 +262,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     "--archive-guide-batch-delay": `${guideArchiveBatchDelayMs}ms`,
   } as CSSProperties;
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || !artworkComplete || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-archive-artwork-ready={artworkComplete ? "true" : "false"} data-archive-artwork-failed={artworkFailed ? "true" : "false"} data-preview={preview || undefined} style={guideEntryStyle}>
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || !artworkComplete || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={enteredFromGuide.current ? (guideEntry ? "reference-staged" : "complete") : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-archive-artwork-ready={artworkComplete ? "true" : "false"} data-archive-artwork-failed={artworkFailed ? "true" : "false"} data-preview={preview || undefined} style={guideEntryStyle}>
     <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their

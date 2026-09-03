@@ -194,7 +194,9 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".brand-guide.is-dragging .brand-guide-stage, .brand-guide.is-dragging .brand-guide-destination-preview { will-change: transform, opacity; }");
     expect(css).toContain(".brand-guide.is-settling .brand-guide-stage, .brand-guide.is-settling .brand-guide-destination-preview { transition: transform 240ms");
     expect(css).toContain(".brand-guide-destination-image");
-    expect(css).toContain('.reports-archive.reports-entry-transition[data-guide-entry="reference-staged"] { animation: none; }');
+    expect(css).toContain(".reports-archive.reports-entry-transition[data-guide-entry] { animation: none; }");
+    expect(reports).toContain("enteredFromGuide.current = true;");
+    expect(reports).toContain('data-guide-entry={enteredFromGuide.current ? (guideEntry ? "reference-staged" : "complete") : undefined}');
     expect(css).toContain("@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-remaining-distance),0); } to { transform: translate3d(0,0,0); } }");
     expect(css).toContain("@keyframes archive-guide-entry-fade { from { opacity: 0; } to { opacity: 1; } }");
     expect(css).toContain('html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-remaining-distance),0);');
@@ -228,7 +230,6 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("}, guideRouteStageDurationMs + 32);");
     expect(reports).toContain('settleSelector=".reports-archive-final"');
     expect(reports).toContain("revealDelayMs={160}");
-    expect(reports).toContain('data-guide-entry={guideEntry ? "reference-staged" : undefined}');
     expect(artwork).toContain("data-guide-entry-stage={layerEntryStage(layer.id)}");
     expect(guideRouteBufferReleaseDurationMs).toBe(520);
     expect(guideArchiveEntryTiming.bookDurationMs).toBe(520);

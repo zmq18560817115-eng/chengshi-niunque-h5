@@ -35,7 +35,7 @@ declare global {
   interface Window {
     __p1HandoffProbe?: {
       running: boolean;
-      samples: Array<{ at: number; coverage: number; active: string[] }>;
+      samples: Array<{ at: number; coverage: number; active: string[]; path: string; routeState: string | null; bufferCount: number }>;
     };
   }
 }
@@ -121,8 +121,8 @@ async function expectNoHorizontalOverflow(page: Page, viewportWidth: number) {
 }
 
 async function expectDecodedImages(root: Locator, selector = "img", minimum = 1) {
-  await expect.poll(async () => root.locator(selector).evaluateAll(async (images) => {
-    if (images.length < minimum) return false;
+  await expect.poll(async () => root.locator(selector).evaluateAll(async (images, imageMinimum) => {
+    if (images.length < imageMinimum) return false;
     const decoded = await Promise.all(images.map(async (node) => {
       if (!(node instanceof HTMLImageElement) || !node.complete || node.naturalWidth <= 0 || node.naturalHeight <= 0) return false;
       if (typeof node.decode === "function") {
@@ -135,7 +135,7 @@ async function expectDecodedImages(root: Locator, selector = "img", minimum = 1)
       return true;
     }));
     return decoded.every(Boolean);
-  }), { timeout: 20_000 }).toBe(true);
+  }, minimum), { timeout: 20_000 }).toBe(true);
 }
 
 async function expectFrameWidth(locator: Locator, viewportWidth: number) {
@@ -225,23 +225,20 @@ async function alphaGeometry(image: Locator, stage: Locator) {
 
 async function expectGuideSubjectOccupancy(page: Page) {
   const stage = page.locator(".brand-guide-stage");
-  const hint = page.locator(".brand-guide-entry-hint").first();
-  await expect(hint).toBeVisible();
-  const [stageBox, hintBox] = await Promise.all([stage.boundingBox(), hint.boundingBox()]);
+  const artwork = page.locator(".brand-guide-artwork");
+  const stageBox = await artwork.boundingBox();
   expect(stageBox).not.toBeNull();
-  expect(hintBox).not.toBeNull();
-  if (!stageBox || !hintBox) throw new Error("guide subject geometry is unavailable");
+  if (!stageBox) throw new Error("guide subject geometry is unavailable");
 
   if (stageBox.width > stageBox.height) {
-    const composition = page.locator(".brand-guide-landscape-composition");
+    const composition = page.locator(".guide-landscape-composition");
     await expect(composition).toBeVisible();
-    await expectDecodedImages(stage, ".brand-guide-landscape-composition", 1);
+    await expectDecodedImages(stage, ".guide-landscape-composition img", 6);
     const compositionBox = await composition.boundingBox();
     expect(compositionBox).not.toBeNull();
     if (!compositionBox) throw new Error("landscape composition has no layout box");
     expect(compositionBox.width).toBeCloseTo(stageBox.width, 0);
     expect(compositionBox.height).toBeCloseTo(stageBox.height, 0);
-    expect(await composition.evaluate((image) => getComputedStyle(image).objectFit)).toBe("cover");
   } else {
     const character = page.locator(".brand-guide-character-open").first();
     const envelope = page.locator(".brand-guide-paper-bottom").first();
@@ -260,6 +257,11 @@ async function expectGuideSubjectOccupancy(page: Page) {
     expect(envelopeGeometry.visibleFraction).toBeGreaterThanOrEqual(0.58);
   }
 
+  const hint = page.locator(stageBox.width > stageBox.height ? ".guide-landscape-hint" : ".brand-guide-entry-hint").first();
+  await expect(hint).toBeVisible();
+  const hintBox = await hint.boundingBox();
+  expect(hintBox).not.toBeNull();
+  if (!hintBox) throw new Error("guide hint geometry is unavailable");
   const hintVisibleWidth = Math.max(0, Math.min(stageBox.x + stageBox.width, hintBox.x + hintBox.width) - Math.max(stageBox.x, hintBox.x));
   const hintVisibleHeight = Math.max(0, Math.min(stageBox.y + stageBox.height, hintBox.y + hintBox.height) - Math.max(stageBox.y, hintBox.y));
   expect((hintVisibleWidth * hintVisibleHeight) / Math.max(1, hintBox.width * hintBox.height)).toBeGreaterThanOrEqual(0.94);
@@ -300,16 +302,17 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     // Texture/background panels deliberately do not count as content. The
     // regression being guarded was a fully painted frame whose only visible
     // pixels were the two paper textures while both page subjects vanished.
-    const subjectImages = [
+    const subjectElements = [
       ".brand-guide-character-open",
       ".brand-guide-paper-bottom",
       ".brand-guide-fallback",
-      ".brand-guide-landscape-composition",
+      ".guide-landscape-composition",
       ".brand-guide-destination-image",
-    ].flatMap((selector) => [...document.querySelectorAll<HTMLImageElement>(selector)]);
-    const subjectCoverage = Math.min(1, subjectImages.reduce((sum, image) => {
-      if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) return sum;
-      return sum + area(image.getBoundingClientRect()) * effectiveOpacity(image);
+    ].flatMap((selector) => [...document.querySelectorAll(selector)]);
+    const subjectCoverage = Math.min(1, subjectElements.reduce((sum, element) => {
+      if (element instanceof HTMLImageElement
+        && (!element.complete || element.naturalWidth <= 0 || element.naturalHeight <= 0)) return sum;
+      return sum + area(element.getBoundingClientRect()) * effectiveOpacity(element);
     }, 0) / viewportArea);
     const overlapWidth = Math.max(0, Math.min(guideRect.right, destinationRect.right) - Math.max(guideRect.left, destinationRect.left));
     const overlapHeight = Math.max(0, Math.min(guideRect.bottom, destinationRect.bottom) - Math.max(guideRect.top, destinationRect.top));
@@ -355,7 +358,7 @@ async function startHandoffCoverageProbe(page: Page) {
       const height = Math.max(0, Math.min(document.documentElement.clientHeight, rect.bottom) - Math.max(0, rect.top));
       return width * height;
     };
-    const probe = { running: true, samples: [] as Array<{ at: number; coverage: number; active: string[] }> };
+    const probe = { running: true, samples: [] as Array<{ at: number; coverage: number; active: string[]; path: string; routeState: string | null; bufferCount: number }> };
     window.__p1HandoffProbe = probe;
     const sample = () => {
       if (!probe.running) return;
@@ -363,7 +366,7 @@ async function startHandoffCoverageProbe(page: Page) {
         ".brand-guide-character-open",
         ".brand-guide-paper-bottom",
         ".brand-guide-fallback",
-        ".brand-guide-landscape-composition",
+        ".guide-landscape-composition",
         ".brand-guide-destination-image",
         ".h5-guide-route-snapshot",
         ".h5-guide-route-destination-image",
@@ -385,6 +388,9 @@ async function startHandoffCoverageProbe(page: Page) {
         at: performance.now(),
         coverage: Math.min(1, weightedCoverage / viewportArea()),
         active,
+        path: window.location.pathname,
+        routeState: document.documentElement.getAttribute("data-guide-route-entry"),
+        bufferCount: document.querySelectorAll("#h5-guide-route-buffer-host > .h5-guide-route-buffer").length,
       });
       requestAnimationFrame(sample);
     };
@@ -413,8 +419,8 @@ for (const viewport of targetViewports) {
     await expect(stage).toHaveAttribute("data-gesture-state", "ready", { timeout: 15_000 });
     await expect(stage).toHaveAttribute("data-destination-state", "ready", { timeout: 15_000 });
     await expectDecodedImages(root, ".brand-guide-artwork img, .brand-guide-destination-preview img", 3);
-    const guideFrame = await expectFrameWidth(stage, viewport.width);
-    const destinationFrame = await expectFrameWidth(destination, viewport.width);
+    const guideFrame = await expectFrameWidth(stage.locator(".brand-guide-artwork"), viewport.width);
+    const destinationFrame = await expectFrameWidth(destination.locator(".brand-guide-destination-content"), viewport.width);
     expect(destinationFrame.width).toBeCloseTo(guideFrame.width, 0);
     expect(destinationFrame.x).toBeCloseTo(guideFrame.x, 0);
     await expectNoHorizontalOverflow(page, viewport.width);
@@ -464,7 +470,11 @@ for (const viewport of targetViewports) {
     await dispatchSingleTouch(root, "touchend", startX, 0);
     const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
     await expect(routeBuffer).toBeAttached({ timeout: 5_000 });
-    await expectDecodedImages(routeBuffer, ".h5-guide-route-snapshot, .h5-guide-route-destination-image", 2);
+    const routeBufferState = await routeBuffer.evaluate((element) => ({
+      source: element.getAttribute("data-source-state"),
+      destination: element.getAttribute("data-destination-state"),
+    }));
+    expect(routeBufferState).toEqual({ source: "decoded", destination: "decoded" });
     const routeDestinationBox = await routeBuffer.locator(".h5-guide-route-destination-image").boundingBox();
     expect(routeDestinationBox).not.toBeNull();
     if (!routeDestinationBox) throw new Error("route destination frame has no box");
@@ -525,7 +535,7 @@ test("archive fallback survives delayed decode, failed assets, and a clean retry
   await page.waitForTimeout(350);
   await expect(fallback).toBeVisible();
   releaseAsset();
-  await page.unroute(blockedAsset);
+  await page.unrouteAll({ behavior: "wait" });
   await expect(archive).toHaveAttribute("data-archive-artwork-ready", "true", { timeout: 25_000 });
   await expectDecodedImages(archive, ".reports-archive-source-layer", 10);
   await expect(fallback).toBeHidden();
