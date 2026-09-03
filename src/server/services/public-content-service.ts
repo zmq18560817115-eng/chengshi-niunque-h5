@@ -4,6 +4,8 @@ import {
   PublicContentRepository,
   type PublicModuleRecord,
 } from "@/server/repositories/public-content-repository";
+import { isProductionPublicRecord } from "@/server/public-report-policy";
+import { hasMatchingReportImageExtension, isStaticReportImageMimeType } from "@/server/report-image-policy";
 import { defaultH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
 
 export type PublicAsset = {
@@ -44,8 +46,36 @@ export function publicSiteConfig(_content: PublicContent): H5SiteConfig {
   return defaultH5SiteConfig;
 }
 
-function assetHref(asset: PublicModuleRecord["cards"][number]["assets"][number]): string {
-  if (asset.assetType !== "IMAGE") return "";
+type PublicAssetRecord = PublicModuleRecord["cards"][number]["assets"][number];
+
+function isPublicImageAsset(asset: PublicAssetRecord): boolean {
+  if (asset.assetType !== "IMAGE" || !isProductionPublicRecord(asset)) return false;
+  if (asset.pages.length > 0) {
+    return asset.pages.every((page) => (
+      isStaticReportImageMimeType(page.mimeType)
+      && hasMatchingReportImageExtension(page.storageKey, page.mimeType)
+    ));
+  }
+  return Boolean(
+    asset.storageKey
+    && isStaticReportImageMimeType(asset.mimeType)
+    && hasMatchingReportImageExtension(asset.storageKey, asset.mimeType),
+  );
+}
+
+function visibleAssets(card: PublicModuleRecord["cards"][number]): PublicAssetRecord[] {
+  return card.assets.filter(isPublicImageAsset);
+}
+
+function visibleCards(module: PublicModuleRecord): PublicModuleRecord["cards"] {
+  return module.cards.filter(isProductionPublicRecord);
+}
+
+function visibleModules(modules: PublicModuleRecord[]): PublicModuleRecord[] {
+  return modules.filter(isProductionPublicRecord);
+}
+
+function assetHref(asset: PublicAssetRecord): string {
   return `/reports/image/${asset.id}`;
 }
 
@@ -56,13 +86,13 @@ export function reportButtonText(reportCount: number): string {
 function contentVersion(modules: PublicModuleRecord[], settings: Array<{ updatedAt: Date }>): string {
   const publicShape = {
     settings: settings.map((setting) => setting.updatedAt.toISOString()),
-    modules: modules.map((module) => ({
+    modules: visibleModules(modules).map((module) => ({
       id: module.id,
       updatedAt: module.updatedAt.toISOString(),
-      cards: module.cards.map((card) => ({
+      cards: visibleCards(module).map((card) => ({
         id: card.id,
         updatedAt: card.updatedAt.toISOString(),
-        assets: card.assets.map((asset) => ({
+        assets: visibleAssets(card).map((asset) => ({
           id: asset.id,
           updatedAt: asset.updatedAt.toISOString(),
           pages: asset.pages.map((page) => ({ id: page.id, updatedAt: page.updatedAt.toISOString() })),
@@ -84,31 +114,32 @@ export class PublicContentService {
 
     return {
       version: contentVersion(modules, settings),
-      modules: modules.map((module) => ({
+      modules: visibleModules(modules).map((module) => ({
         id: module.id,
         slug: module.slug,
         title: module.title,
         description: module.description,
-        cards: module.cards.map((card) => ({
-          id: card.id,
-          title: card.title,
-          description: card.description,
-          buttonText: reportButtonText(card.assets.length),
-          footerNote: card.footerNote,
-          assets: card.assets.map((asset) => ({
-            id: asset.id,
-            title: asset.title,
-            description: asset.description,
-            type: asset.assetType,
-            href: assetHref(asset),
-            openMode: asset.openMode === "NEW_TAB" ? "new_tab" : "same_tab",
-            pages: asset.assetType === "IMAGE"
-              ? asset.pages.length > 0
+        cards: visibleCards(module).map((card) => {
+          const assets = visibleAssets(card);
+          return {
+            id: card.id,
+            title: card.title,
+            description: card.description,
+            buttonText: reportButtonText(assets.length),
+            footerNote: card.footerNote,
+            assets: assets.map((asset) => ({
+              id: asset.id,
+              title: asset.title,
+              description: asset.description,
+              type: "IMAGE" as const,
+              href: assetHref(asset),
+              openMode: "same_tab" as const,
+              pages: asset.pages.length > 0
                 ? asset.pages.map((page) => ({ id: page.id, pageNumber: page.pageNumber, href: `/reports/image/page/${page.id}` }))
-                : [{ id: asset.id, pageNumber: 1, href: `/reports/image/${asset.id}` }]
-              : [],
-          })),
-        })),
+                : [{ id: asset.id, pageNumber: 1, href: `/reports/image/${asset.id}` }],
+            })),
+          };
+        }),
       })),
       settings: settings.map((setting) => ({
         key: setting.key,

@@ -47,7 +47,8 @@ const guideAssetNames = [
 ] as const;
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const guideAssets = guideAssetNames.map(assetUrl);
-export const guideWarmAssets = [...guideAssets, assetUrl("guide-final-fallback-v3.webp")] as const;
+const guideLandscapeAsset = assetUrl("guide-landscape-composition.webp");
+export const guideWarmAssets = [...guideAssets, assetUrl("guide-final-fallback-v3.webp"), guideLandscapeAsset] as const;
 
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
@@ -145,6 +146,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const guideContentReady = useAdaptiveReadiness();
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
+  const [routePreparing, setRoutePreparing] = useState(false);
   const [assetStatus, setAssetStatus] = useState<AssetStatus>(motionEnabled ? "loading" : "disabled");
   const [motionPreference, setMotionPreference] = useState<GuideMotionPreference>("unknown");
   const [fallbackUnavailable, setFallbackUnavailable] = useState(false);
@@ -152,7 +154,6 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const [swipeReady, setSwipeReady] = useState(!motionEnabled);
   const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const [destinationStatus, setDestinationStatus] = useState<GuideDestinationStatus>(preview ? "ready" : "loading");
-  const [transitionError, setTransitionError] = useState(false);
   const destinationUsable = destinationStatus !== "loading";
   const transitionSwipeReady = swipeReady && destinationUsable;
   const transitionGestureReady = gestureReady && destinationUsable;
@@ -233,8 +234,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       if (cancelled) return;
       if (result.failed.length > 0) {
         console.error(`[BrandGuide] destination preload failed: ${result.failed.join(", ")}`);
-        setDestinationStatus("fallback");
-      } else setDestinationStatus((current) => current === "fallback" ? current : "ready");
+      }
     });
     return () => { cancelled = true; };
   }, [guideContentReady, preview]);
@@ -254,27 +254,28 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     entering.current = true;
     const startProgress = source === "gesture" ? clampProgress(progress) : 0;
     flushGuideProgress(startProgress);
+    const continuityReady = onEnter
+      ? undefined
+      : prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
     guideRoot.current?.classList.remove("is-dragging", "is-settling");
-    setTransitionError(false);
-    const continueToArchive = async () => {
-      if (!onEnter) {
-        const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
-        if (!prepared) {
-          entering.current = false;
-          setDestinationStatus("fallback");
-          setTransitionError(true);
-          flushGuideProgress(0);
-          return;
-        }
-      }
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const navigationDelayMs = reducedMotion ? 0 : guideRouteNavigationDelayMs;
+    if (onEnter) {
       setLeaving(true);
-      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-      window.setTimeout(() => {
-        if (onEnter) onEnter();
-        else navigateWithGuideContinuity(() => replaceHierarchyRoute(router, "/reports"));
-      }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
-    };
-    void continueToArchive();
+      window.setTimeout(onEnter, navigationDelayMs);
+    }
+    else {
+      // Keep the live guide visible while the detached continuity images are
+      // still decoding. This also prevents reduced-motion CSS from hiding the
+      // only safe frame before the route buffer has been activated.
+      setRoutePreparing(true);
+      const navigationDelay = new Promise<void>((resolve) => window.setTimeout(resolve, navigationDelayMs));
+      void Promise.all([continuityReady, navigationDelay]).then(() => {
+        setLeaving(true);
+        setRoutePreparing(false);
+        navigateWithGuideContinuity(() => replaceHierarchyRoute(router, "/reports"));
+      });
+    }
   }, [destinationStatus, flushGuideProgress, leaving, onEnter, preview, router, transitionGestureReady, transitionSwipeReady]);
 
   const settleGuide = useCallback(() => {
@@ -409,7 +410,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     "--guide-paper-duration": `${h5MotionTiming.guide.paperDurationMs}ms`,
   } as CSSProperties;
 
-  return <main ref={guideRoot} data-motion-module="guide" data-swipe-progress="0.000" data-swipe-interaction="idle" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""} ${destinationStatus === "fallback" ? "has-destination-fallback" : ""}`}
+  return <main ref={guideRoot} data-motion-module="guide" data-swipe-progress="0.000" data-swipe-interaction="idle" className={`brand-guide is-${assetStatus} ${motionEnabled ? "is-motion-enabled" : "is-motion-disabled"} ${animationStarted ? "is-animating" : ""} ${routePreparing ? "is-route-preparing" : ""} ${leaving ? "is-leaving" : ""} ${fallbackUnavailable ? "has-no-fallback" : ""} ${destinationStatus === "fallback" ? "has-destination-fallback" : ""}`}
     onPointerDown={(event) => {
       if (event.pointerType === "touch" && gesture.current?.source === "pointer" && gesture.current.id !== event.pointerId) {
         const current = gesture.current;
@@ -475,12 +476,11 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
           </div>
           <GuideLandscapeComposition onError={handleLayerError}/>
         </div>
-        {transitionError && <p className="brand-guide-transition-error" role="alert">档案预览加载失败，请再次上滑或点击重试</p>}
         <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>
         <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
-        <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={leaving || preview || !transitionSwipeReady}>进入档案</button>
+        <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={routePreparing || leaving || preview || !transitionSwipeReady}>进入档案</button>
       </section>
-      <GuideDestinationPreview onReady={() => setDestinationStatus("ready")} onError={handleDestinationError}/>
+      <GuideDestinationPreview onReady={() => setDestinationStatus((current) => current === "fallback" ? current : "ready")} onError={handleDestinationError}/>
     </div>
   </main>;
 }

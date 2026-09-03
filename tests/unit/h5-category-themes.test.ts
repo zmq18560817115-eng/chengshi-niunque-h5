@@ -42,7 +42,7 @@ describe("H5 category report themes", () => {
     expect(Object.values(categoryCardLayouts).flat().every((card) => card.backplate.src.startsWith("/design/final-v1/category-runtime/"))).toBe(true);
   });
 
-  it("awaits every independent category layer, card, status and CSS control asset", () => {
+  it("awaits every independent category layer, card, neutral decoration and CSS control asset", () => {
     const slugs = Object.keys(categoryArtworkLayers) as Array<keyof typeof categoryArtworkLayers>;
     const warmed = new Set(categoryRouteWarmAssets);
 
@@ -50,7 +50,7 @@ describe("H5 category report themes", () => {
       const expected = [
         ...categoryArtworkLayers[slug].map((layer) => layer.src),
         ...categoryCardLayouts[slug].map((card) => card.backplate.src),
-        ...categoryCardFallbacks[slug].flatMap((card) => [card.statusArtwork.src, card.statusBaseArtwork?.src]).filter((src): src is string => Boolean(src)),
+        ...categoryCardFallbacks[slug].map((card) => card.statusBaseArtwork?.src).filter((src): src is string => Boolean(src)),
         ...categoryControlAssets[slug],
       ];
       expect(new Set(categoryReadinessAssets[slug])).toEqual(new Set(expected));
@@ -59,18 +59,16 @@ describe("H5 category report themes", () => {
     }
   });
 
-  it("keeps the artwork status labels aligned with each official category", () => {
-    expect(categoryCardFallbacks["inspection-projects"].map((card) => card.statusText)).toEqual(["已通过", "符合标准", "已通过"]);
-    expect(categoryCardFallbacks["review-assurance"].map((card) => card.statusText)).toEqual(["已核对", "已留档", "持续关注"]);
-    expect(categoryCardFallbacks["production-traceability"].map((card) => card.statusText)).toEqual(["已核验", "已核对"]);
-  });
-
-  it("maps every visible status to an original design-text image", () => {
+  it("does not expose fixed conclusions while retaining the neutral fish decoration", () => {
     const cards = Object.values(categoryCardFallbacks).flat();
     const cardsWithSeparateFish = cards.filter((card) => card.statusBaseArtwork);
     expect(cards).toHaveLength(8);
-    expect(cards.every((card) => card.statusArtwork.src.startsWith("/design/final-v1/category-status-"))).toBe(true);
-    expect(cards.every((card) => card.statusArtwork.width > 0 && card.statusArtwork.height === 102)).toBe(true);
+    expect(cards.every((card) => !("statusText" in card) && !("statusArtwork" in card))).toBe(true);
+    const serialized = JSON.stringify(categoryCardFallbacks);
+    for (const conclusion of ["已通过", "符合标准", "已核对", "已留档", "持续关注", "已核验"]) {
+      expect(serialized).not.toContain(conclusion);
+    }
+    expect(serialized).not.toContain("category-status-");
     expect(cardsWithSeparateFish).toHaveLength(5);
     expect(cardsWithSeparateFish.every((card) => card.statusBaseArtwork?.src.startsWith("/design/final-v1/category-runtime/"))).toBe(true);
     expect(cardsWithSeparateFish.every((card) => (card.statusBaseArtwork?.width ?? 0) >= 412 && card.statusBaseArtwork?.height === 189)).toBe(true);

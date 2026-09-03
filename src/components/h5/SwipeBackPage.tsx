@@ -5,6 +5,7 @@ import { useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { replaceHierarchyRoute, type H5HierarchyHref } from "@/components/h5/hierarchy-navigation";
 
 const SWIPE_BACK_DISTANCE = 72;
+const SWIPE_BACK_EDGE = 32;
 
 function ignoresSwipeBack(target: EventTarget | null) {
   return target instanceof Element && target.closest("[data-swipe-back-ignore]") !== null;
@@ -14,6 +15,7 @@ export function SwipeBackPage({
   children,
   className,
   fallbackHref,
+  backLabel = "返回上一级",
   preview = false,
   showBackControl = true,
   ...props
@@ -21,6 +23,7 @@ export function SwipeBackPage({
   children: ReactNode;
   className: string;
   fallbackHref: H5HierarchyHref;
+  backLabel?: string;
   preview?: boolean;
   showBackControl?: boolean;
 } & Omit<React.ComponentPropsWithoutRef<"main">, "children" | "className">) {
@@ -39,6 +42,10 @@ export function SwipeBackPage({
       start.current = null;
       return;
     }
+    if (event.touches[0].clientX > SWIPE_BACK_EDGE) {
+      start.current = null;
+      return;
+    }
     start.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
   };
 
@@ -53,7 +60,7 @@ export function SwipeBackPage({
   };
 
   return <main {...props} className={`${className} ${leavingBack ? "is-swipe-back" : ""}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-    {!preview && showBackControl ? <button className="swipe-back-control" type="button" onClick={goBack} disabled={leavingBack}>返回上一页</button> : null}
+    {!preview && showBackControl ? <button className="swipe-back-control" type="button" onClick={goBack} disabled={leavingBack}>{backLabel}</button> : null}
     {children}
   </main>;
 }

@@ -65,8 +65,8 @@ export function ArchiveFishFloatMotion({ preview = false }: { preview?: boolean 
     {nearby && <MotionBoundary fallback={staticFish}>
       <MotionStage masterWidth={masterWidth} masterHeight={masterHeight} assets={motionAssets} enabled={enabled} crossfadeMs={0} fallback={staticFish} onStateChange={onStateChange}>
         {ready && visible && <>
-          <Image className="archive-fish-clean-patch" src={cleanBaseAsset.src} alt="" width={cleanBaseAsset.width} height={cleanBaseAsset.height} unoptimized style={position(cleanBaseAsset)} />
-          {fishAssets.map((fish, index) => <Image key={fish.src} className="archive-fish-motion-gif" data-fish-index={index + 1} src={fish.src} alt="" width={281} height={176} unoptimized onError={handleGifError} style={position(fish)} />)}
+          <Image className="archive-fish-clean-patch" src={cleanBaseAsset.src} alt="" width={cleanBaseAsset.width} height={cleanBaseAsset.height} loading="eager" unoptimized style={position(cleanBaseAsset)} />
+          {fishAssets.map((fish, index) => <Image key={fish.src} className="archive-fish-motion-gif" data-fish-index={index + 1} src={fish.src} alt="" width={281} height={176} loading="eager" unoptimized onError={handleGifError} style={position(fish)} />)}
         </>}
       </MotionStage>
     </MotionBoundary>}

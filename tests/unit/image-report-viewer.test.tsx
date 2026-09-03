@@ -1,8 +1,16 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 
+const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: navigation.replace }),
+}));
+
 describe("ImageReportViewer", () => {
   const asset = { id: "asset-1", title: "营养检测报告", description: "报告说明", type: "IMAGE" as const, href: "/reports/image/asset-1", openMode: "same_tab" as const, pages: [{ id: "page-1", pageNumber: 1, href: "/reports/image/page/page-1" }, { id: "page-2", pageNumber: 2, href: "/reports/image/page/page-2" }] };
+
+  beforeEach(() => vi.clearAllMocks());
 
   it("keeps the currently visible reading anchor when entering zoom", () => {
     const frames: FrameRequestCallback[] = [];
@@ -28,22 +36,43 @@ describe("ImageReportViewer", () => {
     requestFrame.mockRestore();
   });
 
-  it("keeps zoom inside a fixed viewer, supports 1–4x zoom, page switching and isolated retry", async () => {
-    const { container } = render(<ImageReportViewer asset={asset}/>);
+  it("uses page scrolling at 100%, then keeps zoom inside a fixed viewer with isolated recovery", async () => {
+    const { container } = render(<ImageReportViewer asset={asset} returnHref="/reports/inspection-projects" returnLabel="返回检测项目"/>);
     const viewer = container.querySelector(".image-report") as HTMLElement;
     const stage = container.querySelector(".report-image-stage") as HTMLElement;
     expect(stage).toHaveClass("is-loading");
-    expect(stage).not.toHaveClass("is-zoomed");
+    expect(stage).toHaveClass("is-natural");
     expect(stage).not.toHaveAttribute("data-swipe-back-ignore");
     expect(stage.getAttribute("aria-label")).toContain("原始大小随页面滚动");
-    expect(fireEvent.touchMove(stage, { touches: [{ clientX: 12, clientY: 40 }] })).toBe(true);
+    Object.defineProperties(stage, {
+      setPointerCapture: { configurable: true, value: vi.fn() },
+      releasePointerCapture: { configurable: true, value: vi.fn() },
+    });
+    const dispatchMousePointer = (type: string, values: Record<string, string | number>) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.entries(values).forEach(([name, value]) => Object.defineProperty(event, name, { value }));
+      fireEvent(stage, event);
+    };
+
+    dispatchMousePointer("pointerdown", { pointerType: "mouse", button: 0, pointerId: 1, clientX: 40, clientY: 40 });
+    expect(stage).not.toHaveClass("is-dragging");
+    stage.scrollTop = 12;
+    fireEvent.touchStart(stage, { touches: [{ clientX: 40, clientY: 80 }] });
+    expect(fireEvent.touchMove(stage, { touches: [{ clientX: 40, clientY: 40 }] })).toBe(true);
+    expect(stage.scrollTop).toBe(12);
+
     fireEvent.load(screen.getByRole("img"));
     await waitFor(() => expect(stage).toHaveClass("is-loaded"));
     fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
-    expect(screen.getByRole("img")).toHaveStyle({ width: "125%" });
     expect(stage).toHaveClass("is-zoomed");
+    expect(stage.getAttribute("aria-label")).toContain("图片区域内平移");
     expect(stage).toHaveAttribute("data-swipe-back-ignore", "true");
-    expect(fireEvent.touchMove(stage, { touches: [{ clientX: 30, clientY: 40 }] })).toBe(true);
+    expect(screen.getByRole("img")).toHaveStyle({ width: "125%" });
+    dispatchMousePointer("pointerdown", { pointerType: "mouse", button: 0, pointerId: 2, clientX: 40, clientY: 40 });
+    expect(stage).toHaveClass("is-dragging");
+    dispatchMousePointer("pointerup", { pointerType: "mouse", button: 0, pointerId: 2, clientX: 40, clientY: 40 });
+    expect(stage).not.toHaveClass("is-dragging");
+
     Object.defineProperty(stage, "scrollHeight", { configurable: true, get: () => 1000 });
     Object.defineProperty(stage, "clientHeight", { configurable: true, get: () => 500 });
     let stageScrollTop = 0;
@@ -55,33 +84,28 @@ describe("ImageReportViewer", () => {
     expect(fireEvent.touchMove(stage, { touches: [{ clientX: 30, clientY: 100 }] })).toBe(true);
     expect(scrollTo).toHaveBeenCalledWith(0, 100);
     fireEvent.touchEnd(stage, { touches: [] });
+
     stage.scrollLeft = 20;
     stage.scrollTop = 30;
-    stage.setPointerCapture = vi.fn();
-    stage.releasePointerCapture = vi.fn();
-    const dispatchMousePointer = (type: string, values: Record<string, string | number>) => {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      Object.entries(values).forEach(([name, value]) => Object.defineProperty(event, name, { value }));
-      fireEvent(stage, event);
-    };
-    dispatchMousePointer("pointerdown", { pointerType: "mouse", button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+    dispatchMousePointer("pointerdown", { pointerType: "mouse", button: 0, pointerId: 3, clientX: 100, clientY: 100 });
     expect(stage).toHaveClass("is-dragging");
-    dispatchMousePointer("pointermove", { pointerType: "mouse", pointerId: 1, clientX: 80, clientY: 70 });
+    dispatchMousePointer("pointermove", { pointerType: "mouse", pointerId: 3, clientX: 80, clientY: 70 });
     expect(stage.scrollLeft).toBe(40);
     expect(stage.scrollTop).toBe(60);
-    dispatchMousePointer("pointerup", { pointerType: "mouse", pointerId: 1, clientX: 80, clientY: 70 });
+    dispatchMousePointer("pointerup", { pointerType: "mouse", pointerId: 3, clientX: 80, clientY: 70 });
     expect(stage).not.toHaveClass("is-dragging");
+
     for (let index = 0; index < 11; index += 1) fireEvent.click(screen.getByRole("button", { name: "放大报告图片" }));
     expect(screen.getByRole("img")).toHaveStyle({ width: "400%" });
     expect(screen.getByRole("button", { name: "放大报告图片" })).toBeDisabled();
     for (let index = 0; index < 12; index += 1) fireEvent.click(screen.getByRole("button", { name: "缩小报告图片" }));
     expect(screen.getByRole("img")).toHaveStyle({ width: "100%" });
-    expect(stage).not.toHaveClass("is-zoomed");
+    expect(stage).toHaveClass("is-natural");
     expect(stage).not.toHaveAttribute("data-swipe-back-ignore");
     expect(screen.getByRole("button", { name: "缩小报告图片" })).toBeDisabled();
-    fireEvent.doubleClick(container.querySelector(".report-image-stage") as HTMLElement);
+    fireEvent.doubleClick(stage);
     expect(screen.getByRole("img")).toHaveStyle({ width: "200%" });
-    fireEvent.doubleClick(container.querySelector(".report-image-stage") as HTMLElement);
+    fireEvent.doubleClick(stage);
     expect(screen.getByRole("img")).toHaveStyle({ width: "100%" });
     fireEvent.touchStart(stage, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }] });
     expect(fireEvent.touchMove(stage, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 200, clientY: 0 }] })).toBe(true);
@@ -89,13 +113,17 @@ describe("ImageReportViewer", () => {
     expect(stage).toHaveClass("is-pinching");
     fireEvent.touchEnd(stage, { touches: [] });
     expect(stage).not.toHaveClass("is-pinching");
+
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     expect(viewer).toHaveAttribute("data-page", "2");
     expect(screen.getByRole("img")).toHaveAttribute("src", "/reports/image/page/page-2");
     expect(screen.getByRole("img")).toHaveStyle({ width: "100%" });
     expect(screen.getByRole("button", { name: "下一页" })).toBeDisabled();
     fireEvent.error(screen.getByRole("img"));
-    expect(screen.getByRole("alert")).toHaveTextContent("营养检测报告 · 第 2 页资料加载失败");
+    expect(screen.getByRole("alert")).toHaveTextContent("营养检测报告 · 第 2 页报告图片暂时没有加载出来");
+    expect(screen.getByRole("alert")).toHaveTextContent("诚实纽雀检测档案");
+    fireEvent.click(screen.getByRole("button", { name: "返回检测项目" }));
+    expect(navigation.replace).toHaveBeenCalledWith("/reports/inspection-projects");
     fireEvent.click(screen.getByRole("button", { name: "重新加载" }));
     expect(screen.getByRole("img")).toBeInTheDocument();
   });

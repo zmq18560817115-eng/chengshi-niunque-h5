@@ -201,7 +201,7 @@ function ArchiveSectionTitleGroup({ group, active, exiting, sequenceIndex }: { g
 
   return (
     <div className={`archive-section-title-group ${active ? "archive-module-pressed-layer" : ""} ${exiting ? "archive-module-exit-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-ready="true" data-title-sequence-order={sequenceIndex + 1} data-title-render-layer="poster" style={groupStyle}>
-      <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" unoptimized />
+      <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" loading="eager" unoptimized />
       {group.numberParts.map((part) => (
         <Image
           key={part.src}
@@ -210,6 +210,7 @@ function ArchiveSectionTitleGroup({ group, active, exiting, sequenceIndex }: { g
           alt=""
           width={part.width * 2}
           height={part.height * 2}
+          loading="eager"
           style={positionWithin(group, part)}
           sizes="(max-width: 750px) 9vw, 68px"
           unoptimized

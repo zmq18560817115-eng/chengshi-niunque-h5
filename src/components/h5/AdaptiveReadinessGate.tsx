@@ -8,7 +8,9 @@ type ReadinessPhase = RuntimeLoadingPhase | "waiting" | "ready";
 
 const loadingExitDurationMs = 260;
 export const adaptiveLoadingRevealDelayMs = 220;
+export const adaptiveFailOpenDelayMs = 3000;
 const AdaptiveReadinessContext = createContext(true);
+const AdaptiveReadinessFailureContext = createContext(false);
 
 const nextPaintFrame = () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
@@ -18,14 +20,15 @@ async function settleRenderedContent(selector: string, frameCount: number) {
     root = document.querySelector(selector);
     if (!root) await nextPaintFrame();
   }
-  if (!root) return;
+  if (!root) return false;
 
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
   const images = [...root.querySelectorAll<HTMLImageElement>("img")].filter((image) => {
+    if (image.closest(".reports-archive-reference-fallback")) return false;
     const rect = image.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && rect.bottom >= -viewportHeight * .25 && rect.top <= viewportHeight * 1.08;
   });
-  await Promise.all(images.map(async (image) => {
+  const decoded = await Promise.all(images.map(async (image) => {
     if (!image.complete) {
       await new Promise<void>((resolve) => {
         const finish = () => resolve();
@@ -34,14 +37,28 @@ async function settleRenderedContent(selector: string, frameCount: number) {
         if (image.complete) resolve();
       });
     }
-    if (image.naturalWidth > 0 && typeof image.decode === "function") await image.decode().catch(() => undefined);
+    if (image.naturalWidth <= 0) return false;
+    if (typeof image.decode === "function") {
+      try {
+        await image.decode();
+      } catch {
+        return false;
+      }
+    }
+    return true;
   }));
+  if (decoded.some((ready) => !ready)) return false;
   await document.fonts?.ready?.catch(() => undefined);
   for (let frame = 0; frame < frameCount; frame += 1) await nextPaintFrame();
+  return true;
 }
 
 export function useAdaptiveReadiness() {
   return useContext(AdaptiveReadinessContext);
+}
+
+export function useAdaptiveReadinessFailed() {
+  return useContext(AdaptiveReadinessFailureContext);
 }
 
 export function AdaptiveReadinessGate({
@@ -53,6 +70,8 @@ export function AdaptiveReadinessGate({
   revealDelayMs = adaptiveLoadingRevealDelayMs,
   settleSelector,
   settleFrames = 3,
+  failOpen = false,
+  failOpenAfterMs = adaptiveFailOpenDelayMs,
 }: {
   requests: readonly HomepageAssetRequest[];
   children: ReactNode;
@@ -62,6 +81,8 @@ export function AdaptiveReadinessGate({
   revealDelayMs?: number;
   settleSelector?: string;
   settleFrames?: number;
+  failOpen?: boolean;
+  failOpenAfterMs?: number;
 }) {
   const [phase, setPhase] = useState<ReadinessPhase>("waiting");
   const loadingVisible = useRef(false);
@@ -69,6 +90,7 @@ export function AdaptiveReadinessGate({
 
   useEffect(() => {
     let cancelled = false;
+    let failedOpen = false;
     loadingVisible.current = false;
     setPhase("waiting");
     const revealTimer = window.setTimeout(() => {
@@ -76,19 +98,40 @@ export function AdaptiveReadinessGate({
       loadingVisible.current = true;
       setPhase("loading");
     }, revealDelayMs);
-    void preloadHomepageAssets(requests).then(async (result) => {
-      if (result.failed.length > 0) console.error(`[AdaptiveReadinessGate] assets failed: ${result.failed.join(", ")}`);
+    const failOpenTimer = failOpen ? window.setTimeout(() => {
       if (cancelled) return;
-      if (settleSelector) await settleRenderedContent(settleSelector, settleFrames);
-      if (cancelled) return;
+      failedOpen = true;
       window.clearTimeout(revealTimer);
+      setPhase("failed");
+    }, failOpenAfterMs) : 0;
+    void preloadHomepageAssets(requests).then(async (result) => {
+      if (cancelled || failedOpen) return;
+      if (result.failed.length > 0) {
+        console.error(`[AdaptiveReadinessGate] assets failed: ${result.failed.join(", ")}`);
+        window.clearTimeout(revealTimer);
+        window.clearTimeout(failOpenTimer);
+        setPhase("failed");
+        return;
+      }
+      if (settleSelector && !(await settleRenderedContent(settleSelector, settleFrames))) {
+        if (!cancelled && !failedOpen) {
+          window.clearTimeout(revealTimer);
+          window.clearTimeout(failOpenTimer);
+          setPhase("failed");
+        }
+        return;
+      }
+      if (cancelled || failedOpen) return;
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(failOpenTimer);
       setPhase(loadingVisible.current ? "leaving" : "ready");
     });
     return () => {
       cancelled = true;
       window.clearTimeout(revealTimer);
+      window.clearTimeout(failOpenTimer);
     };
-  }, [requestKey, requests, revealDelayMs, settleFrames, settleSelector]);
+  }, [failOpen, failOpenAfterMs, requestKey, requests, revealDelayMs, settleFrames, settleSelector]);
 
   useEffect(() => {
     if (phase !== "leaving") return;
@@ -96,10 +139,14 @@ export function AdaptiveReadinessGate({
     return () => window.clearTimeout(timer);
   }, [phase]);
 
-  const contentReady = phase === "leaving" || phase === "ready";
-  if (phase === "ready") return <AdaptiveReadinessContext.Provider value>{children}</AdaptiveReadinessContext.Provider>;
+  const readinessFailed = phase === "failed";
+  const contentReady = phase === "leaving" || phase === "ready" || (failOpen && readinessFailed);
+  const content = <AdaptiveReadinessFailureContext.Provider value={readinessFailed}>
+    <AdaptiveReadinessContext.Provider value={contentReady}>{children}</AdaptiveReadinessContext.Provider>
+  </AdaptiveReadinessFailureContext.Provider>;
+  if (phase === "ready") return content;
   return <>
-    {mountChildrenWhileLoading || contentReady ? <AdaptiveReadinessContext.Provider value={contentReady}>{children}</AdaptiveReadinessContext.Provider> : null}
-    {phase === "loading" || phase === "leaving" ? <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/> : null}
+    {mountChildrenWhileLoading || contentReady ? content : null}
+    {phase === "loading" || phase === "leaving" || (phase === "failed" && !failOpen) ? <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/> : null}
   </>;
 }

@@ -17,22 +17,22 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: honest_nutri
+          POSTGRES_DB: honest_nutri_e2e
           POSTGRES_USER: app_user
           POSTGRES_PASSWORD: ci_local_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U app_user -d honest_nutri"
+          --health-cmd "pg_isready -U app_user -d honest_nutri_e2e"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
     env:
       CI: "true"
-      DATABASE_URL: postgresql://app_user:ci_local_password@127.0.0.1:5432/honest_nutri?schema=public
+      DATABASE_URL: postgresql://app_user:ci_local_password@127.0.0.1:5432/honest_nutri_e2e?schema=public
       S3_ENDPOINT: http://127.0.0.1:9000
       S3_REGION: us-east-1
-      S3_BUCKET: honest-nutri-reports
+      S3_BUCKET: honest-nutri-reports-e2e
       S3_ACCESS_KEY_ID: ci_local_access_key
       S3_SECRET_ACCESS_KEY: ci_local_secret_key
       S3_FORCE_PATH_STYLE: "true"
@@ -41,9 +41,14 @@ jobs:
       ADMIN_SEED_USERNAME: ci-admin@example.test
       ADMIN_SEED_DISPLAY_NAME: CI Administrator
       ADMIN_SEED_PASSWORD: ci_only_password_12345
+      E2E_FIXTURE_WRITES_ALLOWED: "true"
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The rollback qualification step builds the known-good release in a
+          # detached worktree, so the base commit must be available locally.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
@@ -79,7 +84,56 @@ jobs:
       - run: pnpm test
       - run: pnpm prisma:validate
       - run: pnpm build
-      - name: Install Chromium test runtime
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Run mobile and admin browser journeys
+      - name: Install Chromium and WebKit test runtimes
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Run production mobile, visual, and admin browser journeys
         run: pnpm test:e2e
+      - name: Qualify the d984a8a rollback build
+        shell: bash
+        env:
+          ROLLBACK_REF: d984a8a
+          E2E_BASE_URL: http://127.0.0.1:3101
+          E2E_SKIP_WEB_SERVER: "true"
+          PLAYWRIGHT_OUTPUT_DIR: test-results/rollback
+          PLAYWRIGHT_HTML_REPORT: playwright-report/rollback
+        run: |
+          set -euo pipefail
+          rollback_dir="$RUNNER_TEMP/h5-rollback-$GITHUB_RUN_ID"
+          rollback_log="$RUNNER_TEMP/h5-rollback-$GITHUB_RUN_ID.log"
+          git worktree add --detach "$rollback_dir" "$ROLLBACK_REF"
+          cleanup() {
+            if [ -n "${rollback_pid:-}" ]; then
+              kill "$rollback_pid" 2>/dev/null || true
+            fi
+            git worktree remove --force "$rollback_dir" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          pnpm --dir "$rollback_dir" install --frozen-lockfile
+          pnpm --dir "$rollback_dir" prisma:generate
+          pnpm --dir "$rollback_dir" build
+          (
+            cd "$rollback_dir"
+            PORT=3101 pnpm start >"$rollback_log" 2>&1
+          ) &
+          rollback_pid=$!
+          for attempt in {1..90}; do
+            if curl --fail --silent "$E2E_BASE_URL/api/health" >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              cat "$rollback_log"
+              exit 1
+            fi
+            sleep 1
+          done
+          pnpm test:e2e:rollback
+      - name: Upload browser baselines, failures, traces, and videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence-${{ github.sha }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: error
+          retention-days: 14

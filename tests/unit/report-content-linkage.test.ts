@@ -8,12 +8,12 @@ describe("multi-page report content linkage", () => {
     const repository = {
       listSettings: vi.fn().mockResolvedValue([]),
       listModules: vi.fn().mockResolvedValue([{ id: "module-1", slug: "review", title: "复核保障", description: null, updatedAt, cards: [{ id: "card-1", title: "配方与标签", description: "内容", footerNote: null, updatedAt, assets: [
-        { id: "report-1", title: "检测报告", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, updatedAt, pages: [
-          { id: "page-1", pageNumber: 1, updatedAt },
-          { id: "page-2", pageNumber: 2, updatedAt },
-          { id: "page-3", pageNumber: 3, updatedAt },
+        { id: "report-1", title: "检测报告", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/report-1-1.png", mimeType: "image/png", updatedAt, pages: [
+          { id: "page-1", pageNumber: 1, storageKey: "reports/report-1-1.png", mimeType: "image/png", updatedAt },
+          { id: "page-2", pageNumber: 2, storageKey: "reports/report-1-2.webp", mimeType: "image/webp", updatedAt },
+          { id: "page-3", pageNumber: 3, storageKey: "reports/report-1-3.jpg", mimeType: "image/jpeg", updatedAt },
         ] },
-        { id: "report-2", title: "复核记录", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, updatedAt, pages: [{ id: "page-4", pageNumber: 1, updatedAt }] },
+        { id: "report-2", title: "复核记录", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/report-2.png", mimeType: "image/png", updatedAt, pages: [{ id: "page-4", pageNumber: 1, storageKey: "reports/report-2.png", mimeType: "image/png", updatedAt }] },
       ] }] }]),
     } as unknown as PublicContentRepository;
 
@@ -52,7 +52,7 @@ describe("multi-page report content linkage", () => {
 
   it("changes the public version when an older published report is removed", async () => {
     const updatedAt = new Date("2026-08-21T08:00:00.000Z");
-    const records = (assetIds: string[]) => [{ id: "module", slug: "review", title: "复核", description: null, updatedAt, cards: [{ id: "card", title: "卡片", description: null, footerNote: null, updatedAt, assets: assetIds.map((id) => ({ id, title: id, description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, updatedAt, pages: [] })) }] }];
+    const records = (assetIds: string[]) => [{ id: "module", slug: "review", title: "复核", description: null, updatedAt, cards: [{ id: "card", title: "卡片", description: null, footerNote: null, updatedAt, assets: assetIds.map((id) => ({ id, title: id, description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: `reports/${id}.png`, mimeType: "image/png", updatedAt, pages: [] })) }] }];
     const listModules = vi.fn().mockResolvedValue(records(["older-report", "newer-report"]));
     const repository = { listModules, listSettings: vi.fn().mockResolvedValue([]) } as unknown as PublicContentRepository;
     const service = new PublicContentService(repository);
@@ -63,17 +63,23 @@ describe("multi-page report content linkage", () => {
     expect(removed.modules[0]?.cards[0]?.buttonText).toBe("查看1份报告");
   });
 
-  it("does not publish PDF or external navigation targets to the H5", async () => {
+  it("filters legacy links, PDFs, animated images, and explicit integration records without deleting repository data", async () => {
     const updatedAt = new Date("2026-08-21T08:00:00.000Z");
+    const assets = [
+      { id: "real-image", title: "批次检测报告", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/real.webp", mimeType: "image/webp", updatedAt, pages: [] },
+      { id: "legacy-pdf", title: "历史 PDF", description: null, assetType: "PDF", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/legacy.pdf", mimeType: "application/pdf", updatedAt, pages: [] },
+      { id: "legacy-link", title: "历史外链", description: null, assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com", storageKey: null, mimeType: "text/html", updatedAt, pages: [] },
+      { id: "legacy-gif", title: "旧动画", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/legacy.gif", mimeType: "image/gif", updatedAt, pages: [] },
+      { id: "random-id", title: "公开联调资料", description: null, assetType: "IMAGE", openMode: "SAME_TAB", externalUrl: null, storageKey: "reports/test.png", mimeType: "image/png", updatedAt, pages: [] },
+    ];
+    const records = [{ id: "module", slug: "review", title: "复核", description: null, updatedAt, cards: [{ id: "card", title: "卡片", description: null, footerNote: null, updatedAt, assets }] }];
     const repository = {
+      listModules: vi.fn().mockResolvedValue(records),
       listSettings: vi.fn().mockResolvedValue([]),
-      listModules: vi.fn().mockResolvedValue([{ id: "module", slug: "review", title: "复核", description: null, updatedAt, cards: [{ id: "card", title: "资料", description: null, footerNote: null, updatedAt, assets: [
-        { id: "pdf", title: "PDF", description: null, assetType: "PDF", openMode: "SAME_TAB", externalUrl: null, updatedAt, pages: [] },
-        { id: "external", title: "外链", description: null, assetType: "EXTERNAL_LINK", openMode: "NEW_TAB", externalUrl: "https://example.com/report", updatedAt, pages: [] },
-      ] }] }]),
     } as unknown as PublicContentRepository;
 
-    const assets = (await new PublicContentService(repository).getContent()).modules[0]?.cards[0]?.assets;
-    expect(assets?.map((asset) => asset.href)).toEqual(["", ""]);
+    const content = await new PublicContentService(repository).getContent();
+    expect(content.modules[0]?.cards[0]?.assets.map((asset) => asset.id)).toEqual(["real-image"]);
+    expect(assets).toHaveLength(5);
   });
 });

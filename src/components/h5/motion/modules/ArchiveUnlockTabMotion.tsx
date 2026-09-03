@@ -100,6 +100,7 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled: enabledOverri
         alt=""
         width={193}
         height={674}
+        loading="eager"
         sizes="(max-width: 750px) 9.65vw, 72.375px"
         unoptimized
         onLoad={() => setReady(true)}

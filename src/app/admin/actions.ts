@@ -8,6 +8,7 @@ import { AdminAuthService } from "@/server/services/admin-auth-service";
 import { AdminContentService } from "@/server/services/admin-content-service";
 import { getObjectStorage } from "@/server/storage";
 import { validateReportFile } from "@/server/upload/report-file";
+import { MAX_REPORT_IMAGE_PAGES, MAX_REPORT_TOTAL_BYTES } from "@/server/report-image-policy";
 import { requireCurrentAdmin } from "@/server/auth/request-session";
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/server/auth/token";
 
@@ -61,11 +62,15 @@ async function assetValues(formData: FormData): Promise<{ input: Record<string, 
   const input = values(formData);
   const type = String(formData.get("assetType") ?? "");
   const uploadedKeys: string[] = [];
+  if (type !== "IMAGE") throw new Error("公开报告仅支持 JPG、PNG 或 WebP 静态图片");
   if (type === "IMAGE") {
     const files = formData.getAll("files").filter((value): value is File => value instanceof File && value.size > 0);
     const legacyFile = formData.get("file");
     if (!files.length && legacyFile instanceof File && legacyFile.size > 0) files.push(legacyFile);
-    if (files.length > 50) throw new Error("一份报告最多上传 50 张图片");
+    if (files.length > MAX_REPORT_IMAGE_PAGES) throw new Error(`一份报告最多上传 ${MAX_REPORT_IMAGE_PAGES} 张图片`);
+    if (files.reduce((sum, file) => sum + file.size, 0) > MAX_REPORT_TOTAL_BYTES) {
+      throw new Error("一份报告的图片总大小不能超过 100MB");
+    }
     if (files.length) {
       const pages: UploadedPage[] = [];
       try {
@@ -86,18 +91,6 @@ async function assetValues(formData: FormData): Promise<{ input: Record<string, 
       input.byteSize = pages.reduce((sum, page) => sum + page.byteSize, 0);
       return { input, uploadedKeys };
     }
-  }
-  const file = formData.get("file");
-  if (type === "PDF" && file instanceof File && file.size > 0) {
-    const checked = await validateReportFile(file, type);
-    const extension = checked.extension;
-    const key = `reports/${new Date().getUTCFullYear()}/${randomUUID()}.${extension}`;
-    await getObjectStorage().put(key, checked.body, checked.contentType);
-    input.storageKey = key;
-    input.mimeType = checked.contentType;
-    input.byteSize = file.size;
-    uploadedKeys.push(key);
-    return { input, uploadedKeys };
   }
   return { input, uploadedKeys };
 }

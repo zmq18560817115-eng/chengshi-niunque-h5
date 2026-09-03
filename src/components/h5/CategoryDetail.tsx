@@ -92,9 +92,9 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     announceCategoryRouteReady();
   }, [routeReady]);
 
-  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
+  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" backLabel="返回档案首页" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" backLabel="返回档案首页" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {
@@ -125,9 +125,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
         const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const statusBaseWidth = fallback.statusBaseArtwork?.width ?? 413;
-        const statusStyle = { "--category-status-text-width": `${fallback.statusArtwork.width / statusBaseWidth * 100}%` } as CSSProperties;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span><span className="category-card-status" aria-hidden="true" data-status={fallback.statusText} style={statusStyle}>{fallback.statusBaseArtwork ? <Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /> : null}<Image className="category-card-status-text-art" src={fallback.statusArtwork.src} alt="" width={fallback.statusArtwork.width} height={fallback.statusArtwork.height} /></span><span className="sr-only">{label}</span></>;
+        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span>{fallback.statusBaseArtwork ? <span className="category-card-status category-card-decoration" aria-hidden="true"><Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /></span> : null}<span className="sr-only">{label}</span></>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,

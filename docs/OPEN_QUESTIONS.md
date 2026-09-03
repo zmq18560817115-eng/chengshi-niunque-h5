@@ -32,8 +32,8 @@ These are not blockers for the skeleton.
 
 ## Multi-page H5 follow-ups
 
-17. Confirm the final artwork, font, illustration, copy, and easing curves for the guide, archive, category, and report pages; the current implementation intentionally uses structural placeholders.
+17. Confirm the final art-direction approval for the derived landscape guide composition. The local P1 repair now recomposes only supplied guide layers into a dedicated 1500×800 asset, with a documented center crop that keeps the logo, mascot, report, envelope, heart, and separate swipe hint inside the supported 667/844/956 landscape safe area. No new illustration was invented; the final design source should eventually replace this derived runtime export.
 18. Confirm whether `/go` should remain a temporary 307 redirect to `/`, become permanent, or preserve channel tracking parameters.
 19. Confirm whether report images require pinch-to-zoom, drag boundaries, and landscape rules beyond the current 1–3x controls.
-20. Provide an approved branded artwork asset if category pages must gain a visible “返回上一页” control; the source artwork contains none, so runtime categories currently preserve only right-swipe return while tertiary report pages retain the neutral semantic control.
+20. Provide an approved branded artwork asset for the visible fixed-level return controls. The local P1 repair currently uses a neutral semantic button so users are not forced to discover an unlabelled gesture.
 21. Confirm the final guide gesture acceptance distance and travel curve. The supplied 30fps reference proves touch-move feedback begins within one frame, but it does not expose finger coordinates; the current mobile-first acceptance uses 24 CSS px and a 5dvh buffered rise so early swipes are no longer dropped.

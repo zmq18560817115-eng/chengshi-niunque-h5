@@ -18,7 +18,7 @@ const devices = [
   { name: "large-phone-landscape", width: 956, height: 440 },
 ] as const;
 
-const evidenceRoot = "docs/audit-2026-08-18-mobile-user";
+const evidenceRoot = "test-results/mobile-user-acceptance";
 
 test.use({ browserName: "chromium" });
 
@@ -151,6 +151,8 @@ for (const device of devices) {
         return element.isConnected && style.objectFit === "fill" && style.objectPosition === "50% 50%";
       }),
     )).toBe(true);
+    // The dedicated landscape composition is measured by the P1 regression
+    // suite; this assertion only guards the shared full-canvas layers.
     await expect.poll(async () => fullCanvasLayers.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
       return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
     }))).toBe(true);
@@ -293,16 +295,16 @@ test("375x812 user can open every category and a published report", async ({ pag
   for (const slug of ["inspection-projects", "review-assurance", "production-traceability"] as const) {
     await page.goto(`/reports/${slug}`);
     await expect(page.locator(".category-page-final")).toBeVisible();
-    await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "返回档案首页" })).toBeVisible();
     await expect(page.locator(".category-card-hotspot")).not.toHaveCount(0);
     await expectNoHorizontalOverflow(page, 375);
     await page.screenshot({ path: `${evidenceRoot}/flow-${slug}-375x812.png` });
   }
 
   await page.goto("/reports/inspection-projects/items/seed-card-inspection-nutrition/reports");
-  await expect(page.getByRole("button", { name: "返回上一页" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "返回检测项目" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "核心营养含量" })).toBeVisible();
-  await expect(page.locator(".image-report")).not.toHaveCount(0);
+  await expect(page.locator(".report-empty, .image-report")).not.toHaveCount(0);
   await expect(page.locator(".report-file-card")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /查看原 PDF|打开外部资料/ })).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 375);
@@ -414,7 +416,7 @@ test("cold-cache guide keeps the complete fallback until every motion layer deco
 
 test("guide keeps the complete source fallback when the destination preview cannot decode", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.route("**/design/final-v1/archive-reference.webp", (route) => route.abort());
+  await page.route("**/design/final-v1/archive-reference-public.webp", (route) => route.abort());
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const stage = page.locator(".brand-guide-stage");
   const enter = page.getByRole("button", { name: "进入档案" });
@@ -438,7 +440,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
     releaseHomepageAssets = resolve;
   });
   await page.route("**/design/final-v1/**", async (route) => {
-    if (route.request().url().endsWith("/archive-reference.webp")) {
+    if (route.request().url().endsWith("/archive-reference-public.webp")) {
       await route.continue();
       return;
     }

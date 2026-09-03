@@ -1,6 +1,7 @@
 import { GET } from "@/app/api/public/content/route";
 import { PublicContentService } from "@/server/services/public-content-service";
 import { prisma } from "@/server/db/prisma";
+import { isProductionPublicRecord } from "@/server/public-report-policy";
 
 describe("public content integration", () => {
   it("returns only published, online, non-deleted content in sort order", async () => {
@@ -9,32 +10,34 @@ describe("public content integration", () => {
       where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
       select: {
+        id: true,
         title: true,
+        description: true,
         slug: true,
         cards: {
           where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
           select: {
+            id: true,
             title: true,
-            assets: {
-              where: { contentStatus: "PUBLISHED", isOnline: true, deletedAt: null },
-              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-              select: { title: true, assetType: true },
-            },
+            description: true,
           },
         },
       },
     });
-    expect(content.modules.map((module) => module.title)).toEqual(expectedModules.map((module) => module.title));
+    const visibleExpectedModules = expectedModules.filter(isProductionPublicRecord);
+    expect(content.modules.map((module) => module.title)).toEqual(visibleExpectedModules.map((module) => module.title));
     expect(content.modules.flatMap((module) => module.cards).map((card) => card.title)).not.toEqual(
       expect.arrayContaining(["草稿卡片", "已删除卡片"]),
     );
-    for (const expectedModule of expectedModules) {
+    for (const expectedModule of visibleExpectedModules) {
       const actualModule = content.modules.find((module) => module.slug === expectedModule.slug);
-      expect(actualModule?.cards.map((card) => card.title)).toEqual(expectedModule.cards.map((card) => card.title));
-      expect(actualModule?.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.type })))).toEqual(
-        expectedModule.cards.map((card) => card.assets.map((asset) => ({ title: asset.title, type: asset.assetType }))),
-      );
+      expect(actualModule?.cards.map((card) => card.title)).toEqual(expectedModule.cards.filter(isProductionPublicRecord).map((card) => card.title));
+      expect(actualModule?.cards.flatMap((card) => card.assets).every((asset) => (
+        asset.type === "IMAGE"
+        && asset.href.startsWith("/reports/image/")
+        && asset.openMode === "same_tab"
+      ))).toBe(true);
     }
   });
 

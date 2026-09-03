@@ -130,8 +130,8 @@ export function ArchiveStoryCopyMotion({ preview = false }: { preview?: boolean 
     <div ref={trigger} className="archive-story-copy-trigger"/>
     {!complete && <MotionBoundary fallback={null}>
       <MotionStage masterWidth={masterWidth} masterHeight={masterHeight} assets={motionAssets} enabled={enabled} crossfadeMs={0} fallback={null} onStateChange={handleMotionState}>
-        <Image className="archive-story-copy-clean-patch" src={cleanPatch.src} alt="" width={cleanPatch.width} height={cleanPatch.height} style={position(cleanPatch)} unoptimized />
-        {lineAssets.map((line, index) => <Image key={line.src} className="archive-story-copy-line" data-story-line={index + 1} src={line.src} alt="" width={line.width} height={line.height} style={{ ...position(line), "--archive-story-index": index, "--archive-story-line-offset": `${h5MotionTiming.archiveStoryCopy.lineOffsetsMs[index]}ms` } as CSSProperties} unoptimized/>)}
+        <Image className="archive-story-copy-clean-patch" src={cleanPatch.src} alt="" width={cleanPatch.width} height={cleanPatch.height} loading="eager" style={position(cleanPatch)} unoptimized />
+        {lineAssets.map((line, index) => <Image key={line.src} className="archive-story-copy-line" data-story-line={index + 1} src={line.src} alt="" width={line.width} height={line.height} loading="eager" style={{ ...position(line), "--archive-story-index": index, "--archive-story-line-offset": `${h5MotionTiming.archiveStoryCopy.lineOffsetsMs[index]}ms` } as CSSProperties} unoptimized/>)}
       </MotionStage>
     </MotionBoundary>}
   </div>;

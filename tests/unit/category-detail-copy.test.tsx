@@ -58,15 +58,8 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
     expect(screen.getByText("DHA、ARA与安全检测说明。")).toBeInTheDocument();
     expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
-    const passedStatuses = container.querySelectorAll(
-      '.category-card-status[data-status="已通过"]',
-    );
-    expect(passedStatuses).toHaveLength(2);
-    expect(
-      [...passedStatuses].every((status) =>
-        status.querySelector(".category-card-status-text-art"),
-      ),
-    ).toBe(true);
+    expect(container.querySelectorAll("[data-status]")).toHaveLength(0);
+    expect(container.querySelectorAll(".category-card-status-text-art")).toHaveLength(0);
     expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.runtime.webp"));
     expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(6);
     expect(container.querySelector(".category-page-viewport")).toHaveAttribute("data-artwork-source", "layered-components");
@@ -135,27 +128,30 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 
-  it("renders production status with original fish and design-text artwork instead of system text", () => {
+  it("retains the production fish decoration without publishing a fixed conclusion", () => {
     const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
-    const statusLabels = [...container.querySelectorAll<HTMLElement>(".category-card-status")];
+    const decorations = [...container.querySelectorAll<HTMLElement>(".category-card-decoration")];
 
-    expect(statusLabels).toHaveLength(2);
-    expect(statusLabels.map((label) => label.textContent)).toEqual(["", ""]);
-    expect(statusLabels.map((label) => label.dataset.status)).toEqual(["已核验", "已核对"]);
-    expect(statusLabels.map((label) => label.querySelectorAll("img").length)).toEqual([2, 2]);
-    expect(statusLabels.every((label) => label.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/"))).toBe(true);
-    expect(statusLabels.every((label) => label.getAttribute("aria-hidden") === "true")).toBe(true);
-    expect(statusLabels.every((label) => label.closest(".category-card-hotspot"))).toBe(true);
+    expect(decorations).toHaveLength(2);
+    expect(decorations.map((decoration) => decoration.textContent)).toEqual(["", ""]);
+    expect(decorations.every((decoration) => decoration.dataset.status === undefined)).toBe(true);
+    expect(decorations.map((decoration) => decoration.querySelectorAll("img").length)).toEqual([1, 1]);
+    expect(decorations.every((decoration) => decoration.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/category-runtime/"))).toBe(true);
+    expect(decorations.every((decoration) => decoration.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(decorations.every((decoration) => decoration.closest(".category-card-hotspot"))).toBe(true);
+    expect(container.querySelector(".category-card-status-text-art")).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toContain("已核验");
+    expect(container.innerHTML).not.toContain("已核对");
   });
 
-  it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {
+  it("preloads the complete category asset set, shows the fixed parent return, and navigates immediately", async () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     await waitFor(() => expect(preloadHomepageAssets).toHaveBeenCalled());
     expect(vi.mocked(preloadHomepageAssets).mock.calls[0]?.[0]).toEqual(
       categoryReadinessAssets["inspection-projects"].map((src) => ({ src, priority: "high" })),
     );
-    expect(screen.queryByRole("button", { name: "返回上一页" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回档案首页" })).toBeInTheDocument();
 
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
     expect(firstCard).not.toBeNull();

@@ -1,11 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { archiveClickCueLayout, archiveInspectionMascotLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
-import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
+import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
 import { ArchiveArtwork, archiveArtworkCriticalAssets } from "@/components/h5/ArchiveArtwork";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
@@ -29,9 +30,51 @@ const reportsReadinessRequests = [
 ] as const;
 type ReportsArchiveProps = { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig };
 
+function waitForDecodedImage(image: HTMLImageElement, timeoutMs = 12000) {
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    let timer = 0;
+    const finish = (ready: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+      resolve(ready);
+    };
+    const decode = async () => {
+      if (image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+        finish(false);
+        return;
+      }
+      if (typeof image.decode === "function") {
+        try {
+          await image.decode();
+        } catch {
+          finish(false);
+          return;
+        }
+      }
+      finish(true);
+    };
+    const handleLoad = () => void decode();
+    const handleError = () => finish(false);
+    timer = window.setTimeout(() => finish(false), timeoutMs);
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+    if (image.complete && image.naturalWidth > 0) void decode();
+    else window.requestAnimationFrame(() => {
+      if (!settled && image.complete) {
+        if (image.naturalWidth > 0) void decode();
+        else finish(false);
+      }
+    });
+  });
+}
+
 export function ReportsArchive(props: ReportsArchiveProps) {
   if (props.preview) return <ReportsArchiveReady {...props}/>;
-  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets" revealDelayMs={160} settleSelector=".reports-archive-final" settleFrames={3}>
+  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets" revealDelayMs={160} settleSelector=".reports-archive-final" settleFrames={3} failOpen>
     <ReportsArchiveReady {...props}/>
   </AdaptiveReadinessGate>;
 }
@@ -39,12 +82,19 @@ export function ReportsArchive(props: ReportsArchiveProps) {
 function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteConfig }: ReportsArchiveProps) {
   const router = useRouter();
   const readinessReady = useAdaptiveReadiness();
+  const readinessFailed = useAdaptiveReadinessFailed();
   const [leaving, setLeaving] = useState(false);
   const [guideEntry, setGuideEntry] = useState(false);
   const [deferredMounted, setDeferredMounted] = useState(preview);
   const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);
+  const [artworkReady, setArtworkReady] = useState(false);
+  const [layerArtworkFailed, setLayerArtworkFailed] = useState(false);
+  const [fallbackImageMounted, setFallbackImageMounted] = useState(true);
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
   const navigating = useRef(false);
+  const archiveCanvas = useRef<HTMLDivElement | null>(null);
+  const artworkFailed = readinessFailed || layerArtworkFailed;
+  const artworkComplete = artworkReady && !artworkFailed;
   const visibleModules = useMemo(() => [...modules].filter((module) => getArchiveModuleLayout(module.slug)).sort((a, b) => getArchiveModuleLayout(a.slug)!.order - getArchiveModuleLayout(b.slug)!.order), [modules]);
   const inspectionModule = visibleModules.find((module) => module.slug === "inspection-projects");
 
@@ -145,6 +195,42 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     return () => window.clearTimeout(timer);
   }, [guideEntry, preview, readinessReady]);
 
+  useEffect(() => {
+    if (!deferredMounted || !deepDeferredMounted) {
+      setArtworkReady(false);
+      return;
+    }
+    let cancelled = false;
+    setLayerArtworkFailed(false);
+    const frame = window.requestAnimationFrame(() => {
+      const images = Array.from(archiveCanvas.current?.querySelectorAll<HTMLImageElement>("img") ?? [])
+        .filter((image) => !image.closest(".reports-archive-reference-fallback"));
+      if (images.length === 0) {
+        if (!cancelled) setLayerArtworkFailed(true);
+        return;
+      }
+      void Promise.all(images.map((image) => waitForDecodedImage(image))).then((results) => {
+        if (cancelled) return;
+        const ready = results.every(Boolean);
+        setArtworkReady(ready);
+        setLayerArtworkFailed(!ready);
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [deferredMounted, deepDeferredMounted]);
+
+  useEffect(() => {
+    if (!artworkReady || artworkFailed) {
+      setFallbackImageMounted(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setFallbackImageMounted(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [artworkFailed, artworkReady]);
+
   const enter = (module: PublicModule) => {
     if (navigating.current || leaving || guideEntry || preview) return;
     const guideRouteState = document.documentElement.getAttribute(guideRouteEntryAttribute);
@@ -174,8 +260,8 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     "--archive-guide-batch-delay": `${guideArchiveBatchDelayMs}ms`,
   } as CSSProperties;
 
-  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-preview={preview || undefined} style={guideEntryStyle}>
-    <div className="reports-archive-canvas">
+  return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || !artworkComplete || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={guideEntry ? "reference-staged" : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-archive-artwork-ready={artworkComplete ? "true" : "false"} data-archive-artwork-failed={artworkFailed ? "true" : "false"} data-preview={preview || undefined} style={guideEntryStyle}>
+    <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their
           supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
@@ -183,6 +269,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />}
+      <div className="reports-archive-reference-fallback" data-fallback-image={fallbackImageMounted ? "mounted" : "released"}>
+        {fallbackImageMounted ? <Image className="reports-archive-reference-fallback-image" src="/design/final-v1/archive-reference-public.webp" alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /> : null}
+      </div>
+      {artworkFailed ? <div className="reports-archive-artwork-error" role="alert">
+        <span>部分档案素材加载失败，已保留预览。</span>
+        <button type="button" onClick={() => window.location.reload()}>重新加载</button>
+      </div> : null}
       <nav className="reports-archive-hotspots" aria-label="档案分类">
         {inspectionModule && (preview ?
           <div className="archive-click-cue-hotspot" data-cue-slug="inspection-projects" style={archiveClickCueLayout}><span>点击进入检测项目</span></div> :

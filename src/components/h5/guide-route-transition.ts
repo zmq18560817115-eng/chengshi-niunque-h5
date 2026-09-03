@@ -6,11 +6,13 @@ export const guideRouteBufferHostId = "h5-guide-route-buffer-host";
 export const guideRouteNavigationDelayMs = 16;
 export const guideRouteBufferReleaseDurationMs = 520;
 export const guideRouteCommitDurationMs = 520;
+export const guideRouteAssetTimeoutMs = 4000;
 export const guideRouteSnapshotSrc = "/design/guide/guide-final-fallback-v3.webp";
-export const guideRouteDestinationSrc = "/design/final-v1/archive-reference.webp";
 export const guideRouteForegroundSrc = "/design/guide/guide-foreground-top.webp";
 export const guideRouteHintSrc = "/design/guide/swipe-up-hint-v2.png";
 export const guideTransitionTravelRatio = 0.26;
+export const guideRouteLandscapeSnapshotSrc = "/design/guide/guide-landscape-composition.webp";
+export const guideRouteDestinationSrc = "/design/final-v1/archive-reference-public.webp";
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 const smoothstep = (value: number) => {
@@ -50,89 +52,57 @@ let bufferCleanupTimer: number | undefined;
 let stageCleanupTimer: number | undefined;
 let revealDelayTimer: number | undefined;
 let bufferCommitReadyAt = 0;
+let cancelPendingPreparation: (() => void) | undefined;
 
-function createTransitionImage(src: string, className: string) {
-  const image = document.createElement("img");
-  image.className = className;
-  image.src = src;
-  image.alt = "";
-  image.loading = "eager";
-  image.fetchPriority = "high";
-  image.decoding = "async";
-  image.setAttribute("aria-hidden", "true");
-  return image;
-}
+type RouteImageOutcome = "ready" | "failed";
 
-function createGuideLandscapeComposition() {
-  const composition = document.createElement("div");
-  composition.className = "guide-landscape-composition";
-  composition.setAttribute("aria-hidden", "true");
-  const crop = (name: "logo" | "character" | "envelope", src: string) => {
-    const frame = document.createElement("div");
-    frame.className = `guide-landscape-crop guide-landscape-${name}`;
-    frame.dataset.guideLandmark = name;
-    frame.append(createTransitionImage(src, "guide-landscape-crop-master"));
-    return frame;
+function loadAndDecodeRouteImage(image: HTMLImageElement, src: string) {
+  let settled = false;
+  let decoding = false;
+  let timeoutId = 0;
+  let resolveOutcome!: (outcome: RouteImageOutcome) => void;
+  const promise = new Promise<RouteImageOutcome>((resolve) => { resolveOutcome = resolve; });
+  const settle = (outcome: RouteImageOutcome) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(timeoutId);
+    image.removeEventListener("load", decodeLoadedImage);
+    image.removeEventListener("error", fail);
+    image.dataset.decodeState = outcome;
+    resolveOutcome(outcome);
   };
-  composition.append(
-    crop("logo", guideRouteForegroundSrc),
-    crop("character", guideRouteSnapshotSrc),
-    crop("envelope", guideRouteForegroundSrc),
-  );
-  const hint = createTransitionImage(guideRouteHintSrc, "guide-landscape-hint");
-  hint.dataset.guideLandmark = "hint";
-  composition.append(hint);
-  return composition;
-}
-
-function createGuideSnapshot() {
-  const snapshot = document.createElement("div");
-  snapshot.className = "h5-guide-route-snapshot";
-  snapshot.setAttribute("aria-hidden", "true");
-  snapshot.append(
-    createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot"),
-    createGuideLandscapeComposition(),
-  );
-  return snapshot;
-}
-
-function waitForTransitionImage(image: HTMLImageElement, timeoutMs = 4500) {
-  return new Promise<boolean>((resolve) => {
-    let settled = false;
-    const finish = (ready: boolean) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      image.removeEventListener("load", onLoad);
-      image.removeEventListener("error", onError);
-      resolve(ready);
-    };
-    const decode = async () => {
-      try {
-        if (typeof image.decode === "function") await image.decode();
-        finish(image.naturalWidth > 0);
-      } catch {
-        finish(false);
-      }
-    };
-    const onLoad = () => { void decode(); };
-    const onError = () => finish(false);
-    const timeout = window.setTimeout(() => finish(false), timeoutMs);
-    if (image.complete) void decode();
-    else {
-      image.addEventListener("load", onLoad, { once: true });
-      image.addEventListener("error", onError, { once: true });
+  const fail = () => settle("failed");
+  const decodeLoadedImage = () => {
+    if (settled || decoding) return;
+    if (image.naturalWidth <= 0) {
+      fail();
+      return;
     }
-  });
+    decoding = true;
+    const decoded = typeof image.decode === "function" ? image.decode() : Promise.resolve();
+    void decoded.then(
+      () => settle(image.naturalWidth > 0 ? "ready" : "failed"),
+      fail,
+    );
+  };
+  image.dataset.decodeState = "loading";
+  image.addEventListener("load", decodeLoadedImage);
+  image.addEventListener("error", fail);
+  image.src = src;
+  timeoutId = window.setTimeout(fail, guideRouteAssetTimeoutMs);
+  if (image.complete) queueMicrotask(decodeLoadedImage);
+  return { promise, cancel: fail };
 }
 
-export async function prepareGuideRouteContinuity(initialProgress = 0, destinationFallback = false) {
+export function prepareGuideRouteContinuity(initialProgress = 0, destinationFallback = false): Promise<void> {
   const root = document.documentElement;
   const host = document.getElementById(guideRouteBufferHostId);
   const source = document.querySelector<HTMLElement>(".brand-guide");
   const sourceStage = source?.querySelector<HTMLElement>(".brand-guide-stage");
-  if (!host || !source || !sourceStage) return false;
+  const sourceFrame = source?.querySelector<HTMLElement>(".brand-guide-swipe-track");
+  if (!host || !source || !sourceStage || !sourceFrame) return Promise.resolve();
 
+  cancelPendingPreparation?.();
   window.clearTimeout(bufferCleanupTimer);
   window.clearTimeout(stageCleanupTimer);
   window.clearTimeout(revealDelayTimer);
@@ -146,8 +116,27 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);
   root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);
   root.style.setProperty("--guide-route-remaining-distance", `${remainingDistance}px`);
-  const snapshot = createGuideSnapshot();
-  const destination = createTransitionImage(guideRouteDestinationSrc, "h5-guide-route-destination-image");
+  const frameRect = sourceFrame.getBoundingClientRect();
+  const snapshot = document.createElement("div");
+  snapshot.className = "h5-guide-route-snapshot";
+  snapshot.setAttribute("aria-hidden", "true");
+
+  const snapshotImage = document.createElement("img");
+  snapshotImage.className = "h5-guide-route-portrait-snapshot";
+  snapshotImage.alt = "";
+  snapshotImage.loading = "eager";
+  snapshotImage.fetchPriority = "high";
+  snapshotImage.decoding = "async";
+  snapshotImage.setAttribute("aria-hidden", "true");
+  snapshot.append(snapshotImage);
+
+  const destination = document.createElement("img");
+  destination.className = "h5-guide-route-destination-image";
+  destination.alt = "";
+  destination.loading = "eager";
+  destination.fetchPriority = "high";
+  destination.decoding = "async";
+  destination.setAttribute("aria-hidden", "true");
 
   const guidePanel = document.createElement("div");
   guidePanel.className = "h5-guide-route-panel h5-guide-route-guide-panel";
@@ -160,10 +149,16 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   destinationPanel.append(destinationContent);
   const track = document.createElement("div");
   track.className = "h5-guide-route-track";
+  Object.assign(track.style, {
+    left: `${frameRect.left}px`,
+    top: `${frameRect.top}px`,
+    width: `${frameRect.width}px`,
+    height: `${frameRect.height}px`,
+  });
   track.append(guidePanel, destinationPanel);
 
   const buffer = document.createElement("div");
-  buffer.className = `h5-guide-route-buffer is-preparing${destinationFallback ? " has-destination-fallback" : ""}`;
+  buffer.className = `h5-guide-route-buffer${destinationFallback ? " has-destination-fallback" : ""}`;
   buffer.setAttribute("aria-hidden", "true");
   buffer.style.setProperty("--guide-route-start-guide-y", `${start.guideY.toFixed(3)}px`);
   buffer.style.setProperty("--guide-route-start-destination-y", `${start.destinationY.toFixed(3)}px`);
@@ -171,29 +166,81 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   buffer.style.setProperty("--guide-route-start-guide-opacity", `${start.guideOpacity.toFixed(4)}`);
   buffer.style.setProperty("--guide-route-start-destination-opacity", `${start.destinationOpacity.toFixed(4)}`);
   buffer.style.setProperty("--guide-route-commit-duration", `${commitDuration}ms`);
+  buffer.dataset.commitState = "waiting-for-decoded-images";
   buffer.append(track);
-  host.replaceChildren(buffer);
 
-  const images = Array.from(buffer.querySelectorAll<HTMLImageElement>("img"));
-  const requiredImages = destinationFallback ? images.filter((image) => image !== destination) : images;
-  const decoded = await Promise.all(requiredImages.map((image) => waitForTransitionImage(image)));
-  if (decoded.some((ready) => !ready)) {
-    buffer.remove();
-    return false;
-  }
+  const landscapeSnapshot = window.matchMedia?.("(orientation: landscape) and (max-height: 500px)").matches ?? false;
+  const snapshotLoad = loadAndDecodeRouteImage(snapshotImage, landscapeSnapshot ? guideRouteLandscapeSnapshotSrc : guideRouteSnapshotSrc);
+  const destinationLoad = destinationFallback
+    ? (() => {
+        destination.src = guideRouteDestinationSrc;
+        destination.dataset.decodeState = "failed";
+        return { promise: Promise.resolve<RouteImageOutcome>("failed"), cancel: () => undefined };
+      })()
+    : loadAndDecodeRouteImage(destination, guideRouteDestinationSrc);
 
-  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  if (!buffer.isConnected) return false;
-  buffer.classList.remove("is-preparing");
-  root.setAttribute(guideRouteEntryAttribute, "active");
-  bufferCommitReadyAt = performance.now() + commitDuration;
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => buffer.classList.add("is-committing")));
-  return true;
+  let cancelled = false;
+  let activated = false;
+  let resolveActivated!: () => void;
+  const activation = new Promise<void>((resolve) => { resolveActivated = resolve; });
+  const cancel = () => {
+    if (cancelled || activated) return;
+    cancelled = true;
+    snapshotLoad.cancel();
+    destinationLoad.cancel();
+    resolveActivated();
+  };
+  cancelPendingPreparation = cancel;
+
+  void Promise.all([snapshotLoad.promise, destinationLoad.promise]).then(([snapshotOutcome, destinationOutcome]) => {
+    if (cancelled) return;
+    activated = true;
+    if (cancelPendingPreparation === cancel) cancelPendingPreparation = undefined;
+    if (destinationOutcome === "failed") {
+      buffer.classList.add("has-destination-fallback");
+      buffer.dataset.destinationState = "fallback";
+    } else {
+      buffer.dataset.destinationState = "decoded";
+    }
+    if (snapshotOutcome === "failed") {
+      // If the guide poster itself cannot be decoded, switch directly to the
+      // already-decoded destination (or its explicit error card). This avoids
+      // ever replacing live guide content with a texture-only panel.
+      snapshot.remove();
+      buffer.dataset.sourceState = "fallback";
+      buffer.style.setProperty("--guide-route-start-guide-opacity", "0");
+      buffer.style.setProperty("--guide-route-start-destination-opacity", "1");
+    } else {
+      buffer.dataset.sourceState = "decoded";
+    }
+    host.replaceChildren(buffer);
+    root.setAttribute(guideRouteEntryAttribute, "active");
+    bufferCommitReadyAt = 0;
+    resolveActivated();
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      if (!buffer.isConnected) return;
+      buffer.dataset.commitState = "committing";
+      bufferCommitReadyAt = performance.now() + commitDuration;
+      buffer.classList.add("is-committing");
+      if (buffer.dataset.revealPending === "true") {
+        delete buffer.dataset.revealPending;
+        revealGuideDestination();
+      }
+    }));
+  });
+  return activation;
 }
 
 function revealGuideDestination() {
   const root = document.documentElement;
   const buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`);
+  if (buffer && !buffer.classList.contains("is-committing")) {
+    // The destination route can announce readiness in the narrow interval
+    // between buffer activation and its first composited transition frame.
+    // Hold that reveal until commit has genuinely started.
+    buffer.dataset.revealPending = "true";
+    return;
+  }
   const release = () => window.requestAnimationFrame(() => {
       root.setAttribute(guideRouteEntryAttribute, "revealing");
       buffer?.classList.add("is-releasing");
@@ -216,17 +263,21 @@ function revealGuideDestination() {
 }
 
 export function navigateWithGuideContinuity(navigate: () => void) {
-  let settled = false;
-  const finish = () => {
-    if (settled) return;
-    settled = true;
-    window.clearTimeout(fallbackTimer);
-    window.removeEventListener(guideRouteReadyEvent, finish);
-    revealGuideDestination();
+  const beginNavigation = () => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(fallbackTimer);
+      window.removeEventListener(guideRouteReadyEvent, finish);
+      revealGuideDestination();
+    };
+    const fallbackTimer = window.setTimeout(finish, 12000);
+    window.addEventListener(guideRouteReadyEvent, finish, { once: true });
+    navigate();
   };
-  const fallbackTimer = window.setTimeout(finish, 12000);
-  window.addEventListener(guideRouteReadyEvent, finish, { once: true });
-  navigate();
+  if (document.documentElement.hasAttribute(guideRouteEntryAttribute)) beginNavigation();
+  else void prepareGuideRouteContinuity().then(beginNavigation);
 }
 
 export function announceGuideRouteReady() {
@@ -234,6 +285,8 @@ export function announceGuideRouteReady() {
 }
 
 export function clearGuideRouteContinuity() {
+  cancelPendingPreparation?.();
+  cancelPendingPreparation = undefined;
   window.clearTimeout(bufferCleanupTimer);
   window.clearTimeout(stageCleanupTimer);
   window.clearTimeout(revealDelayTimer);

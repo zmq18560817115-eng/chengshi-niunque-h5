@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export function GET(): Response {
   return new Response(null, {
     status: 410,
     headers: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { PublicAsset } from "@/server/services/public-content-service";
 
 type ScaleAnchor = { contentX: number; contentY: number; screenX: number; screenY: number };
@@ -10,7 +11,8 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
+export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分类资料" }: { asset: PublicAsset; returnHref?: string; returnLabel?: string }) {
+  const router = useRouter();
   const pages = asset.pages.length > 0 ? asset.pages : [{ id: asset.id, pageNumber: 1, href: asset.href }];
   const [pageIndex, setPageIndex] = useState(0);
   const [scale, setScale] = useState(1);
@@ -123,6 +125,18 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
     resetView();
   };
 
+  const retryPage = () => {
+    resetView();
+    pinchStart.current = null;
+    touchPanPoint.current = null;
+    dragStart.current = null;
+    setDragging(false);
+    setPinching(false);
+    setFailed(false);
+    setLoaded(false);
+    setRetry((value) => value + 1);
+  };
+
   return <article className="image-report" data-scale={scale} data-page={pageIndex + 1}>
     <header>
       <div><h2>{asset.title}</h2>{asset.description && <p>{asset.description}</p>}<small className="report-page-count">第 {pageIndex + 1} / {pages.length} 页</small></div>
@@ -134,8 +148,8 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
       </div>
     </header>
     {pages.length > 1 && <nav className="report-page-controls" aria-label={`${asset.title}图片页`}><button type="button" onClick={() => selectPage(pageIndex - 1)} disabled={pageIndex === 0}>上一页</button><span>{pageIndex + 1} / {pages.length}</span><button type="button" onClick={() => selectPage(pageIndex + 1)} disabled={pageIndex === pages.length - 1}>下一页</button></nav>}
-    {failed ? <div className="report-error" role="alert"><strong>{asset.title} · 第 {pageIndex + 1} 页</strong><p>资料加载失败</p><button type="button" onClick={() => { setFailed(false); setLoaded(false); setRetry((value) => value + 1); }}>重新加载</button></div> :
-      <div ref={stageRef} className={`report-image-stage ${loaded ? "is-loaded" : "is-loading"} ${scale > 1 ? "is-zoomed" : ""} ${dragging ? "is-dragging" : ""} ${pinching ? "is-pinching" : ""}`} data-swipe-back-ignore={scale > 1 || undefined} aria-label="报告图片查看区域，原始大小随页面滚动，放大后可在区域内缩放和拖动" onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); updateScale(scale === 1 ? 2 : 1, { x: event.clientX - bounds.left, y: event.clientY - bounds.top }); }}
+    {failed ? <div className="report-error" role="alert"><span className="report-error-brand">诚实纽雀检测档案</span><strong>{asset.title} · 第 {pageIndex + 1} 页</strong><p>报告图片暂时没有加载出来，请检查网络后重试。</p><div className="report-error-actions"><button type="button" onClick={retryPage}>重新加载</button>{returnHref ? <button className="button button-secondary" type="button" onClick={() => router.replace(returnHref)}>{returnLabel}</button> : null}</div></div> :
+      <div ref={stageRef} data-swipe-back-ignore={scale > 1 || undefined} className={`report-image-stage ${scale > 1 ? "is-zoomed" : "is-natural"} ${loaded ? "is-loaded" : "is-loading"} ${dragging ? "is-dragging" : ""} ${pinching ? "is-pinching" : ""}`} aria-label={scale > 1 ? "报告图片已放大，可在图片区域内平移或双指缩放" : "报告图片按整页显示，原始大小随页面滚动；放大后才可平移"} onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); updateScale(scale === 1 ? 2 : 1, { x: event.clientX - bounds.left, y: event.clientY - bounds.top }); }}
         onTouchStart={(event) => {
           if (event.touches.length === 2) {
             const bounds = event.currentTarget.getBoundingClientRect();
@@ -186,7 +200,7 @@ export function ImageReportViewer({ asset }: { asset: PublicAsset }) {
         }}
         onTouchEnd={(event) => { if (event.touches.length < 2) { pinchStart.current = null; setPinching(false); } touchPanPoint.current = event.touches.length === 1 && scaleRef.current > 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null; }}
         onTouchCancel={() => { pinchStart.current = null; touchPanPoint.current = null; setPinching(false); }}
-        onPointerDown={(event) => { if (event.pointerType !== "mouse" || event.button !== 0) return; dragStart.current = { x: event.clientX, y: event.clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop }; event.currentTarget.setPointerCapture(event.pointerId); setDragging(true); }}
+        onPointerDown={(event) => { if (scaleRef.current <= 1 || event.pointerType !== "mouse" || event.button !== 0) return; dragStart.current = { x: event.clientX, y: event.clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop }; event.currentTarget.setPointerCapture(event.pointerId); setDragging(true); }}
         onPointerMove={(event) => { if (!dragStart.current) return; event.currentTarget.scrollLeft = dragStart.current.left - (event.clientX - dragStart.current.x); event.currentTarget.scrollTop = dragStart.current.top - (event.clientY - dragStart.current.y); }}
         onPointerUp={(event) => { if (!dragStart.current) return; dragStart.current = null; event.currentTarget.releasePointerCapture(event.pointerId); setDragging(false); }}
         onPointerCancel={() => { dragStart.current = null; setDragging(false); }}>

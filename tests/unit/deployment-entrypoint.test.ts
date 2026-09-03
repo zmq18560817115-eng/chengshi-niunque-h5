@@ -49,6 +49,7 @@ describe("production deployment entrypoint", () => {
     expect(nextConfig).toContain('source: "/design/:path*"');
     expect(nextConfig).toContain("public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400");
     expect(nginx).toContain("location ^~ /_next/static/");
+    expect(nginx).toContain("location ^~ /design/reports/test-report-");
     expect(nginx).toContain('add_header Cache-Control "public, max-age=31536000, immutable";');
     expect(nginx).toContain("gzip on;");
     expect(nginx).not.toMatch(/add_header Cache-Control [^;]+ always;/);
@@ -56,6 +57,8 @@ describe("production deployment entrypoint", () => {
 
   it("runs the required quality gates and mobile browser journeys in CI", () => {
     const workflow = readFileSync(".github/workflows/quality.yml", "utf8");
+    const playwright = readFileSync("playwright.config.ts", "utf8");
+    const packageJson = readFileSync("package.json", "utf8");
     expect(workflow).toContain("postgres:17-alpine");
     expect(workflow).toContain("minio/minio:RELEASE.2025-07-23T15-54-02Z");
     expect(workflow).toContain("pnpm install --frozen-lockfile");
@@ -64,7 +67,23 @@ describe("production deployment entrypoint", () => {
     expect(workflow).toContain("pnpm test");
     expect(workflow).toContain("pnpm prisma:validate");
     expect(workflow).toContain("pnpm build");
-    expect(workflow).toContain("playwright install --with-deps chromium");
+    expect(workflow).toContain('E2E_FIXTURE_WRITES_ALLOWED: "true"');
+    expect(workflow).toContain("POSTGRES_DB: honest_nutri_e2e");
+    expect(workflow).toContain("S3_BUCKET: honest-nutri-reports-e2e");
+    expect(workflow).toContain("playwright install --with-deps chromium webkit");
     expect(workflow).toContain("pnpm test:e2e");
+    expect(workflow).toContain("ROLLBACK_REF: d984a8a");
+    expect(workflow).toContain("git worktree add --detach");
+    expect(workflow).toContain("pnpm test:e2e:rollback");
+    expect(workflow).toContain("actions/upload-artifact@v4");
+    expect(workflow).toContain("playwright-report");
+    expect(workflow).toContain("test-results");
+    expect(playwright).toContain('process.env.CI ? "pnpm start" : "pnpm dev"');
+    expect(playwright).toContain('name: "android-chromium"');
+    expect(playwright).toContain('name: "mobile-webkit-p1"');
+    expect(playwright).not.toContain('devices["iPhone 13"]');
+    expect(playwright).toContain("(?:p1-regression|report-image-viewer)\\.spec\\.ts");
+    expect(packageJson).toContain('"test:e2e:p1"');
+    expect(packageJson).toContain('"test:e2e:rollback"');
   });
 });
