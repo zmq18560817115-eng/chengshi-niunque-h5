@@ -229,19 +229,38 @@ async function expectGuideSubjectOccupancy(page: Page) {
   const stageBox = await artwork.boundingBox();
   expect(stageBox).not.toBeNull();
   if (!stageBox) throw new Error("guide subject geometry is unavailable");
+  const profile = await page.locator(".brand-guide").getAttribute("data-guide-profile");
 
-  if (stageBox.width > stageBox.height) {
-    const composition = page.locator(".guide-landscape-composition");
+  if (profile === "landscape") {
+    const composition = artwork.locator(":scope > .guide-landscape-composition");
     await expect(composition).toBeVisible();
-    await expectDecodedImages(stage, ".guide-landscape-composition img", 6);
+    await expectDecodedImages(artwork, ":scope > .guide-landscape-composition img", 6);
     const compositionBox = await composition.boundingBox();
     expect(compositionBox).not.toBeNull();
     if (!compositionBox) throw new Error("landscape composition has no layout box");
     expect(compositionBox.width).toBeCloseTo(stageBox.width, 0);
     expect(compositionBox.height).toBeCloseTo(stageBox.height, 0);
+  } else if (profile === "portrait-compact") {
+    const composition = artwork.locator(":scope > .guide-compact-portrait-composition");
+    await expect(composition).toBeVisible();
+    await expectDecodedImages(composition, "img", 11);
+    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
+    await expect(landmarks).toHaveCount(4);
+    const occupied = await landmarks.evaluateAll((elements) => {
+      const boxes = elements.map((element) => element.getBoundingClientRect());
+      return {
+        left: Math.min(...boxes.map((box) => box.left)),
+        top: Math.min(...boxes.map((box) => box.top)),
+        right: Math.max(...boxes.map((box) => box.right)),
+        bottom: Math.max(...boxes.map((box) => box.bottom)),
+      };
+    });
+    expect((occupied.right - occupied.left) / stageBox.width).toBeGreaterThanOrEqual(0.92);
+    expect((occupied.bottom - occupied.top) / stageBox.height).toBeGreaterThanOrEqual(0.84);
   } else {
-    const character = page.locator(".brand-guide-character-open").first();
-    const envelope = page.locator(".brand-guide-paper-bottom").first();
+    expect(profile).toBe("portrait-standard");
+    const character = artwork.locator(".brand-guide-character-open");
+    const envelope = artwork.locator(".brand-guide-paper-bottom");
     await expect(character).toBeAttached();
     await expect(envelope).toBeAttached();
     const [characterGeometry, envelopeGeometry] = await Promise.all([
@@ -257,7 +276,12 @@ async function expectGuideSubjectOccupancy(page: Page) {
     expect(envelopeGeometry.visibleFraction).toBeGreaterThanOrEqual(0.58);
   }
 
-  const hint = page.locator(stageBox.width > stageBox.height ? ".guide-landscape-hint" : ".brand-guide-entry-hint").first();
+  const hintSelector = profile === "landscape"
+    ? ":scope > .guide-landscape-composition .guide-landscape-hint"
+    : profile === "portrait-compact"
+      ? ":scope > .guide-compact-portrait-composition .guide-compact-hint"
+      : ".brand-guide-entry-hint";
+  const hint = artwork.locator(hintSelector);
   await expect(hint).toBeVisible();
   const hintBox = await hint.boundingBox();
   expect(hintBox).not.toBeNull();
@@ -302,11 +326,15 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     // Texture/background panels deliberately do not count as content. The
     // regression being guarded was a fully painted frame whose only visible
     // pixels were the two paper textures while both page subjects vanished.
+    const profile = root.dataset.guideProfile;
+    const guideSubjectSelectors = profile === "portrait-compact"
+      ? [".brand-guide-artwork > .guide-compact-portrait-composition"]
+      : profile === "landscape"
+        ? [".brand-guide-artwork > .guide-landscape-composition"]
+        : [".brand-guide-artwork .brand-guide-character-open", ".brand-guide-artwork .brand-guide-paper-bottom"];
     const subjectElements = [
-      ".brand-guide-character-open",
-      ".brand-guide-paper-bottom",
+      ...guideSubjectSelectors,
       ".brand-guide-fallback",
-      ".guide-landscape-composition",
       ".brand-guide-destination-image",
     ].flatMap((selector) => [...document.querySelectorAll(selector)]);
     const subjectCoverage = Math.min(1, subjectElements.reduce((sum, element) => {
@@ -363,10 +391,11 @@ async function startHandoffCoverageProbe(page: Page) {
     const sample = () => {
       if (!probe.running) return;
       const candidates = [
-        ".brand-guide-character-open",
-        ".brand-guide-paper-bottom",
+        ".brand-guide-artwork .brand-guide-character-open",
+        ".brand-guide-artwork .brand-guide-paper-bottom",
+        ".brand-guide-artwork > .guide-compact-portrait-composition",
         ".brand-guide-fallback",
-        ".guide-landscape-composition",
+        ".brand-guide-artwork > .guide-landscape-composition",
         ".brand-guide-destination-image",
         ".h5-guide-route-snapshot",
         ".h5-guide-route-destination-image",
@@ -469,12 +498,11 @@ for (const viewport of targetViewports) {
     await startHandoffCoverageProbe(page);
     await dispatchSingleTouch(root, "touchend", startX, 0);
     const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
-    await expect(routeBuffer).toBeAttached({ timeout: 5_000 });
-    const routeBufferState = await routeBuffer.evaluate((element) => ({
-      source: element.getAttribute("data-source-state"),
-      destination: element.getAttribute("data-destination-state"),
-    }));
-    expect(routeBufferState).toEqual({ source: "decoded", destination: "decoded" });
+    await expect(routeBuffer).toBeVisible({ timeout: 5_000 });
+    await expect(routeBuffer).toHaveAttribute("data-guide-profile", await root.getAttribute("data-guide-profile") ?? "portrait-standard");
+    await expect(routeBuffer).toHaveAttribute("data-commit-state", /^(prepared|committing)$/);
+    await expectDecodedImages(routeBuffer, "img", 2);
+    await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toHaveAttribute("data-decode-state", "ready");
     const routeDestinationBox = await routeBuffer.locator(".h5-guide-route-destination-image").boundingBox();
     expect(routeDestinationBox).not.toBeNull();
     if (!routeDestinationBox) throw new Error("route destination frame has no box");
@@ -509,7 +537,7 @@ test("canonical guide still matches the approved 750px visual baseline", async (
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const stage = page.locator(".brand-guide-stage");
   await expect(stage).toHaveAttribute("data-destination-state", "ready", { timeout: 15_000 });
-  await expectDecodedImages(stage, "img", 2);
+  await expectDecodedImages(stage, "img", 1);
   await expect(stage).toHaveScreenshot("source-guide-normalized-750x1624.png", {
     animations: "disabled",
     scale: "css",
@@ -624,8 +652,11 @@ test("cold and warm production-cache journeys decode every requested visual asse
     await rememberRenderedAssets();
   });
 
-  const cacheHitCount = warmCacheEvidence.filter((entry) => entry.deliveryType === "cache" || entry.transferSize === 0).length;
-  expect(cacheHitCount / warmCacheEvidence.length, JSON.stringify(warmCacheEvidence)).toBeGreaterThanOrEqual(0.6);
+  const warmReloadEvidence = warmCacheEvidence.filter((entry) => entry.label === "warm guide reload");
+  const warmReloadHits = warmReloadEvidence.filter((entry) => entry.deliveryType === "cache" || entry.transferSize === 0);
+  expect(warmReloadEvidence.length, "the repeated guide navigation must expose timing evidence").toBeGreaterThan(3);
+  expect(warmReloadHits.length / warmReloadEvidence.length, JSON.stringify(warmReloadEvidence)).toBeGreaterThanOrEqual(0.8);
+  expect(new Set(warmReloadHits.map((entry) => new URL(entry.name).pathname)).size, "multiple distinct guide assets must be served from browser cache").toBeGreaterThan(3);
 
   const assetUrls = [...observedAssetUrls];
   expect(assetUrls.length).toBeGreaterThan(2);

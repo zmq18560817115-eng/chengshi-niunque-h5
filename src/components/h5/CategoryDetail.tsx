@@ -7,7 +7,7 @@ import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/Ada
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
-import { replaceHierarchyRoute } from "@/components/h5/hierarchy-navigation";
+import { pushHierarchyRoute, readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
 import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteMountedEvent, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
@@ -60,14 +60,13 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     const root = document.documentElement;
     root.setAttribute("data-h5-page-lock", "category");
     const page = document.querySelector<HTMLElement>(`.category-page-final[data-category="${module.slug}"]`);
-    if (page) page.scrollTop = 0;
-    window.scrollTo(0, 0);
-    const resetFrame = window.requestAnimationFrame(() => {
-      if (page) page.scrollTop = 0;
+    const initialScroll = readCategoryScrollPosition(module.slug);
+    const restoreScroll = () => {
+      if (page) page.scrollTop = initialScroll;
       window.scrollTo(0, 0);
-    });
+    };
+    restoreScroll();
     return () => {
-      window.cancelAnimationFrame(resetFrame);
       if (root.getAttribute("data-h5-page-lock") === "category") root.removeAttribute("data-h5-page-lock");
     };
   }, [module.slug, preview]);
@@ -92,9 +91,9 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     announceCategoryRouteReady();
   }, [routeReady]);
 
-  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" backLabel="返回档案首页" preview={preview}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
+  if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
-  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" backLabel="返回档案首页" preview={preview} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
+  return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${leaving ? "is-leaving" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {
@@ -140,7 +139,9 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
             if (leaving) return;
             setLeaving(true);
             const destination = `/reports/${module.slug}/items/${cardId}/reports` as const;
-            replaceHierarchyRoute(router, destination);
+            const page = document.querySelector<HTMLElement>(`.category-page-final[data-category="${module.slug}"]`);
+            saveCategoryScrollPosition(module.slug, page?.scrollTop ?? 0);
+            pushHierarchyRoute(router, destination);
           }}>{copy}</button>;
       })}
       </section>

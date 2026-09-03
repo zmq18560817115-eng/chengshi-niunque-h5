@@ -3,125 +3,161 @@ import {
   clearGuideRouteContinuity,
   guideRouteBufferHostId,
   guideRouteCommitDurationMs,
+  guideRouteDestinationSrc,
+  guideRouteEntryAttribute,
+  guideRouteSnapshotSrc,
   navigateWithGuideContinuity,
   prepareGuideRouteContinuity,
+  primeGuideRouteContinuity,
 } from "@/components/h5/guide-route-transition";
 
-type RafCallback = FrameRequestCallback;
-
-function mountGuideShell() {
-  const host = document.createElement("div");
-  host.id = guideRouteBufferHostId;
-  const source = document.createElement("main");
-  source.className = "brand-guide";
-  const track = document.createElement("div");
-  track.className = "brand-guide-swipe-track";
-  const stage = document.createElement("section");
-  stage.className = "brand-guide-stage";
-  track.append(stage);
-  source.append(track);
-  document.body.append(host, source);
-  const viewportRect = {
-    x: 0, y: 0, left: 0, top: 0, right: 375, bottom: 812,
-    width: 375, height: 812, toJSON: () => undefined,
-  } as DOMRect;
-  Object.defineProperty(source, "getBoundingClientRect", { configurable: true, value: () => viewportRect });
-  Object.defineProperty(track, "getBoundingClientRect", { configurable: true, value: () => viewportRect });
-}
-
-function captureCreatedImages() {
-  const createdImages: HTMLImageElement[] = [];
-  const createElement = document.createElement.bind(document);
-  vi.spyOn(document, "createElement").mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-    const element = createElement(tagName, options);
-    if (tagName.toLowerCase() === "img") createdImages.push(element as HTMLImageElement);
-    return element;
-  }) as typeof document.createElement);
-  return createdImages;
-}
-
-async function decodeImage(image: HTMLImageElement) {
-  Object.defineProperty(image, "complete", { configurable: true, value: true });
-  Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1000 });
-  Object.defineProperty(image, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
-  image.dispatchEvent(new Event("load"));
-  await Promise.resolve();
-  await Promise.resolve();
-}
-
-describe("guide route decoded-image continuity", () => {
-  let rafCallbacks: RafCallback[];
+describe("guide route transition priming", () => {
+  const originalComplete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "complete");
+  const originalNaturalWidth = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "naturalWidth");
+  const originalDecode = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "decode");
+  let decodedSources: string[] = [];
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    document.body.replaceChildren();
-    document.documentElement.removeAttribute("data-guide-route-entry");
-    mountGuideShell();
-    rafCallbacks = [];
-    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: RafCallback) => {
-      rafCallbacks.push(callback);
-      return rafCallbacks.length;
-    }));
+    decodedSources = [];
+    document.documentElement.removeAttribute(guideRouteEntryAttribute);
+    document.documentElement.removeAttribute("style");
+    document.body.innerHTML = `<div id="${guideRouteBufferHostId}"></div><main class="brand-guide" data-guide-profile="portrait-standard"><div class="brand-guide-swipe-track"><section class="brand-guide-stage"></section></div></main>`;
+    const rect = { bottom: 812, height: 812, left: 0, right: 375, top: 0, width: 375, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    document.querySelector<HTMLElement>(".brand-guide")!.getBoundingClientRect = () => rect;
+    document.querySelector<HTMLElement>(".brand-guide-swipe-track")!.getBoundingClientRect = () => rect;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(), matches: query.includes("orientation: landscape") ? false : false,
+        media: query, onchange: null, removeEventListener: vi.fn(), removeListener: vi.fn(),
+      })),
+    });
+    Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, get: () => true });
+    Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, get: () => 750 });
+    Object.defineProperty(HTMLImageElement.prototype, "decode", {
+      configurable: true,
+      value: vi.fn(function decode(this: HTMLImageElement) {
+        decodedSources.push(this.getAttribute("src") ?? "");
+        return Promise.resolve();
+      }),
+    });
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(performance.now()); return 1; });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
-    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
   });
 
   afterEach(() => {
     clearGuideRouteContinuity();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
-    document.body.replaceChildren();
+    vi.unstubAllGlobals();
+    if (originalComplete) Object.defineProperty(HTMLImageElement.prototype, "complete", originalComplete);
+    if (originalNaturalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalNaturalWidth);
+    if (originalDecode) Object.defineProperty(HTMLImageElement.prototype, "decode", originalDecode);
+    else delete (HTMLImageElement.prototype as Partial<HTMLImageElement>).decode;
+    document.body.innerHTML = "";
   });
 
-  it("keeps the live guide until both route images decode and defers an early reveal", async () => {
-    const createdImages = captureCreatedImages();
-    const activation = prepareGuideRouteContinuity(.25);
-    expect(createdImages).toHaveLength(2);
-    expect(document.querySelector(".h5-guide-route-buffer")).not.toBeInTheDocument();
+  it("primes decoded portrait assets, keeps the buffer hidden, and reuses it on commit", async () => {
+    await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(true);
+    const host = document.getElementById(guideRouteBufferHostId)!;
+    const primed = host.firstElementChild as HTMLElement;
+    expect([...primed.querySelectorAll("img")].map((image) => image.getAttribute("src"))).toEqual([
+      guideRouteSnapshotSrc,
+      guideRouteDestinationSrc,
+    ]);
+    expect(primed).toHaveClass("is-preparing");
+    expect(primed.dataset.guideProfile).toBe("portrait-standard");
+    expect(decodedSources).toEqual([guideRouteSnapshotSrc, guideRouteDestinationSrc]);
+    expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
 
-    await decodeImage(createdImages[0]!);
-    expect(document.querySelector(".h5-guide-route-buffer")).not.toBeInTheDocument();
-    await decodeImage(createdImages[1]!);
-    await activation;
+    await expect(prepareGuideRouteContinuity(.25, false)).resolves.toBe(true);
+    expect(host.firstElementChild).toBe(primed);
+    expect(host.childElementCount).toBe(1);
+    expect(primed).not.toHaveClass("is-preparing");
+    expect(primed).toHaveClass("is-committing");
+    expect(decodedSources).toHaveLength(2);
+    expect(document.documentElement).toHaveAttribute(guideRouteEntryAttribute, "active");
+  });
+
+  it("primes compact and landscape buffers from semantic responsive layers", async () => {
+    await expect(primeGuideRouteContinuity("portrait-compact", false)).resolves.toBe(true);
+    let buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)!;
+    expect(buffer.querySelector(".guide-compact-portrait-composition")).not.toBeNull();
+    expect(buffer.querySelector(".guide-compact-character-overlay")).not.toBeNull();
+    expect(buffer.querySelector(".guide-compact-envelope")).not.toBeNull();
+
+    await expect(primeGuideRouteContinuity("landscape", false)).resolves.toBe(true);
+    buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)!;
+    expect(buffer.dataset.guideProfile).toBe("landscape");
+    expect(buffer.dataset.guideOrientation).toBe("landscape");
+    expect(buffer.querySelector(".h5-guide-route-portrait-snapshot")).toBeNull();
+    expect([...buffer.querySelectorAll(".guide-landscape-character img")].map((image) => image.getAttribute("src"))).toEqual([
+      "/design/guide/guide-arch.webp",
+      "/design/guide/guide-character-open.webp",
+      "/design/guide/guide-foreground-top.webp",
+    ]);
+    expect(buffer.querySelector(".guide-landscape-logo")).not.toBeNull();
+    expect(buffer.querySelector(".guide-landscape-envelope")).not.toBeNull();
+    expect(buffer.querySelector(".guide-landscape-hint")).not.toBeNull();
+  });
+
+  it("replaces stale profiles and keeps explicit destination fallback decoded safely", async () => {
+    await primeGuideRouteContinuity("portrait-standard", false);
+    const host = document.getElementById(guideRouteBufferHostId)!;
+    const first = host.firstElementChild;
+    await primeGuideRouteContinuity("portrait-compact", true);
+    const buffer = host.firstElementChild as HTMLElement;
+    expect(first?.isConnected).toBe(false);
+    expect(host.childElementCount).toBe(1);
+    expect(buffer).toHaveClass("has-destination-fallback");
+    expect(buffer.querySelector(".h5-guide-route-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
+  });
+
+  it("does not expose a partial buffer or route lock after required decoding fails", async () => {
+    Object.defineProperty(HTMLImageElement.prototype, "decode", {
+      configurable: true,
+      value: vi.fn(function decode(this: HTMLImageElement) {
+        return this.getAttribute("src") === guideRouteDestinationSrc ? Promise.reject(new Error("decode failed")) : Promise.resolve();
+      }),
+    });
+    await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(false);
+    expect(document.getElementById(guideRouteBufferHostId)).toBeEmptyDOMElement();
+    expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
+  });
+
+  it("defers an early route-ready reveal until the decoded commit window completes", async () => {
+    vi.useFakeTimers();
+    const rafCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { rafCallbacks.push(callback); return rafCallbacks.length; }));
+    await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(true);
+    const preparation = prepareGuideRouteContinuity(.25, false);
+    await Promise.resolve();
+    rafCallbacks.shift()?.(0);
+    await expect(preparation).resolves.toBe(true);
 
     const buffer = document.querySelector<HTMLElement>(".h5-guide-route-buffer")!;
-    expect(buffer).toHaveAttribute("data-source-state", "decoded");
-    expect(buffer).toHaveAttribute("data-destination-state", "decoded");
-    expect(buffer).not.toHaveClass("is-committing");
-
     const navigate = vi.fn();
     navigateWithGuideContinuity(navigate);
     announceGuideRouteReady();
     expect(navigate).toHaveBeenCalledOnce();
-    expect(buffer).toHaveAttribute("data-reveal-pending", "true");
     expect(buffer).not.toHaveClass("is-releasing");
 
     rafCallbacks.shift()?.(0);
     rafCallbacks.shift()?.(0);
     expect(buffer).toHaveClass("is-committing");
-    expect(buffer).not.toHaveAttribute("data-reveal-pending");
     expect(buffer).not.toHaveClass("is-releasing");
-
     await vi.advanceTimersByTimeAsync(guideRouteCommitDurationMs);
     rafCallbacks.shift()?.(guideRouteCommitDurationMs);
     expect(buffer).toHaveClass("is-releasing");
   });
 
-  it("commits an explicit error fallback when the route destination cannot decode", async () => {
-    const createdImages = captureCreatedImages();
-    const activation = prepareGuideRouteContinuity(.5);
-    await decodeImage(createdImages[0]!);
-    createdImages[1]!.dispatchEvent(new Event("error"));
-    await activation;
-
-    const buffer = document.querySelector<HTMLElement>(".h5-guide-route-buffer")!;
-    expect(buffer).toHaveClass("has-destination-fallback");
-    expect(buffer).toHaveAttribute("data-destination-state", "fallback");
-    expect(buffer.querySelector(".h5-guide-route-snapshot")).toBeInTheDocument();
-    expect(buffer).not.toHaveClass("is-committing");
-    rafCallbacks.shift()?.(0);
-    rafCallbacks.shift()?.(0);
-    expect(buffer).toHaveClass("is-committing");
+  it("clear removes the hidden buffer and resets the prime cache", async () => {
+    await primeGuideRouteContinuity("portrait-standard", false);
+    const host = document.getElementById(guideRouteBufferHostId)!;
+    const first = host.firstElementChild;
+    clearGuideRouteContinuity();
+    expect(host).toBeEmptyDOMElement();
+    await primeGuideRouteContinuity("portrait-standard", false);
+    expect(host.firstElementChild).not.toBe(first);
+    expect(decodedSources).toHaveLength(4);
   });
 });

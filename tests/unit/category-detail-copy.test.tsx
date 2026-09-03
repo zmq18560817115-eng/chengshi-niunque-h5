@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CategoryDetail } from "@/components/h5/CategoryDetail";
 import { preloadHomepageAssets } from "@/components/h5/homepage-preload";
+import { readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
 import { categoryReadinessAssets } from "@/config/h5-category-themes";
 import type { PublicModule } from "@/server/services/public-content-service";
 
@@ -48,6 +49,8 @@ describe("CategoryDetail dynamic card copy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(preloadHomepageAssets).mockResolvedValue({ total: 4, failed: [] });
+    sessionStorage.clear();
+    window.history.replaceState({}, "", "/reports/inspection-projects");
     document.documentElement.removeAttribute("data-category-route-entry");
     document.documentElement.removeAttribute("data-category-route-buffer");
   });
@@ -106,6 +109,51 @@ describe("CategoryDetail dynamic card copy", () => {
 
     expect(container.querySelector(".category-page-final")).not.toHaveAttribute("data-route-entry");
   });
+
+  it("keeps the category node and saved reading position stable when readiness completes", async () => {
+    let resolveReadiness!: (value: { total: number; failed: string[] }) => void;
+    vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise((resolve) => { resolveReadiness = resolve; }));
+    saveCategoryScrollPosition(moduleFixture.slug, 86);
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    const initialPage = container.querySelector<HTMLElement>(".category-page-final");
+    expect(initialPage?.scrollTop).toBe(86);
+    await act(async () => { resolveReadiness({ total: categoryReadinessAssets["inspection-projects"].length, failed: [] }); });
+
+    await waitFor(() => expect(container.querySelector<HTMLElement>(".category-page-final")?.scrollTop).toBe(86));
+    expect(container.querySelector<HTMLElement>(".category-page-final")).toBe(initialPage);
+  });
+
+  it("does not reset a fresh category after the user starts scrolling", () => {
+    vi.useFakeTimers();
+    vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise(() => undefined));
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+    const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
+
+    categoryPage!.scrollTop = 86;
+    act(() => vi.advanceTimersByTime(120));
+
+    expect(categoryPage?.scrollTop).toBe(86);
+    vi.useRealTimers();
+  });
+
+  it("does not overwrite the saved reading position while the report route is committing", () => {
+    vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise(() => undefined));
+    const { container, unmount } = render(<CategoryDetail module={moduleFixture} />);
+    const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
+    const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
+    expect(categoryPage).not.toBeNull();
+    expect(firstCard).not.toBeNull();
+
+    categoryPage!.scrollTop = 86;
+    fireEvent.click(firstCard!);
+    expect(readCategoryScrollPosition(moduleFixture.slug)).toBe(86);
+    categoryPage!.scrollTop = 0;
+    unmount();
+
+    expect(readCategoryScrollPosition(moduleFixture.slug)).toBe(86);
+  });
+
   it("maps card and copy coordinates directly from the shared 1000px master", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} preview />);
     const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
@@ -144,19 +192,24 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(container.innerHTML).not.toContain("已核对");
   });
 
-  it("preloads the complete category asset set, shows the fixed parent return, and navigates immediately", async () => {
+  it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     await waitFor(() => expect(preloadHomepageAssets).toHaveBeenCalled());
     expect(vi.mocked(preloadHomepageAssets).mock.calls[0]?.[0]).toEqual(
       categoryReadinessAssets["inspection-projects"].map((src) => ({ src, priority: "high" })),
     );
-    expect(screen.getByRole("button", { name: "返回档案首页" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "返回档案首页" })).not.toBeInTheDocument();
 
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
+    const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
     expect(firstCard).not.toBeNull();
+    expect(categoryPage).not.toBeNull();
+    if (categoryPage) categoryPage.scrollTop = 86;
     fireEvent.click(firstCard!);
-    expect(navigation.replace).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
-    expect(navigation.push).not.toHaveBeenCalled();
+    expect(categoryPage).toHaveClass("is-leaving");
+    expect(readCategoryScrollPosition("inspection-projects")).toBe(86);
+    expect(navigation.push).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
+    expect(navigation.replace).not.toHaveBeenCalled();
   });
 });

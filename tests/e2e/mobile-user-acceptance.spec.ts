@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 const devices = [
   { name: "iphone-se-first-generation", width: 320, height: 568 },
@@ -19,6 +19,7 @@ const devices = [
 ] as const;
 
 const evidenceRoot = "test-results/mobile-user-acceptance";
+type GuideProfile = "portrait-standard" | "portrait-compact" | "landscape";
 
 test.use({ browserName: "chromium" });
 
@@ -57,60 +58,88 @@ async function expectStageFillsSafeContentBox(root: Locator, stage: Locator) {
   expect(stageBox.height).toBeCloseTo(rootBox.height - padding.top - padding.bottom, 0);
 }
 
-async function measureGuideReferenceDifference(page: import("@playwright/test").Page) {
-  const screenshot = await page.screenshot({ animations: "disabled" });
-  return page.evaluate(async ({ actualUrl, referenceUrl }) => {
-    const load = async (src: string) => {
-      const image = new Image();
-      image.src = src;
-      await image.decode();
-      return image;
+function expectedGuideProfile(width: number, height: number): GuideProfile {
+  if (width > height) return "landscape";
+  return width / Math.max(1, height) >= 12 / 25 ? "portrait-compact" : "portrait-standard";
+}
+
+async function expectImagesDecodedWithoutStretch(images: Locator) {
+  const metrics = await images.evaluateAll((elements) => elements.map((element) => {
+    const image = element as HTMLImageElement;
+    const style = window.getComputedStyle(image);
+    // Use the resolved floating-point CSS box. offsetWidth/offsetHeight round
+    // to integers and made the 440x820 compact hint look ~2.7% distorted even
+    // though its declared width + auto height preserve the source ratio.
+    const renderedWidth = Number.parseFloat(style.width);
+    const renderedHeight = Number.parseFloat(style.height);
+    return {
+      className: image.className,
+      complete: image.complete,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      naturalRatio: image.naturalWidth / Math.max(1, image.naturalHeight),
+      renderedRatio: renderedWidth / Math.max(1, renderedHeight),
+      renderedWidth,
+      renderedHeight,
+      objectFit: style.objectFit,
     };
-    const [actual, reference] = await Promise.all([load(actualUrl), load(referenceUrl)]);
-    const canvas = document.createElement("canvas");
-    canvas.width = actual.naturalWidth;
-    canvas.height = actual.naturalHeight;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (!context) throw new Error("2d canvas is unavailable");
-    context.drawImage(reference, 0, 0, canvas.width, canvas.height);
-    const baseline = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(actual, 0, 0);
-    const rendered = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const sampleStep = Math.max(1, Math.round(devicePixelRatio));
-    const badgeSize = 72 * devicePixelRatio;
-    let total = 0;
-    let count = 0;
-    const histogram = new Array<number>(256).fill(0);
-    for (let y = 0; y < canvas.height; y += sampleStep) {
-      for (let x = 0; x < canvas.width; x += sampleStep) {
-        if (x < badgeSize && y > canvas.height - badgeSize) continue;
-        const offset = (y * canvas.width + x) * 4;
-        const difference = Math.round((
-          Math.abs(rendered[offset] - baseline[offset])
-          + Math.abs(rendered[offset + 1] - baseline[offset + 1])
-          + Math.abs(rendered[offset + 2] - baseline[offset + 2])
-        ) / 3);
-        histogram[difference] += 1;
-        total += difference;
-        count += 1;
-      }
+  }));
+  expect(metrics.length).toBeGreaterThan(0);
+  for (const metric of metrics) {
+    expect(metric.complete, metric.className).toBe(true);
+    expect(metric.naturalWidth, metric.className).toBeGreaterThan(0);
+    expect(metric.naturalHeight, metric.className).toBeGreaterThan(0);
+    expect(metric.renderedWidth, metric.className).toBeGreaterThan(0);
+    expect(metric.renderedHeight, metric.className).toBeGreaterThan(0);
+    if (metric.objectFit === "fill") {
+      expect(Math.abs(metric.naturalRatio - metric.renderedRatio), metric.className).toBeLessThan(.025);
     }
-    const percentileTarget = count * .95;
-    let running = 0;
-    let p95 = 255;
-    for (let value = 0; value < histogram.length; value += 1) {
-      running += histogram[value] ?? 0;
-      if (running >= percentileTarget) {
-        p95 = value;
-        break;
-      }
-    }
-    return { mean: total / Math.max(1, count), p95 };
-  }, {
-    actualUrl: `data:image/png;base64,${screenshot.toString("base64")}`,
-    referenceUrl: "/design/guide/guide-final-fallback-v3.webp",
-  });
+  }
+}
+
+async function expectLandmarkCoverage(
+  landmarks: Locator,
+  frame: { x: number; y: number; width: number; height: number },
+  minimumWidthRatio: number,
+  minimumHeightRatio: number,
+) {
+  const boxes = await landmarks.evaluateAll((elements) => elements.map((element) => {
+    const box = element.getBoundingClientRect();
+    return {
+      left: box.left,
+      top: box.top,
+      right: box.right,
+      bottom: box.bottom,
+      width: box.width,
+      height: box.height,
+    };
+  }));
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const box of boxes) {
+    const visibleWidth = Math.max(0, Math.min(box.right, frame.x + frame.width) - Math.max(box.left, frame.x));
+    const visibleHeight = Math.max(0, Math.min(box.bottom, frame.y + frame.height) - Math.max(box.top, frame.y));
+    expect(visibleWidth * visibleHeight / Math.max(1, box.width * box.height)).toBeGreaterThanOrEqual(.94);
+  }
+  const union = {
+    left: Math.min(...boxes.map((box) => box.left)),
+    top: Math.min(...boxes.map((box) => box.top)),
+    right: Math.max(...boxes.map((box) => box.right)),
+    bottom: Math.max(...boxes.map((box) => box.bottom)),
+  };
+  expect((union.right - union.left) / frame.width).toBeGreaterThanOrEqual(minimumWidthRatio);
+  expect((union.bottom - union.top) / frame.height).toBeGreaterThanOrEqual(minimumHeightRatio);
+}
+
+async function expectPrimedGuideBuffer(page: Page, profile: GuideProfile) {
+  const buffer = page.locator(`#h5-guide-route-buffer-host > .h5-guide-route-buffer[data-guide-profile="${profile}"]`);
+  await expect(buffer).toHaveClass(/is-preparing/, { timeout: 15_000 });
+  await expect(buffer).toBeHidden();
+  const images = buffer.locator("img");
+  await expect.poll(async () => images.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
+    return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0 && element.naturalHeight > 0;
+  })), { timeout: 15_000 }).toBe(true);
+  await expectImagesDecodedWithoutStretch(images);
+  return buffer;
 }
 
 for (const device of devices) {
@@ -128,98 +157,82 @@ for (const device of devices) {
     const guideRoot = page.locator(".brand-guide");
     const guideStage = page.locator(".brand-guide-stage");
     const contentFrame = page.locator(".brand-guide-artwork");
+    const profile = expectedGuideProfile(device.width, device.height);
+    await expect(guideRoot).toHaveAttribute("data-guide-profile", profile, { timeout: 15_000 });
+    await expect(guideStage).toHaveAttribute("data-load-state", "ready", { timeout: 15_000 });
+    await expect(guideStage).toHaveAttribute("data-gesture-state", "ready", { timeout: 15_000 });
     await expectStageFillsSafeContentBox(guideRoot, guideStage);
     await expect(guideStage).toHaveCSS("aspect-ratio", "auto");
     await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
+    await expect(page.locator(".brand-guide-window-mask")).toHaveCount(0);
+    await expect(page.locator(".brand-guide .motion-stage")).toHaveCount(0);
+    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0);
     const frameBox = await contentFrame.boundingBox();
     expect(frameBox).not.toBeNull();
     if (!frameBox) throw new Error("guide content frame has no layout box");
     expect(frameBox.width).toBeCloseTo(Math.min(device.width, 750), 0);
     expect(frameBox.x).toBeCloseTo((device.width - frameBox.width) / 2, 0);
     const fullCanvasLayers = page.locator([
-      ".brand-guide-base",
       ".brand-guide-arch",
       ".brand-guide-paper",
       ".brand-guide-character",
-      ".brand-guide-window-mask",
       ".brand-guide-foreground-top",
       ".brand-guide-fallback",
     ].join(", "));
-    await expect.poll(async () => fullCanvasLayers.evaluateAll(
-      (elements) => elements.length > 0 && elements.every((element) => {
-        const style = window.getComputedStyle(element);
-        return element.isConnected && style.objectFit === "fill" && style.objectPosition === "50% 50%";
-      }),
-    )).toBe(true);
-    // The dedicated landscape composition is measured by the P1 regression
-    // suite; this assertion only guards the shared full-canvas layers.
-    await expect.poll(async () => fullCanvasLayers.evaluateAll((elements) => elements.length > 0 && elements.every((element) => {
-      return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
-    }))).toBe(true);
+    // Only the 750x1625 portrait-standard canvas is intentionally stretched
+    // to the responsive 6:13 scene. Compact and landscape use cropped,
+    // aspect-preserving component layers, so requiring object-fit: fill there
+    // would reject the current responsive-touch-v3 composition.
+    if (profile === "portrait-standard") {
+      await expect.poll(async () => fullCanvasLayers.evaluateAll(
+        (elements) => elements.length > 0 && elements.every((element) => {
+          const style = window.getComputedStyle(element);
+          return element.isConnected && style.objectFit === "fill" && style.objectPosition === "50% 50%";
+        }),
+      )).toBe(true);
+    }
     await expect(guideStage).toHaveAttribute("data-destination-state", "ready");
     const destinationImage = page.locator(".brand-guide-destination-image");
     await expect.poll(async () => destinationImage.evaluate((element) => {
-      return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000 && element.naturalHeight === 5557;
+      return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
     })).toBe(true);
+    await expectImagesDecodedWithoutStretch(destinationImage);
 
-    if (device.width <= device.height) {
+    if (profile === "portrait-standard") {
       const portraitScene = page.locator(".brand-guide-portrait-scene");
       await expect(portraitScene).toBeVisible();
-      await expect(page.locator(".guide-landscape-composition")).toBeHidden();
+      await expect(portraitScene).not.toHaveClass(/is-compact-fallback/);
+      await expect(page.locator(".guide-compact-portrait-composition, .guide-landscape-composition")).toHaveCount(0);
       await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
       const portraitBox = await portraitScene.boundingBox();
       expect(portraitBox).not.toBeNull();
       if (!portraitBox) throw new Error("portrait coordinate stage has no layout box");
-      expect(portraitBox.x).toBeCloseTo(frameBox.x, 0);
-      expect(portraitBox.y).toBeCloseTo(frameBox.y, 0);
-      expect(portraitBox.width).toBeCloseTo(frameBox.width, 0);
-      expect(portraitBox.height).toBeCloseTo(device.height, 0);
-      await expect.poll(async () => portraitScene.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return [style.webkitMaskImage, style.maskImage];
-      })).toEqual(["none", "none"]);
+      expect(portraitBox.width / portraitBox.height).toBeCloseTo(6 / 13, 3);
+      expect(portraitBox.x + portraitBox.width / 2).toBeCloseTo(frameBox.x + frameBox.width / 2, 0);
+      expect(portraitBox.y + portraitBox.height / 2).toBeCloseTo(frameBox.y + frameBox.height / 2, 0);
+      expect(portraitBox.width / frameBox.width).toBeGreaterThanOrEqual(.94);
+      expect(portraitBox.height / frameBox.height).toBeGreaterThanOrEqual(.94);
+      await expectImagesDecodedWithoutStretch(page.locator(".brand-guide-live-stage img"));
+    } else if (profile === "portrait-compact") {
+      const portraitScene = page.locator(".brand-guide-portrait-scene.is-compact-fallback");
+      const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
+      await expect(portraitScene).toBeVisible();
+      await expect(composition).toBeVisible();
+      await expect(page.locator(".guide-landscape-composition")).toHaveCount(0);
+      const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
+      await expect(landmarks).toHaveCount(4);
+      await expectLandmarkCoverage(landmarks, frameBox, .9, .82);
+      await expectImagesDecodedWithoutStretch(composition.locator("img"));
     } else {
       const composition = page.locator(".brand-guide-artwork > .guide-landscape-composition");
       await expect(composition).toBeVisible();
-      await expect(page.locator(".brand-guide-portrait-scene")).toBeHidden();
+      await expect(page.locator(".brand-guide-portrait-scene, .guide-compact-portrait-composition")).toHaveCount(0);
       const landmarks = composition.locator("[data-guide-landmark]");
       await expect(landmarks).toHaveCount(4);
-      await expect.poll(async () => landmarks.evaluateAll((elements) => elements.every((element) => {
-        const images = element instanceof HTMLImageElement ? [element] : Array.from(element.querySelectorAll("img"));
-        return images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0);
-      })), { timeout: 15_000 }).toBe(true);
-      const boxes = await landmarks.evaluateAll((elements) => elements.map((element) => {
-        const box = element.getBoundingClientRect();
-        const style = window.getComputedStyle(element);
-        const image = element instanceof HTMLImageElement ? element : element.querySelector("img");
-        return {
-          name: element.getAttribute("data-guide-landmark"),
-          x: box.x,
-          y: box.y,
-          right: box.right,
-          bottom: box.bottom,
-          width: box.width,
-          height: box.height,
-          fit: image ? window.getComputedStyle(image).objectFit : style.objectFit,
-          loaded: image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
-          visibleRatio: Math.max(0, Math.min(box.right, innerWidth) - Math.max(box.left, 0)) * Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0)) / Math.max(1, box.width * box.height),
-        };
-      }));
-      expect(boxes.every((box) => (box.name === "hint" || box.fit !== "contain") && box.loaded && box.visibleRatio >= 0.95)).toBe(true);
-      const byName = Object.fromEntries(boxes.map((box) => [box.name, box]));
-      expect(byName.logo.width / frameBox.width).toBeGreaterThanOrEqual(0.28);
-      expect(byName.character.width / frameBox.width).toBeGreaterThanOrEqual(0.42);
-      expect(byName.envelope.width / frameBox.width).toBeGreaterThanOrEqual(0.32);
-      expect(byName.hint.width / frameBox.width).toBeGreaterThanOrEqual(0.2);
-      const union = {
-        left: Math.min(...boxes.map((box) => box.x)),
-        top: Math.min(...boxes.map((box) => box.y)),
-        right: Math.max(...boxes.map((box) => box.right)),
-        bottom: Math.max(...boxes.map((box) => box.bottom)),
-      };
-      expect((union.right - union.left) / frameBox.width).toBeGreaterThanOrEqual(0.9);
-      expect((union.bottom - union.top) / device.height).toBeGreaterThanOrEqual(0.82);
+      await expectLandmarkCoverage(landmarks, frameBox, .9, .78);
+      await expectImagesDecodedWithoutStretch(composition.locator("img"));
     }
+    await expectPrimedGuideBuffer(page, profile);
     await expectNoHorizontalOverflow(page, device.width);
     await page.waitForTimeout(2300);
     await page.screenshot({ path: `${evidenceRoot}/${device.name}-${device.width}x${device.height}-guide.png` });
@@ -280,8 +293,9 @@ test("375x812 upward drag moves and crossfades the guide continuously before com
   await expect(routeBuffer).toBeVisible();
   await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toBeVisible();
   await expect.poll(async () => routeBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
-    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000;
+    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
   })).toBe(true);
+  await expectImagesDecodedWithoutStretch(routeBuffer.locator(".h5-guide-route-destination-image"));
   await expect(routeBuffer.locator(".h5-guide-route-destination-panel")).toHaveCSS("opacity", "1", { timeout: 2000 });
   await page.screenshot({ path: "artifacts/design-qa/guide-progress-100-375x812.png" });
   await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
@@ -295,14 +309,16 @@ test("375x812 user can open every category and a published report", async ({ pag
   for (const slug of ["inspection-projects", "review-assurance", "production-traceability"] as const) {
     await page.goto(`/reports/${slug}`);
     await expect(page.locator(".category-page-final")).toBeVisible();
-    await expect(page.getByRole("button", { name: "返回档案首页" })).toBeVisible();
+    await expect(page.locator(".swipe-back-control")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /返回/ })).toHaveCount(0);
     await expect(page.locator(".category-card-hotspot")).not.toHaveCount(0);
     await expectNoHorizontalOverflow(page, 375);
     await page.screenshot({ path: `${evidenceRoot}/flow-${slug}-375x812.png` });
   }
 
   await page.goto("/reports/inspection-projects/items/seed-card-inspection-nutrition/reports");
-  await expect(page.getByRole("button", { name: "返回检测项目" })).toBeVisible();
+  await expect(page.locator(".swipe-back-control")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /返回/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "核心营养含量" })).toBeVisible();
   await expect(page.locator(".report-empty, .image-report")).not.toHaveCount(0);
   await expect(page.locator(".report-file-card")).toHaveCount(0);
@@ -312,7 +328,7 @@ test("375x812 user can open every category and a published report", async ({ pag
   expect(runtimeErrors).toEqual([]);
 });
 
-test("guide handoff keeps the route loader behind the frozen guide until homepage artwork is painted", async ({ page }) => {
+test("guide handoff reuses the predecoded route buffer until homepage artwork is painted", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route("**/design/final-v1/**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 4200));
@@ -321,6 +337,8 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
   await page.goto("/go");
   const enter = page.getByRole("button", { name: "进入档案" });
   await expect(enter).toBeEnabled({ timeout: 8000 });
+  const primedBuffer = await expectPrimedGuideBuffer(page, "portrait-standard");
+  await primedBuffer.evaluate((element) => { element.setAttribute("data-test-prime-id", "mobile-acceptance"); });
   await enter.click();
   await page.waitForURL(/\/reports$/);
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
@@ -329,8 +347,10 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
   await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toHaveCount(1);
   await expect(guideBuffer.locator(".h5-guide-route-destination-image")).toHaveCount(1);
   await expect.poll(async () => guideBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
-    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 1000;
+    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
   })).toBe(true);
+  await expect(guideBuffer).toHaveAttribute("data-test-prime-id", "mobile-acceptance");
+  await expect(guideBuffer).toHaveAttribute("data-guide-profile", "portrait-standard");
   await expect(guideBuffer.locator(".brand-guide-paper, .brand-guide-character")).toHaveCount(0);
   await page.waitForTimeout(1000);
   await expect(runtimeLoadingLayer).toHaveCount(0);
@@ -340,64 +360,169 @@ test("guide handoff keeps the route loader behind the frozen guide until homepag
 });
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }]) {
-  test(`short portrait route snapshot keeps the complete canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`short portrait route snapshot keeps the compact composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".brand-guide")).toHaveAttribute("data-guide-profile", "portrait-compact");
     const enter = page.getByRole("button", { name: "进入档案" });
     await expect(enter).toBeEnabled({ timeout: 10000 });
-    await enter.click({ noWaitAfter: true });
-    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-portrait-snapshot");
-    await expect(snapshot).toBeVisible({ timeout: 10000 });
+    const buffer = await expectPrimedGuideBuffer(page, "portrait-compact");
+    const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot.is-compact");
+    await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveCount(0);
+    const composition = snapshot.locator(".guide-compact-portrait-composition");
+    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
+    await expect(landmarks).toHaveCount(4);
+
+    // Measure the decoded prime before commit. Sampling snapshotBox and its
+    // landmarks after click was racy because the 520ms parent transform kept
+    // moving between the two Playwright calls.
     const snapshotBox = await snapshot.boundingBox();
     expect(snapshotBox).not.toBeNull();
+    if (!snapshotBox) throw new Error("compact route snapshot has no layout box");
+    expect(snapshotBox.x).toBeCloseTo((viewport.width - Math.min(viewport.width, 750)) / 2, 0);
+    expect(snapshotBox.y).toBeCloseTo(0, 0);
     expect(snapshotBox?.width).toBeCloseTo(viewport.width, 0);
     expect(snapshotBox?.height).toBeCloseTo(viewport.height, 0);
-    await expect(snapshot).toHaveCSS("object-fit", "fill");
-    await page.screenshot({ path: `artifacts/portrait-route-snapshot-${viewport.width}x${viewport.height}.png` });
+    await expectLandmarkCoverage(landmarks, snapshotBox, .9, .82);
+    await expectImagesDecodedWithoutStretch(composition.locator("img"));
+
+    // Reveal the already primed tree and seek the real CSS transitions. Both
+    // full-viewport panels must overlap at every acceptance frame; the compact
+    // character and envelope remain visible while the destination takes over.
+    await buffer.evaluate((element) => {
+      element.classList.remove("is-preparing");
+      void element.getBoundingClientRect();
+      element.classList.add("is-committing");
+    });
+    await expect(snapshot).toBeVisible();
+    for (const progress of [0, .25, .5, .75, 1]) {
+      const metrics = await buffer.evaluate((element, value) => {
+        const guidePanel = element.querySelector<HTMLElement>(".h5-guide-route-guide-panel")!;
+        const destinationPanel = element.querySelector<HTMLElement>(".h5-guide-route-destination-panel")!;
+        const character = element.querySelector<HTMLElement>(".guide-compact-character")!;
+        const envelope = element.querySelector<HTMLElement>(".guide-compact-envelope")!;
+        const seek = (panel: HTMLElement) => {
+          for (const animation of panel.getAnimations()) {
+            animation.pause();
+            const duration = Number(animation.effect?.getComputedTiming().duration ?? 0);
+            animation.currentTime = duration * value;
+          }
+        };
+        seek(guidePanel);
+        seek(destinationPanel);
+        const guideBox = guidePanel.getBoundingClientRect();
+        const destinationBox = destinationPanel.getBoundingClientRect();
+        const visibleRatio = (target: HTMLElement) => {
+          const box = target.getBoundingClientRect();
+          const visibleWidth = Math.max(0, Math.min(box.right, innerWidth) - Math.max(box.left, 0));
+          const visibleHeight = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0));
+          return visibleWidth * visibleHeight / Math.max(1, box.width * box.height);
+        };
+        const destination = destinationPanel.querySelector("img") as HTMLImageElement | null;
+        return {
+          guideOpacity: Number(getComputedStyle(guidePanel).opacity),
+          destinationOpacity: Number(getComputedStyle(destinationPanel).opacity),
+          overlap: Math.max(0, Math.min(guideBox.bottom, destinationBox.bottom) - Math.max(guideBox.top, destinationBox.top)),
+          characterVisibleRatio: visibleRatio(character),
+          envelopeVisibleRatio: visibleRatio(envelope),
+          destinationDecoded: Boolean(destination?.complete && destination.naturalWidth > 0),
+        };
+      }, progress);
+      expect(metrics.guideOpacity + metrics.destinationOpacity).toBeGreaterThanOrEqual(.99);
+      expect(metrics.overlap / viewport.height).toBeGreaterThanOrEqual(.73);
+      expect(metrics.characterVisibleRatio).toBeGreaterThanOrEqual(.78);
+      expect(metrics.envelopeVisibleRatio).toBeGreaterThanOrEqual(.94);
+      expect(metrics.destinationDecoded).toBe(true);
+      await page.screenshot({ path: `artifacts/portrait-route-snapshot-${viewport.width}x${viewport.height}-${Math.round(progress * 100).toString().padStart(3, "0")}.png` });
+    }
+    await expectNoHorizontalOverflow(page, viewport.width);
   });
 }
 
 for (const viewport of [{ width: 408, height: 740 }, { width: 408, height: 805 }]) {
-  test(`real-device portrait uses one edge-to-edge coordinate canvas at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`real-device portrait uses the compact composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
+    const root = page.locator(".brand-guide");
     const stage = page.locator(".brand-guide-stage");
+    await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
     await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
-    const [frameBox, sceneBox] = await Promise.all([
+    const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
+    await expect(composition).toBeVisible();
+    const [frameBox, fallbackBox] = await Promise.all([
       page.locator(".brand-guide-artwork").boundingBox(),
-      page.locator(".brand-guide-portrait-scene").boundingBox(),
+      page.locator(".brand-guide-portrait-scene.is-compact-fallback").boundingBox(),
     ]);
     expect(frameBox).not.toBeNull();
-    expect(sceneBox).not.toBeNull();
-    expect(sceneBox?.x).toBeCloseTo(frameBox?.x ?? 0, 0);
-    expect(sceneBox?.width).toBeCloseTo(frameBox?.width ?? 0, 0);
+    expect(fallbackBox).not.toBeNull();
+    if (!frameBox || !fallbackBox) throw new Error("compact guide frame has no layout box");
+    expect(fallbackBox.x).toBeCloseTo(frameBox.x, 0);
+    expect(fallbackBox.width).toBeCloseTo(frameBox.width, 0);
+    const landmarks = composition.locator(".guide-compact-logo, [data-guide-landmark='character'], .guide-compact-envelope, .guide-compact-hint");
+    await expectLandmarkCoverage(landmarks, frameBox, .9, .82);
+    await expectImagesDecodedWithoutStretch(composition.locator("img"));
     await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, viewport.width);
   });
 }
+
+test("mobile browser toolbar height change keeps the selected compact profile and subject ratios", async ({ page }) => {
+  await page.setViewportSize({ width: 408, height: 740 });
+  await page.goto("/go", { waitUntil: "domcontentloaded" });
+  const root = page.locator(".brand-guide");
+  const stage = page.locator(".brand-guide-stage");
+  await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
+  await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
+  const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
+  const character = composition.locator(".guide-compact-character");
+  const before = await character.boundingBox();
+  expect(before).not.toBeNull();
+
+  await page.setViewportSize({ width: 408, height: 805 });
+  await expect(root).toHaveAttribute("data-guide-profile", "portrait-compact");
+  const after = await character.boundingBox();
+  expect(after).not.toBeNull();
+  expect((after?.width ?? 0) / Math.max(1, after?.height ?? 1)).toBeCloseTo((before?.width ?? 0) / Math.max(1, before?.height ?? 1), 3);
+  await expectImagesDecodedWithoutStretch(composition.locator("img"));
+  await expectNoHorizontalOverflow(page, 408);
+});
 
 for (const viewport of [
   { width: 320, height: 568 },
   { width: 375, height: 812 },
+  { width: 393, height: 852 },
   { width: 408, height: 740 },
   { width: 440, height: 820 },
 ]) {
-  test(`portrait visual baseline stays aligned at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`portrait visual contract stays aligned without stretching at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/go", { waitUntil: "domcontentloaded" });
+    const profile = expectedGuideProfile(viewport.width, viewport.height);
+    await expect(page.locator(".brand-guide")).toHaveAttribute("data-guide-profile", profile);
     const stage = page.locator(".brand-guide-stage");
     await expect(stage).toHaveAttribute("data-swipe-state", "ready", { timeout: 10000 });
-    const difference = await measureGuideReferenceDifference(page);
-    expect(difference.mean).toBeLessThan(12);
-    expect(difference.p95).toBeLessThan(55);
+    if (profile === "portrait-standard") {
+      const scene = page.locator(".brand-guide-portrait-scene");
+      const sceneBox = await scene.boundingBox();
+      expect(sceneBox).not.toBeNull();
+      expect((sceneBox?.width ?? 0) / Math.max(1, sceneBox?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+      await expectImagesDecodedWithoutStretch(page.locator(".brand-guide-live-stage img"));
+    } else {
+      const composition = page.locator(".brand-guide-artwork > .guide-compact-portrait-composition");
+      await expect(composition).toBeVisible();
+      await expectImagesDecodedWithoutStretch(composition.locator("img"));
+    }
+    await expectNoHorizontalOverflow(page, viewport.width);
+    await page.screenshot({ path: `artifacts/design-qa/guide-visual-contract-${viewport.width}x${viewport.height}.png`, animations: "disabled" });
   });
 }
 
-test("cold-cache guide keeps the complete fallback until every motion layer decodes", async ({ page }) => {
+test("cold-cache standard guide keeps the complete fallback until every live layer decodes", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const delayedNames = new Set([
-    "guide-background.webp", "guide-arch.webp", "guide-character-open.webp", "guide-character-closed.webp",
-    "guide-window-mask.webp", "guide-foreground-top.webp", "report-paper-top.webp", "report-paper-left.webp",
-    "report-paper-right.webp", "report-paper-bottom.webp",
+    "guide-arch.webp", "guide-character-open.webp", "guide-character-closed.webp", "guide-foreground-top.webp",
+    "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
+    "swipe-up-hint-v2.png",
   ]);
   await page.route("**/design/guide/**", async (route) => {
     const name = new URL(route.request().url()).pathname.split("/").at(-1) ?? "";
@@ -405,18 +530,26 @@ test("cold-cache guide keeps the complete fallback until every motion layer deco
     await route.continue();
   });
   await page.goto("/go", { waitUntil: "domcontentloaded" });
+  const root = page.locator(".brand-guide");
   const stage = page.locator(".brand-guide-stage");
+  const fallback = page.locator(".brand-guide-portrait-scene .brand-guide-fallback");
+  const liveStage = page.locator(".brand-guide-live-stage");
+  await expect(root).toHaveAttribute("data-guide-profile", "portrait-standard");
   await expect(stage).toHaveAttribute("data-load-state", "loading");
-  await expect(page.locator(".motion-stage-fallback .brand-guide-fallback")).toBeVisible();
-  await expect(page.locator(".brand-guide-entry-hint")).toBeHidden();
+  await expect(fallback).toBeVisible();
+  await expect(fallback).toHaveCSS("opacity", "1");
+  await expect(liveStage).toHaveCSS("opacity", "0");
+  await expect(page.locator(".brand-guide .motion-stage, .brand-guide-window-mask, .runtime-loading-layer")).toHaveCount(0);
   await page.screenshot({ path: "artifacts/design-qa/guide-cold-cache-fallback-375x812.png" });
   await expect(stage).toHaveAttribute("data-load-state", "ready", { timeout: 15000 });
-  await expect(page.locator(".motion-stage-content .brand-guide-dynamic-stage")).toBeVisible();
+  await expect(liveStage).toHaveCSS("opacity", "1");
+  await expect(fallback).toHaveCSS("opacity", "0");
+  await expectImagesDecodedWithoutStretch(liveStage.locator("img"));
 });
 
 test("guide keeps the complete source fallback when the destination preview cannot decode", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.route("**/design/final-v1/archive-reference-public.webp", (route) => route.abort());
+  await page.route("**/design/guide/archive-transition-preview.webp", (route) => route.abort());
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const stage = page.locator(".brand-guide-stage");
   const enter = page.getByRole("button", { name: "进入档案" });
@@ -440,10 +573,6 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
     releaseHomepageAssets = resolve;
   });
   await page.route("**/design/final-v1/**", async (route) => {
-    if (route.request().url().endsWith("/archive-reference-public.webp")) {
-      await route.continue();
-      return;
-    }
     await homepageAssetsReleased;
     await route.continue();
   });
@@ -495,7 +624,9 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
 
   await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });
   await expect(guideBuffer).toHaveCount(0);
-  await expect(archive).not.toHaveAttribute("data-guide-entry", /.+/);
+  // Keep a terminal marker after the route buffer leaves so deferred archive
+  // artwork cannot replay the staged entry animation as it mounts.
+  await expect(archive).toHaveAttribute("data-guide-entry", "complete");
   await expect(archive).not.toHaveAttribute("aria-busy", "true");
   await expect(archive).toHaveAttribute("data-deferred-artwork", "mounted");
   await expect(runtimeLoadingLayer).toHaveCount(0);

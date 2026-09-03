@@ -22,7 +22,7 @@ import {
   guideRouteStageDurationMs,
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
-import { replaceHierarchyRoute } from "@/components/h5/hierarchy-navigation";
+import { pushHierarchyRoute } from "@/components/h5/hierarchy-navigation";
 
 const reportsReadinessRequests = [
   ...archiveArtworkCriticalAssets.map((src) => ({ src, priority: "high" as const })),
@@ -244,7 +244,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
       setLeaving(true);
-      window.setTimeout(() => navigateWithCategoryContinuity(() => replaceHierarchyRoute(router, `/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
+      window.setTimeout(() => navigateWithCategoryContinuity(() => pushHierarchyRoute(router, `/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
     }, archiveModuleExitDelayMs);
   };
 

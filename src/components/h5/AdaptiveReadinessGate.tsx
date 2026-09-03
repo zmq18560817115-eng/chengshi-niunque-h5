@@ -144,7 +144,6 @@ export function AdaptiveReadinessGate({
   const content = <AdaptiveReadinessFailureContext.Provider value={readinessFailed}>
     <AdaptiveReadinessContext.Provider value={contentReady}>{children}</AdaptiveReadinessContext.Provider>
   </AdaptiveReadinessFailureContext.Provider>;
-  if (phase === "ready") return content;
   return <>
     {mountChildrenWhileLoading || contentReady ? content : null}
     {phase === "loading" || phase === "leaving" || (phase === "failed" && !failOpen) ? <RuntimeLoadingBuffer phase={phase} label={label} reason={reason}/> : null}

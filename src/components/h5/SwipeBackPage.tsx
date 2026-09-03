@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ReactNode, type TouchEvent } from "react";
-import { replaceHierarchyRoute, type H5HierarchyHref } from "@/components/h5/hierarchy-navigation";
+import { returnToHierarchyParent, type H5HierarchyHref } from "@/components/h5/hierarchy-navigation";
 
 const SWIPE_BACK_DISTANCE = 72;
 const SWIPE_BACK_EDGE = 32;
@@ -34,7 +34,7 @@ export function SwipeBackPage({
   const goBack = () => {
     if (preview || leavingBack) return;
     setLeavingBack(true);
-    window.setTimeout(() => replaceHierarchyRoute(router, fallbackHref), 220);
+    window.setTimeout(() => returnToHierarchyParent(router, fallbackHref), 220);
   };
 
   const onTouchStart = (event: TouchEvent<HTMLElement>) => {
