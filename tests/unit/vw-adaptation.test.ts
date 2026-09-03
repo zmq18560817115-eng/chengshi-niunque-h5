@@ -38,8 +38,30 @@ describe("750px design-to-vw conversion", () => {
     expect(result.css).toBe(source);
   });
 
-  it("keeps the generated viewport metadata accessible and safe-area aware", () => {
+  it("converts the shared 750 x 1625 guide canvas without converting its desktop cap", async () => {
+    const options = await loadPluginOptions();
+    const sourcePath = "src/app/guide-adaptation.vw.css";
+    const source = readFileSync(sourcePath, "utf8");
+    const result = await postcss([pxToViewport(options)]).process(source, {
+      from: sourcePath,
+    });
+
+    expect(source).toMatch(
+      /\.brand-guide-portrait-scene,\s*\.h5-guide-route-snapshot\.is-portrait\s*\{[^}]*width:\s*750px;[^}]*height:\s*1625px;/,
+    );
+    expect(result.css).toMatch(
+      /\.brand-guide-portrait-scene,\s*\.h5-guide-route-snapshot\.is-portrait\s*\{[^}]*width:\s*100vw;[^}]*height:\s*216\.666667vw;/,
+    );
+    expect(result.css).toMatch(
+      /@media \(min-width:\s*750px\)\s*\{[\s\S]*?\.brand-guide-portrait-scene,\s*\.h5-guide-route-snapshot\.is-portrait\s*\{[^}]*width:\s*750px;[^}]*height:\s*1625px;/,
+    );
+  });
+
+  it("loads the opted-in guide stylesheet after globals and emits safe viewport metadata", () => {
     const layout = readFileSync("src/app/layout.tsx", "utf8");
+    expect(layout).toMatch(
+      /import "\.\/globals\.css";\s*import "\.\/guide-adaptation\.vw\.css";/,
+    );
     expect(layout).toContain('width: "device-width"');
     expect(layout).toContain("initialScale: 1");
     expect(layout).toContain('viewportFit: "cover"');

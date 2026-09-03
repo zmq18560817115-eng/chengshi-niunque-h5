@@ -34,7 +34,7 @@ async function expectNoViewportOverflow(page: Page, width: number) {
 }
 
 async function expectVisibleImagesDecodedWithoutStretch(page: Page) {
-  const images = await page.locator(".brand-guide-artwork img:visible").evaluateAll((elements) => elements.map((element) => {
+  const images = await page.locator(".brand-guide-stage img:visible").evaluateAll((elements) => elements.map((element) => {
     const image = element as HTMLImageElement;
     const box = image.getBoundingClientRect();
     const naturalRatio = image.naturalWidth / Math.max(1, image.naturalHeight);
@@ -73,15 +73,30 @@ for (const viewport of portraitViewports) {
     await expectVisibleImagesDecodedWithoutStretch(page);
 
     const scene = page.locator(".brand-guide-portrait-scene");
+    const artwork = page.locator(".brand-guide-artwork");
+    const hint = page.locator(".brand-guide-entry-hint");
     await expect(scene).toBeVisible();
     await expect(scene.locator(".brand-guide-live-stage")).toBeVisible();
     await expect(scene.locator(".brand-guide-paper")).toHaveCount(4);
     await expect(scene.locator(".brand-guide-character")).toHaveCount(2);
-    const box = await scene.boundingBox();
+    await expect(hint).toBeVisible();
+    const [box, artworkBox, hintBox] = await Promise.all([
+      scene.boundingBox(),
+      artwork.boundingBox(),
+      hint.boundingBox(),
+    ]);
     expect(box).not.toBeNull();
+    expect(artworkBox).not.toBeNull();
+    expect(hintBox).not.toBeNull();
+    if (!box || !artworkBox || !hintBox) throw new Error("portrait guide geometry is unavailable");
     expect((box?.width ?? 0) / Math.max(1, box?.height ?? 1)).toBeCloseTo(6 / 13, 3);
-    expect(box?.width).toBeCloseTo(Math.min(viewport.width, viewport.height * 6 / 13), 0);
-    expect(box?.height).toBeCloseTo(Math.min(viewport.height, viewport.width * 13 / 6), 0);
+    expect(box.width).toBeCloseTo(artworkBox.width, 0);
+    expect(box.height).toBeCloseTo(artworkBox.width * 13 / 6, 0);
+    expect(box.x + box.width / 2).toBeCloseTo(artworkBox.x + artworkBox.width / 2, 0);
+    expect(box.y + box.height / 2).toBeCloseTo(artworkBox.y + artworkBox.height / 2, 0);
+    expect(hintBox.x + hintBox.width / 2).toBeCloseTo(artworkBox.x + artworkBox.width / 2, 0);
+    expect(hintBox.y).toBeGreaterThanOrEqual(artworkBox.y - 1);
+    expect(hintBox.y + hintBox.height).toBeLessThanOrEqual(artworkBox.y + artworkBox.height + 1);
     await expect(page.locator(".guide-compact-portrait-composition")).toHaveCount(0);
 
     await page.screenshot({ path: `${evidenceRoot}/${viewport.width}x${viewport.height}-initial.png` });
@@ -224,8 +239,8 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
     await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
     const box = await snapshot.boundingBox();
     expect(box).not.toBeNull();
-    const expectedWidth = Math.min(viewport.width, viewport.height * 6 / 13);
-    const expectedHeight = Math.min(viewport.height, viewport.width * 13 / 6);
+    const expectedWidth = viewport.width;
+    const expectedHeight = expectedWidth * 13 / 6;
     expect((box?.width ?? 0) / Math.max(1, box?.height ?? 1)).toBeCloseTo(6 / 13, 3);
     expect(box?.x).toBeCloseTo((viewport.width - expectedWidth) / 2, 0);
     expect(box?.y).toBeCloseTo((viewport.height - expectedHeight) / 2, 0);

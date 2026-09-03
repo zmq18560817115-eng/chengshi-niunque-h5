@@ -516,9 +516,9 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
               {fallback}
               {mountLivePortrait && <div className="brand-guide-live-stage">
                 <GuideLayers onReady={handleLayerReady} onError={handleLayerError}/>
-                <GuideEntryHint onReady={handleLayerReady} onError={handleLayerError}/>
               </div>}
             </div>
+            {mountLivePortrait && <GuideEntryHint onReady={handleLayerReady} onError={handleLayerError}/>}
           </>}
           {layoutProfile === "landscape" && <GuideLandscapeComposition onReady={handleLayerReady} onError={handleLayerError}/>}
         </div>

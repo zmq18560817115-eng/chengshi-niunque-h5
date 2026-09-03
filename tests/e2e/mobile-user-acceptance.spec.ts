@@ -112,22 +112,30 @@ async function expectSharedPortraitScene(
   const scene = page.locator(".brand-guide-portrait-scene");
   const liveStage = scene.locator(".brand-guide-live-stage");
   const canvasLayers = liveStage.locator(portraitCanvasLayerSelector);
+  const hint = page.locator(".brand-guide-entry-hint");
 
   await expect(scene).toBeVisible();
   await expect(scene).not.toHaveClass(/is-compact-fallback/);
   await expect(liveStage).toBeVisible();
+  await expect(hint).toBeVisible();
   await expect(page.locator(".guide-compact-portrait-composition, .guide-landscape-composition")).toHaveCount(0);
   await expect(canvasLayers).toHaveCount(9);
 
-  const sceneBox = await scene.boundingBox();
+  const [sceneBox, hintBox] = await Promise.all([
+    scene.boundingBox(),
+    hint.boundingBox(),
+  ]);
   expect(sceneBox).not.toBeNull();
-  if (!sceneBox) throw new Error("portrait coordinate stage has no layout box");
+  expect(hintBox).not.toBeNull();
+  if (!sceneBox || !hintBox) throw new Error("portrait coordinate stage has no layout box");
   expect(sceneBox.width / sceneBox.height).toBeCloseTo(6 / 13, 3);
   expect(sceneBox.x + sceneBox.width / 2).toBeCloseTo(frame.x + frame.width / 2, 0);
   expect(sceneBox.y + sceneBox.height / 2).toBeCloseTo(frame.y + frame.height / 2, 0);
-  expect(sceneBox.width).toBeLessThanOrEqual(frame.width + 1);
-  expect(sceneBox.height).toBeLessThanOrEqual(frame.height + 1);
-  expect(Math.max(sceneBox.width / frame.width, sceneBox.height / frame.height)).toBeGreaterThanOrEqual(.99);
+  expect(sceneBox.width).toBeCloseTo(frame.width, 0);
+  expect(sceneBox.height).toBeCloseTo(frame.width * 13 / 6, 0);
+  expect(hintBox.x + hintBox.width / 2).toBeCloseTo(frame.x + frame.width / 2, 0);
+  expect(hintBox.y).toBeGreaterThanOrEqual(frame.y - 1);
+  expect(hintBox.y + hintBox.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
 
   await expect.poll(async () => canvasLayers.evaluateAll((elements, expectedScene) => elements.every((element) => {
     if (!(element instanceof HTMLImageElement)) return false;
@@ -382,17 +390,17 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
     await expect(snapshot.locator(".guide-compact-portrait-composition")).toHaveCount(0);
 
     // Measure the decoded prime before commit. Both portrait profiles reuse
-    // the exact 750x1625 reference plane and contain it as a centered 6:13
-    // canvas, so the handoff cannot jump to a separately cropped composition.
+    // the exact 750x1625 reference plane at the full viewport width. The
+    // centered 6:13 plane may be vertically clipped on short viewports, but
+    // the handoff cannot jump to a differently scaled composition.
     const snapshotBox = await snapshot.boundingBox();
     expect(snapshotBox).not.toBeNull();
     if (!snapshotBox) throw new Error("portrait route snapshot has no layout box");
     expect(snapshotBox.width / snapshotBox.height).toBeCloseTo(6 / 13, 3);
     expect(snapshotBox.x + snapshotBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
     expect(snapshotBox.y + snapshotBox.height / 2).toBeCloseTo(viewport.height / 2, 0);
-    expect(snapshotBox.width).toBeLessThanOrEqual(viewport.width + 1);
-    expect(snapshotBox.height).toBeLessThanOrEqual(viewport.height + 1);
-    expect(Math.max(snapshotBox.width / viewport.width, snapshotBox.height / viewport.height)).toBeGreaterThanOrEqual(.99);
+    expect(snapshotBox.width).toBeCloseTo(viewport.width, 0);
+    expect(snapshotBox.height).toBeCloseTo(viewport.width * 13 / 6, 0);
     await expect.poll(async () => snapshotImage.evaluate((element) => element instanceof HTMLImageElement
       && element.complete
       && element.naturalWidth === 750
@@ -484,6 +492,11 @@ test("mobile browser toolbar height change keeps the selected compact profile an
   expect(after).not.toBeNull();
   expect((before?.width ?? 0) / Math.max(1, before?.height ?? 1)).toBeCloseTo(6 / 13, 3);
   expect((after?.width ?? 0) / Math.max(1, after?.height ?? 1)).toBeCloseTo(6 / 13, 3);
+  expect(after?.width).toBeCloseTo(before?.width ?? 0, 0);
+  expect(after?.height).toBeCloseTo(before?.height ?? 0, 0);
+  expect(before?.width).toBeCloseTo(408, 0);
+  expect(after?.width).toBeCloseTo(408, 0);
+  await expect(page.locator(".brand-guide-entry-hint")).toBeVisible();
   await expectImagesDecodedWithoutStretch(scene.locator(".brand-guide-live-stage img"));
   await expect(page.locator(".guide-compact-portrait-composition, .brand-guide-portrait-scene.is-compact-fallback")).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 408);

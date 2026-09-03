@@ -131,7 +131,7 @@ function guideRouteOrientation(profile: ResolvedGuideRouteProfile): GuideRouteOr
 
 function createGuideSnapshot(profile: ResolvedGuideRouteProfile) {
   const snapshot = document.createElement("div");
-  snapshot.className = "h5-guide-route-snapshot";
+  snapshot.className = `h5-guide-route-snapshot is-${guideRouteOrientation(profile)}`;
   snapshot.setAttribute("aria-hidden", "true");
   if (profile !== "landscape") {
     snapshot.append(createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot"));

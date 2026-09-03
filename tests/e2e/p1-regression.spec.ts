@@ -248,7 +248,7 @@ async function expectGuideSubjectOccupancy(page: Page) {
     await expect(scene).toBeVisible();
     await expect(scene).not.toHaveClass(/is-compact-fallback/);
     await expect(artwork.locator(":scope > .guide-compact-portrait-composition")).toHaveCount(0);
-    await expectDecodedImages(liveStage, "img", 10);
+    await expectDecodedImages(liveStage, "img", 9);
     await expect(canvasLayers).toHaveCount(9);
     const sceneBox = await scene.boundingBox();
     expect(sceneBox).not.toBeNull();
@@ -256,9 +256,8 @@ async function expectGuideSubjectOccupancy(page: Page) {
     expect(sceneBox.width / sceneBox.height).toBeCloseTo(6 / 13, 3);
     expect(sceneBox.x + sceneBox.width / 2).toBeCloseTo(stageBox.x + stageBox.width / 2, 0);
     expect(sceneBox.y + sceneBox.height / 2).toBeCloseTo(stageBox.y + stageBox.height / 2, 0);
-    expect(sceneBox.width).toBeLessThanOrEqual(stageBox.width + 1);
-    expect(sceneBox.height).toBeLessThanOrEqual(stageBox.height + 1);
-    expect(Math.max(sceneBox.width / stageBox.width, sceneBox.height / stageBox.height)).toBeGreaterThanOrEqual(.99);
+    expect(sceneBox.width).toBeCloseTo(stageBox.width, 0);
+    expect(sceneBox.height).toBeCloseTo(stageBox.width * 13 / 6, 0);
     await expect.poll(async () => canvasLayers.evaluateAll((elements, expectedScene) => elements.every((element) => {
       if (!(element instanceof HTMLImageElement)) return false;
       const box = element.getBoundingClientRect();
@@ -287,13 +286,14 @@ async function expectGuideSubjectOccupancy(page: Page) {
     expect(characterGeometry.occupiedWidth).toBeGreaterThanOrEqual(0.42);
     expect(characterGeometry.visibleFraction).toBeGreaterThanOrEqual(0.62);
     expect(envelopeGeometry.occupiedWidth).toBeGreaterThanOrEqual(0.44);
-    expect(envelopeGeometry.visibleFraction).toBeGreaterThanOrEqual(0.58);
+    // The width-driven 6:13 plane intentionally clips the upper/lower edges
+    // on short WebViews; the supplied bottom paper may therefore be partial.
+    expect(envelopeGeometry.visibleFraction).toBeGreaterThanOrEqual(0.38);
   }
 
-  const hintSelector = profile === "landscape"
-    ? ":scope > .guide-landscape-composition .guide-landscape-hint"
-    : ".brand-guide-entry-hint";
-  const hint = artwork.locator(hintSelector);
+  const hint = profile === "landscape"
+    ? artwork.locator(":scope > .guide-landscape-composition .guide-landscape-hint")
+    : page.locator(".brand-guide-entry-hint");
   await expect(hint).toBeVisible();
   const hintBox = await hint.boundingBox();
   expect(hintBox).not.toBeNull();
@@ -522,9 +522,9 @@ for (const viewport of targetViewports) {
       if (!routeSnapshotBox) throw new Error("portrait route snapshot has no layout box");
       expect(routeSnapshotBox.width / routeSnapshotBox.height).toBeCloseTo(6 / 13, 3);
       expect(routeSnapshotBox.x + routeSnapshotBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
-      expect(routeSnapshotBox.width).toBeLessThanOrEqual(viewport.width + 1);
-      expect(routeSnapshotBox.height).toBeLessThanOrEqual(viewport.height + 1);
-      expect(Math.max(routeSnapshotBox.width / viewport.width, routeSnapshotBox.height / viewport.height)).toBeGreaterThanOrEqual(.99);
+      expect(routeSnapshotBox.y + routeSnapshotBox.height / 2).toBeCloseTo(viewport.height / 2, 0);
+      expect(routeSnapshotBox.width).toBeCloseTo(Math.min(viewport.width, expectedMaximumFrameWidth), 0);
+      expect(routeSnapshotBox.height).toBeCloseTo(Math.min(viewport.width, expectedMaximumFrameWidth) * 13 / 6, 0);
       await expect.poll(async () => routeSnapshotImage.evaluate((element) => element instanceof HTMLImageElement
         && element.complete
         && element.naturalWidth === 750

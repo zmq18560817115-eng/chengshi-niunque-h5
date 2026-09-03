@@ -85,12 +85,14 @@ describe("guide route transition priming", () => {
     expect(buffer.dataset.guideOrientation).toBe("portrait");
     expect(buffer.querySelector(".guide-compact-portrait-composition")).toBeNull();
     expect(buffer.querySelector(".h5-guide-route-snapshot")?.classList.contains("is-compact")).toBe(false);
+    expect(buffer.querySelector(".h5-guide-route-snapshot")).toHaveClass("is-portrait");
     expect(buffer.querySelector(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", guideRouteSnapshotSrc);
 
     await expect(primeGuideRouteContinuity("landscape", false)).resolves.toBe(true);
     buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)!;
     expect(buffer.dataset.guideProfile).toBe("landscape");
     expect(buffer.dataset.guideOrientation).toBe("landscape");
+    expect(buffer.querySelector(".h5-guide-route-snapshot")).toHaveClass("is-landscape");
     expect(buffer.querySelector(".h5-guide-route-portrait-snapshot")).toBeNull();
     expect([...buffer.querySelectorAll(".guide-landscape-character img")].map((image) => image.getAttribute("src"))).toEqual([
       "/design/guide/guide-arch.webp",

@@ -103,13 +103,16 @@ describe("H5 motion isolation", () => {
 
   it("uses one bounded 750px content frame with a shared portrait canvas and a dedicated landscape composition", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
+    const guideAdaptation = readFileSync("src/app/guide-adaptation.vw.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     expect(css).toContain(".brand-guide-swipe-track { position: absolute;");
     expect(css).toMatch(/\.brand-guide-swipe-track\s*\{[^}]*height:\s*100%;/);
     expect(css).toMatch(/\.brand-guide-stage,\s*\.brand-guide-destination-preview\s*\{[^}]*position:\s*absolute;[^}]*width:\s*100%;[^}]*height:\s*100%;/);
     expect(css).toMatch(/\.brand-guide-artwork\s*\{[^}]*width:\s*min\(100%,var\(--h5-content-width\)\);/);
-    expect(css).toMatch(/\.brand-guide-portrait-scene\s*\{[^}]*width:\s*min\(100cqw,46\.153846cqh\);[^}]*aspect-ratio:\s*6\s*\/\s*13;/);
+    expect(guideAdaptation).toMatch(/\.brand-guide-portrait-scene,\s*\.h5-guide-route-snapshot\.is-portrait\s*\{[^}]*width:\s*750px;[^}]*height:\s*1625px;[^}]*aspect-ratio:\s*auto;/);
+    expect(750 / 1625).toBeCloseTo(6 / 13, 10);
+    expect(layout).toMatch(/import "\.\/globals\.css";\s*import "\.\/guide-adaptation\.vw\.css";/);
     expect(css).not.toContain(".brand-guide-portrait-scene.is-compact-fallback");
     expect(css).toMatch(/\.brand-guide-arch,\s*\.brand-guide-paper,\s*\.brand-guide-character,\s*\.brand-guide-foreground-top,\s*\.brand-guide-fallback\s*\{[^}]*object-fit:\s*fill;[^}]*object-position:\s*center;/);
     expect(css).not.toContain(".guide-compact-portrait-composition");
@@ -151,11 +154,19 @@ describe("H5 motion isolation", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     expect(css).toContain("--guide-entry-hint-width: 43.4%;");
-    expect(css).toContain("--guide-entry-hint-bottom: 3.3%;");
+    expect(css).toContain("--guide-entry-hint-bottom: max(3.3%, env(safe-area-inset-bottom));");
     expect(css).toContain(".brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom);");
     expect(guide).toContain('src={assetUrl("swipe-up-hint-v2.png")}');
     expect(guide).toContain("width={868} height={260}");
     expect(guide).not.toContain('assetUrl("swipe-up-hint.png")');
+    const liveStage = guide.match(
+      /<div className="brand-guide-live-stage">([\s\S]*?)<\/div>}/,
+    )?.[1] ?? "";
+    expect(liveStage).toContain("<GuideLayers");
+    expect(liveStage).not.toContain("GuideEntryHint");
+    expect(guide).toMatch(
+      /<div className="brand-guide-portrait-scene">[\s\S]*?<\/div>\s*{mountLivePortrait && <GuideEntryHint/,
+    );
     expect(css).toContain("@keyframes guide-entry-hint-float");
     expect(css).toContain('.brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint');
   });
@@ -163,7 +174,8 @@ describe("H5 motion isolation", () => {
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
     [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
-  ])("maps every %ix%i portrait to the complete normalized guide canvas", (width, height) => {
+  ])("maps every %ix%i portrait width to the shared 6:13 guide canvas", (width) => {
+    const canvasHeight = width * 13 / 6;
     const landmarks = [
       { left: 136 / 750, top: 116 / 1625, right: 625 / 750, bottom: 268 / 1625 },
       { left: 56 / 750, top: 380 / 1625, right: 738 / 750, bottom: 1074 / 1625 },
@@ -172,9 +184,9 @@ describe("H5 motion isolation", () => {
     ];
     for (const landmark of landmarks) {
       expect(landmark.left * width).toBeGreaterThanOrEqual(0);
-      expect(landmark.top * height).toBeGreaterThanOrEqual(0);
+      expect(landmark.top * canvasHeight).toBeGreaterThanOrEqual(0);
       expect(landmark.right * width).toBeLessThanOrEqual(width);
-      expect(landmark.bottom * height).toBeLessThanOrEqual(height);
+      expect(landmark.bottom * canvasHeight).toBeLessThanOrEqual(canvasHeight);
     }
   });
 
@@ -252,7 +264,7 @@ describe("H5 motion isolation", () => {
     );
     expect(routeTransition).toContain('root.setAttribute(guideRouteEntryAttribute, "revealing")');
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
-    expect(routeTransition).toContain('snapshot.className = "h5-guide-route-snapshot"');
+    expect(routeTransition).toContain('snapshot.className = `h5-guide-route-snapshot is-${guideRouteOrientation(profile)}`');
     expect(routeTransition).toContain('createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot")');
     expect(routeTransition).toContain('createTransitionImage(guideRouteDestinationSrc, "h5-guide-route-destination-image")');
     expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp"');

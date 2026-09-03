@@ -1,0 +1,25 @@
+/*
+ * 750px design canvas -> viewport units.
+ * This file is intentionally named *.vw.css, so PostCSS converts authored px
+ * with: design px / 750 * 100 = vw.
+ *
+ * Keep every supplied 750 x 1625 guide layer on this one shared plane. The
+ * viewport clips only the vertical overflow on short embedded browsers; the
+ * artwork never shrinks from cqh changes or opens side seams.
+ */
+.brand-guide-portrait-scene,
+.h5-guide-route-snapshot.is-portrait {
+  width: 750px;
+  height: 1625px;
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+/* mediaQuery:false preserves this desktop cap and its declarations in px. */
+@media (min-width: 750px) {
+  .brand-guide-portrait-scene,
+  .h5-guide-route-snapshot.is-portrait {
+    width: 750px;
+    height: 1625px;
+  }
+}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./guide-adaptation.vw.css";
 import { H5HierarchyTracker } from "@/components/h5/H5HierarchyTracker";
 
 export const metadata: Metadata = {
