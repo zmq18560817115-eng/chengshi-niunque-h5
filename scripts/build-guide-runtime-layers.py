@@ -15,6 +15,8 @@ SOURCE = ROOT / "docs" / "input" / "design" / "home-page-v2" / "homepage-guide-a
 OUTPUT = ROOT / "public" / "design" / "guide"
 MASTER_SIZE = (750, 1625)
 SOURCE_SCALE = 0.375
+WINDOW_MASK_SCALE = 0.3791907514
+WINDOW_MASK_DEST = (-206, -262)
 
 
 def scaled(name: str) -> Image.Image:
@@ -30,6 +32,28 @@ def composite(canvas: Image.Image, layer: Image.Image, x: int, y: int) -> None:
 
 def save_lossless(image: Image.Image, filename: str) -> None:
     image.save(OUTPUT / filename, "WEBP", lossless=True, method=6)
+
+
+def build_window_mask() -> Image.Image:
+    """Register the supplied yellow occlusion mask on the master canvas.
+
+    The arch is intentionally transparent: it reveals the yellow background
+    and the character below, while the opaque texture restores the foreground
+    wall around the opening. The mask therefore belongs above the character
+    and below the painted arch frame; it must never be flattened over white.
+    """
+    with Image.open(SOURCE / "guide-window-mask.png.png") as source:
+        rgba = source.convert("RGBA")
+        size = (
+            round(rgba.width * WINDOW_MASK_SCALE),
+            round(rgba.height * WINDOW_MASK_SCALE),
+        )
+        registered = rgba.resize(size, Image.Resampling.LANCZOS)
+
+    mask = Image.new("RGBA", MASTER_SIZE, (0, 0, 0, 0))
+    composite(mask, registered, *WINDOW_MASK_DEST)
+    save_lossless(mask, "guide-window-mask.webp")
+    return mask
 
 
 def apply_window_cutout(character: Image.Image) -> Image.Image:
@@ -116,8 +140,11 @@ def crop_master(image: Image.Image, box: tuple[int, int, int, int], filename: st
     save_lossless(image.crop(box), filename)
 
 
-def build_static_foreground(character: Image.Image, foreground: Image.Image) -> Image.Image:
-    static = Image.new("RGBA", MASTER_SIZE, (0, 0, 0, 0))
+def build_static_foreground(character: Image.Image, foreground: Image.Image, window_mask: Image.Image) -> Image.Image:
+    with Image.open(OUTPUT / "guide-background.webp") as source:
+        static = source.convert("RGBA")
+    static.alpha_composite(character)
+    static.alpha_composite(window_mask)
     for filename in (
         "guide-arch.webp",
         "report-paper-top.webp",
@@ -125,8 +152,6 @@ def build_static_foreground(character: Image.Image, foreground: Image.Image) -> 
         "report-paper-right.webp",
         "report-paper-bottom.webp",
     ):
-        if filename == "guide-arch.webp":
-            static.alpha_composite(character)
         with Image.open(OUTPUT / filename) as layer:
             static.alpha_composite(layer.convert("RGBA"))
     static.alpha_composite(foreground)
@@ -156,6 +181,7 @@ def build_archive_transition_preview() -> None:
 
 
 def main() -> None:
+    window_mask = build_window_mask()
     open_character, promoted = build_character("open")
     closed_character, _ = build_character("closed")
     open_character = apply_window_cutout(open_character)
@@ -189,16 +215,18 @@ def main() -> None:
         with Image.open(OUTPUT / f"report-paper-{direction}.webp") as paper:
             crop_master(paper.convert("RGBA"), box, f"guide-compact-paper-{direction}.webp")
 
-    static_foreground = build_static_foreground(open_character, foreground)
+    static_foreground = build_static_foreground(open_character, foreground, window_mask)
     save_lossless(static_foreground, "guide-static-foreground.webp")
+    save_lossless(static_foreground, "guide-static-foreground-v2.webp")
     build_archive_transition_preview()
 
     # Keep the static first frame derived from exactly the same runtime layers.
-    first_frame = Image.new("RGBA", MASTER_SIZE, (247, 225, 139, 255))
+    with Image.open(OUTPUT / "guide-background.webp") as source:
+        first_frame = source.convert("RGBA")
     for filename in (
-        "guide-background.webp",
-        "guide-arch.webp",
         "guide-character-open.webp",
+        "guide-window-mask.webp",
+        "guide-arch.webp",
         "guide-foreground-top.webp",
     ):
         with Image.open(OUTPUT / filename) as layer:

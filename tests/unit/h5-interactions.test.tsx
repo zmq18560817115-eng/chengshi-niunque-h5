@@ -305,7 +305,20 @@ describe("multi-page H5 interactions", () => {
       "module-1-batch-coil",
       "module-1-batch",
       "module-1-passed-panel",
+      "module-1-passed-copy",
     ]);
+    const passedCopy = batchGroup.querySelector<HTMLElement>('[data-source-part="module-1-passed-copy"]');
+    expect(passedCopy).toHaveAttribute("src", "/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp");
+    expect(passedCopy).toHaveAttribute("width", "628");
+    expect(passedCopy).toHaveAttribute("height", "113");
+    expect(passedCopy).toHaveAttribute("data-guide-entry-stage", "3");
+    expect(passedCopy).toHaveStyle({
+      left: "6.3%",
+      top: "32.76947993521684%",
+      width: "62.8%",
+      height: "2.0334712974626594%",
+      zIndex: "40",
+    });
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -493,7 +506,8 @@ describe("multi-page H5 interactions", () => {
     const finalPaper = "/design/guide/report-paper-bottom.webp";
 
     expect(page).toHaveClass("is-loading");
-    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
+    expect(container.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/guide/guide-window-mask.webp");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
     await act(async () => {
       await resolvePendingImages(({ src }) => src.includes("/design/guide/") && !src.includes(finalPaper));
     });
@@ -755,7 +769,7 @@ describe("multi-page H5 interactions", () => {
     const animatedCanvas = container.querySelector(".is-animated-canvas");
     const windowFrame = animatedCanvas?.querySelector(".brand-guide-arch");
     expect(windowFrame).toBeInTheDocument();
-    expect(animatedCanvas?.querySelector(".brand-guide-window-mask")).not.toBeInTheDocument();
+    expect(animatedCanvas?.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/guide/guide-window-mask.webp");
     expect(animatedCanvas?.querySelector(".brand-guide-base")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
     expect(container.querySelector(".brand-guide-character-closed")?.getAttribute("src")).toContain("guide-character-closed.webp");
@@ -771,7 +785,7 @@ describe("multi-page H5 interactions", () => {
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
     expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground-v2.webp");
     expect(page).toHaveClass("is-loading");
     await decodeMountedGuideImages();
     expect(page).toHaveClass("is-ready");
@@ -792,7 +806,7 @@ describe("multi-page H5 interactions", () => {
     expect(character).toBeInTheDocument();
     failDomImage(character as Element);
     await waitFor(() => expect(container.querySelector(".brand-guide")).toHaveClass("is-failed"));
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground-v2.webp");
     expect(container.querySelector(".brand-guide")).not.toHaveClass("has-no-fallback");
     consoleError.mockRestore();
   });
@@ -821,7 +835,7 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
     expect(container.querySelector(".brand-guide-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
   });
 

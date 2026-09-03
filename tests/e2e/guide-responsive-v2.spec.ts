@@ -177,6 +177,7 @@ test("mobile browser toolbar resize does not switch composition or distort the s
 
 test("cold cache keeps the complete fallback until every visible layer is decoded", async ({ page }) => {
   const delayed = new Set([
+    "guide-window-mask.webp",
     "guide-character-open.webp", "guide-character-closed.webp", "guide-arch.webp",
     "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp",
     "report-paper-bottom.webp", "guide-foreground-top.webp", "swipe-up-hint-v2.png",
@@ -220,7 +221,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 440, height: 820 }
     const snapshot = page.locator("#h5-guide-route-buffer-host .h5-guide-route-snapshot");
     await expect(snapshot).toBeVisible();
     await expect(snapshot).not.toHaveClass(/is-compact/);
-    await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", "/design/guide/guide-static-foreground.webp");
+    await expect(snapshot.locator(".h5-guide-route-portrait-snapshot")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
     const box = await snapshot.boundingBox();
     expect(box).not.toBeNull();
     const expectedWidth = Math.min(viewport.width, viewport.height * 6 / 13);

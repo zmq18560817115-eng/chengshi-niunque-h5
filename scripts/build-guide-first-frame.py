@@ -7,9 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / "public" / "design" / "guide"
 LAYERS = (
     "guide-background.webp",
-    "guide-arch.webp",
     "guide-character-open.webp",
     "guide-window-mask.webp",
+    "guide-arch.webp",
     "guide-foreground-top.webp",
 )
 

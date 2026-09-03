@@ -39,7 +39,7 @@ const clampProgress = (value: number) => Math.min(1, Math.max(0, value));
 
 const assetUrl = (name: string) => `/design/guide/${name}`;
 const standardLayerNames = [
-  "guide-character-open.webp", "guide-character-closed.webp", "guide-arch.webp",
+  "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-arch.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
   "guide-foreground-top.webp",
 ] as const;
@@ -58,7 +58,7 @@ function markImageDecoded(image: HTMLImageElement, key: string, onReady: (key: s
 function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
   return <>
     {!unavailable && (
-      <Image className="brand-guide-fallback" src={assetUrl("guide-static-foreground.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+      <Image className="brand-guide-fallback" src={assetUrl("guide-static-foreground-v2.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
     )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>上滑查看完整营养信息</span>
   </>;
@@ -69,6 +69,7 @@ function GuideLayers({ onReady, onError }: { onReady: (key: string) => void; onE
   return <div className="brand-guide-dynamic-stage is-animated-canvas">
     {image("guide-character-open.webp", "brand-guide-character brand-guide-character-open", true)}
     {image("guide-character-closed.webp", "brand-guide-character brand-guide-character-closed")}
+    {image("guide-window-mask.webp", "brand-guide-window-mask", true)}
     {image("guide-arch.webp", "brand-guide-arch", true)}
     {image("report-paper-top.webp", "brand-guide-paper brand-guide-paper-top", true)}
     {image("report-paper-left.webp", "brand-guide-paper brand-guide-paper-left", true)}
@@ -436,7 +437,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setGestureReady(true);
   }, []);
   const handleFallbackError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-static-foreground.webp");
+    console.error("[BrandGuide] asset failed: guide-static-foreground-v2.webp");
     setFallbackUnavailable(true);
     setSwipeReady(true);
     setGestureReady(true);

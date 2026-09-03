@@ -19,6 +19,7 @@ CROPS = (
     (RUNTIME / "module-1-batch-coil.webp", RUNTIME / "module-1-batch-coil.runtime.webp", (428, 1582, 893, 1682)),
     (RUNTIME / "module-1-batch.webp", RUNTIME / "module-1-batch.runtime.webp", (463, 1602, 865, 1760)),
     (RUNTIME / "module-1-passed-panel.webp", RUNTIME / "module-1-passed-panel.runtime.webp", (286, 1581, 1190, 2034)),
+    (RUNTIME / "module-1-passed-copy.webp", RUNTIME / "module-1-passed-copy.runtime.webp", (469, 1821, 1097, 1934)),
     (MODULE_TWO / "绿档.png", RUNTIME / "module-2-inspection-folder.runtime.webp", (283, 1167, 2609, 4148)),
     (MODULE_TWO / "黄档.png", RUNTIME / "module-2-review-folder.runtime.webp", (283, 1928, 2609, 4130)),
     (MODULE_TWO / "棕档.png", RUNTIME / "module-2-production-folder.runtime.webp", (283, 2641, 2609, 4384)),
@@ -63,16 +64,19 @@ def main() -> None:
         save_webp(paper, paper_destination)
         print(f"{paper_destination.name}\t{paper.width}x{paper.height}\t{paper_destination.stat().st_size}")
 
-    # Public fallback: restore the supplied blank decorative result panel over
-    # the baked fixed conclusions. The mascot, panel, border, and neutral
-    # report disclaimer remain; only the misleading result copy is removed.
+    # Public fallback: rebuild the latest-batch panel from the same supplied
+    # panel and conclusion layers used by the live composition. This keeps the
+    # decoded fallback and the layered artwork visually identical.
     fallback_source = ROOT / "public/design/final-v1/archive-reference.webp"
     fallback_destination = ROOT / "public/design/final-v1/archive-reference-public.webp"
     panel_source = RUNTIME / "module-1-passed-panel.runtime.webp"
-    with Image.open(fallback_source) as fallback_raw, Image.open(panel_source) as panel_raw:
+    copy_source = RUNTIME / "module-1-passed-copy.runtime.webp"
+    with Image.open(fallback_source) as fallback_raw, Image.open(panel_source) as panel_raw, Image.open(copy_source) as copy_raw:
         fallback = fallback_raw.convert("RGBA")
         panel = panel_raw.convert("RGBA")
+        copy = copy_raw.convert("RGBA")
         fallback.alpha_composite(panel, (-120, 1581))
+        fallback.alpha_composite(copy, (63, 1821))
         fallback.save(fallback_destination, "WEBP", quality=90, method=6, exact=True)
         print(f"{fallback_destination.name}\t{fallback.width}x{fallback.height}\t{fallback_destination.stat().st_size}")
 

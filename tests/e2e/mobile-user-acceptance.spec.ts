@@ -98,6 +98,7 @@ async function expectImagesDecodedWithoutStretch(images: Locator) {
 }
 
 const portraitCanvasLayerSelector = [
+  ".brand-guide-window-mask",
   ".brand-guide-arch",
   ".brand-guide-paper",
   ".brand-guide-character",
@@ -116,7 +117,7 @@ async function expectSharedPortraitScene(
   await expect(scene).not.toHaveClass(/is-compact-fallback/);
   await expect(liveStage).toBeVisible();
   await expect(page.locator(".guide-compact-portrait-composition, .guide-landscape-composition")).toHaveCount(0);
-  await expect(canvasLayers).toHaveCount(8);
+  await expect(canvasLayers).toHaveCount(9);
 
   const sceneBox = await scene.boundingBox();
   expect(sceneBox).not.toBeNull();
@@ -213,7 +214,7 @@ for (const device of devices) {
     await expectStageFillsSafeContentBox(guideRoot, guideStage);
     await expect(guideStage).toHaveCSS("aspect-ratio", "auto");
     await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
-    await expect(page.locator(".brand-guide-window-mask")).toHaveCount(0);
+    await expect(page.locator(".brand-guide-window-mask")).toHaveCount(profile === "landscape" ? 0 : 1);
     await expect(page.locator(".brand-guide .motion-stage")).toHaveCount(0);
     await expect(page.locator(".runtime-loading-layer")).toHaveCount(0);
     const frameBox = await contentFrame.boundingBox();
@@ -514,6 +515,7 @@ for (const viewport of [
 test("cold-cache standard guide keeps the complete fallback until every live layer decodes", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const delayedNames = new Set([
+    "guide-window-mask.webp",
     "guide-arch.webp", "guide-character-open.webp", "guide-character-closed.webp", "guide-foreground-top.webp",
     "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",
     "swipe-up-hint-v2.png",
@@ -533,7 +535,7 @@ test("cold-cache standard guide keeps the complete fallback until every live lay
   await expect(fallback).toBeVisible();
   await expect(fallback).toHaveCSS("opacity", "1");
   await expect(liveStage).toHaveCSS("opacity", "0");
-  await expect(page.locator(".brand-guide .motion-stage, .brand-guide-window-mask, .runtime-loading-layer")).toHaveCount(0);
+  await expect(page.locator(".brand-guide .motion-stage, .runtime-loading-layer")).toHaveCount(0);
   await page.screenshot({ path: "artifacts/design-qa/guide-cold-cache-fallback-375x812.png" });
   await expect(stage).toHaveAttribute("data-load-state", "ready", { timeout: 15000 });
   await expect(liveStage).toHaveCSS("opacity", "1");

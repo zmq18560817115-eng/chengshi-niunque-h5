@@ -244,12 +244,12 @@ async function expectGuideSubjectOccupancy(page: Page) {
     expect(["portrait-standard", "portrait-compact"]).toContain(profile);
     const scene = artwork.locator(":scope > .brand-guide-portrait-scene");
     const liveStage = scene.locator(":scope > .brand-guide-live-stage");
-    const canvasLayers = liveStage.locator(".brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top");
+    const canvasLayers = liveStage.locator(".brand-guide-window-mask, .brand-guide-arch, .brand-guide-paper, .brand-guide-character, .brand-guide-foreground-top");
     await expect(scene).toBeVisible();
     await expect(scene).not.toHaveClass(/is-compact-fallback/);
     await expect(artwork.locator(":scope > .guide-compact-portrait-composition")).toHaveCount(0);
-    await expectDecodedImages(liveStage, "img", 9);
-    await expect(canvasLayers).toHaveCount(8);
+    await expectDecodedImages(liveStage, "img", 10);
+    await expect(canvasLayers).toHaveCount(9);
     const sceneBox = await scene.boundingBox();
     expect(sceneBox).not.toBeNull();
     if (!sceneBox) throw new Error("portrait scene has no layout box");

@@ -68,6 +68,7 @@ const artworkLayers: readonly ArtworkLayer[] = [
   moduleOneLayer("module-1-batch-coil", "module-1-batch-coil", { x: 428, y: 1582, width: 465, height: 100 }),
   moduleOneLayer("module-1-batch", "module-1-batch", { x: 463, y: 1602, width: 402, height: 158 }),
   moduleOneLayer("module-1-passed-panel", "module-1-passed-panel", { x: 286, y: 1581, width: 904, height: 453 }),
+  moduleOneLayer("module-1-passed-copy", "module-1-passed-copy", { x: 469, y: 1821, width: 628, height: 113 }),
   atHalfSize("module-2-resource-02", moduleTwoAsset("资源 2.png"), 1244, 715, 190.5, 2247.5),
   atHalfSize("module-2-resource-03", moduleTwoAsset("资源 3.png"), 215, 251, 696, 2199),
   atHalfSize("module-2-resource-08", moduleTwoAsset("资源 8.png"), 1101, 1216, 51, 2624),
@@ -119,6 +120,7 @@ const guideEntryBatchParts = new Set([
   "module-1-batch-coil",
   "module-1-batch",
   "module-1-passed-panel",
+  "module-1-passed-copy",
 ]);
 
 const deepDeferredParts = new Set([

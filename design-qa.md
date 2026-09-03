@@ -1,47 +1,47 @@
 # Design QA
 
-## Comparison target
+## Comparison targets
 
-- Source visual truth: user-supplied `C:/Users/bu/AppData/Local/Temp/codex-clipboard-223bb4ab-5934-4e9b-9464-e5212e8c160d.jpg` (local reference only; not committed).
-- Source dimensions: 2000×4333 pixels, normalized to the repository's 750×1625 guide coordinate plane (the same 6:13 ratio).
-- Implementation route: `http://127.0.0.1:3420/go` from the optimized local production build.
-- Implementation capture: Codex in-app browser visual capture of `/go`; browser/device chrome excluded from comparison.
-- States inspected: decoded guide at rest, the guide-to-home click handoff, and the settled `/reports` page.
+- Approved guide reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-223bb4ab-5934-4e9b-9464-e5212e8c160d.jpg`.
+- Exact missing mask supplied by the user: `C:/Users/bu/Desktop/H5设计开发/DHA-h5素材全部打包-8.25/h5-封面-/kv部件/h5kv - 输出.png`.
+- Homepage reference/problem evidence: `D:/xwechat_files/wxid_6c31uwcjo0zg22_62e1/temp/RWTemp/2026-09/b21806cd3096cc319427696cfa9339a3/c642ce4dd4ee46684fef339250bced15.jpg`.
+- Production preview checked at `http://127.0.0.1:3421/go` and `http://127.0.0.1:3421/reports`.
+- Comparison artifact (not committed): `public/__qa__/guide-mask-comparison-final.png`, with the approved reference and production layer composite normalized to the same 750×1625 canvas.
 
-## Evidence and findings
+## Guide mask repair
 
-- The reference and implementation were judged as the same full-frame composition, with particular attention to the logo, loose papers, character, report envelope, heart, arrow, and bottom instruction.
-- Both portrait layout profiles now use the same centered 750×1625 scene. Runtime measurement showed a 750×1625 scene with zero horizontal document overflow; every full-canvas layer reported a 750×1625 natural size and the same rendered bounds.
-- The prior compact-only crop layout is no longer mounted. It had independently repositioned the character and envelope, which caused the visible mismatch and a geometry jump during route handoff.
-- Typography and copy remain original raster artwork. No substitute type, HTML reconstruction, crop, or invented graphic was introduced.
-- Color and texture remain the repository's original guide assets. Images are proportionally contained as one 6:13 canvas rather than stretched to fill a non-matching viewport.
-- The live guide layers and the predecoded route snapshot now share the same coordinate plane, so the transition does not switch to a differently positioned composition.
-- The right-side loose paper animation now finishes at its registered source coordinate (`translate3d(0,0,0)`), avoiding a second position jump when animation ends.
-- The click handoff reached `/reports`, settled with the continuity buffer removed, had zero horizontal overflow, and produced no browser warning/error logs. No white or texture-only frame was observed in the in-app browser walk-through.
+- The supplied 3127×5558 RGBA source and the repository's read-only design input have the same SHA-256 hash. That exact asset was registered to the 750×1625 master canvas; no screenshot crop, redrawing, or substitute art was used.
+- The arch-shaped opening in the source is transparent. Visual comparison caught that it must not be flattened over white: the yellow mask is now placed above the character and below the painted arch frame.
+- Verified runtime order: character `z-index:20`, supplied window mask `z-index:25`, painted arch `z-index:27`, loose papers `z-index:34`, foreground `z-index:35`.
+- All full-canvas guide layers decode at 750×1625 and share exactly the same rendered bounds. Browser measurement found zero horizontal document overflow.
+- Static fallback and route-transition snapshot use the same complete background/character/mask/arch/paper/foreground composition. The new `guide-static-foreground-v2.webp` URL avoids serving the previous cached fallback during the handoff.
+- Side-by-side review confirmed the yellow dome texture, character clipping, logo, loose papers, envelope, heart, and instruction remain aligned with the approved reference.
 
-## Comparison history
+## Homepage asset repair
 
-1. Pre-fix compact portrait: logo, character, envelope, and instruction were separate crops with viewport-relative positions. Against the supplied 6:13 reference, the character and envelope were visibly too high and the envelope covered the character at the wrong layer.
-2. First fix: removed the compact crop composition and reused the original full-canvas semantic layers for both portrait profiles.
-3. Handoff fix: replaced the compact route crop snapshot with the same 750×1625 static portrait snapshot and made the right paper animation end at its source coordinate.
-4. Post-fix check: the implementation visually follows the supplied full-frame reference, keeps all layers registered to one canvas, and remains centered without distortion or horizontal overflow.
+- Restored the supplied `module-1-passed-copy` source layer above the existing latest-batch panel instead of baking in a screenshot.
+- Verified source alpha crop `(469,1821)-(1097,1934)`, runtime size 628×113, and final master-canvas placement `(63,1821)` after the existing module offset.
+- The copy is part of the `latest-batch` entry group and enters with that whole second section, preserving the requested staged transition.
+- The decoded fallback and live layered homepage now both show all four public-batch conclusions. Browser inspection confirmed the new layer is decoded, visible, at stage 3 and `z-index:40`.
+- The homepage settled after guide navigation with its continuity buffer removed, zero horizontal overflow, and no browser warnings or errors.
 
-## Responsive contract
+## Responsive and interaction checks
 
-- Reference canvas: 750×1625 (6:13).
-- Portrait sizing: `width: min(100cqw, 46.153846cqh)` with `aspect-ratio: 6 / 13`, centered on both axes.
-- Wider or shorter portrait viewports may show narrow background-texture gutters. This preserves the complete original artwork and prevents the layer displacement caused by stretching/cropping.
-- Landscape retains its existing dedicated semantic composition; this change does not invent a new landscape layout.
+- Portrait guide content remains one centered 6:13 scene (`750×1625`) rather than independently moving or stretching its source layers.
+- Narrow texture gutters on wider/shorter viewports are intentional and preserve the approved full artwork without cropping or distortion.
+- The guide became interactive only after required image decoding; clicking the entry control reached `/reports` without a white frame or failed asset.
+- The homepage remained normally scrollable after the entry animation, and the restored batch copy stayed registered to the book coordinate system.
 
 ## Verification
 
-- Automated unit coverage checks shared portrait-layer rendering, route-snapshot continuity, removal of compact-only DOM/CSS, source-layer dimensions, and the zero-offset animation endpoint.
-- Browser walk-through: `/go` decoded and became swipe-ready; click entry reached `/reports`; the continuity buffer and route-entry attribute cleaned up after settling; browser warnings/errors: none.
 - `pnpm lint`: passed.
 - `pnpm typecheck`: passed.
 - `pnpm test`: 35 files, 207 tests passed.
 - `pnpm prisma:validate`: passed.
 - `pnpm build`: passed.
+- Targeted guide/archive unit regression: 3 files, 89 tests passed.
+- In-app browser visual and interaction walk-through: passed.
+- Browser warning/error log: empty.
 - `git diff --check`: passed.
 
 final result: passed

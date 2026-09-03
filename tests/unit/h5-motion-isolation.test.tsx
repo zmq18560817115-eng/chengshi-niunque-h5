@@ -90,7 +90,7 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("function markImageDecoded(image: HTMLImageElement");
     expect(guide).toContain("requiredReadyKeys.every((required) => readyLayers.current.has(required))");
     expect(guide).toContain('setAssetStatus("ready")');
-    expect(guide).toContain('assetUrl("guide-static-foreground.webp")');
+    expect(guide).toContain('assetUrl("guide-static-foreground-v2.webp")');
     expect(guide).not.toContain("MotionStage");
   });
 
@@ -128,8 +128,10 @@ describe("H5 motion isolation", () => {
     expect(css).toMatch(/\.brand-guide\s*\{[^}]*width:\s*100%;[^}]*touch-action:\s*none;/);
     expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
-    expect(css).not.toContain(".brand-guide-window-mask");
-    expect(guide).not.toContain("brand-guide-window-mask");
+    expect(css).toMatch(/\.brand-guide-window-mask\s*\{[^}]*z-index:\s*25;[^}]*object-fit:\s*fill;/);
+    expect(guide).toContain('"guide-window-mask.webp"');
+    expect(existsSync("public/design/guide/guide-window-mask.webp")).toBe(true);
+    expect(existsSync("public/design/guide/guide-static-foreground-v2.webp")).toBe(true);
     expect(guide).not.toContain("brand-guide-base");
     expect(css).not.toContain("brand-guide-portrait-edge-bleed");
     expect(guide).not.toContain("GuidePortraitEdgeBleed");
@@ -253,7 +255,7 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain('snapshot.className = "h5-guide-route-snapshot"');
     expect(routeTransition).toContain('createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot")');
     expect(routeTransition).toContain('createTransitionImage(guideRouteDestinationSrc, "h5-guide-route-destination-image")');
-    expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground.webp"');
+    expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp"');
     expect(routeTransition).toContain('export const guideRouteDestinationSrc = "/design/guide/archive-transition-preview.webp"');
     expect(routeTransition).toContain('export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile');
     expect(routeTransition).not.toContain("function createGuideCompactComposition()");
@@ -431,16 +433,16 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain(".guide-compact-character");
     expect(css).not.toContain(".guide-compact-arch");
     expect(css).not.toContain(".guide-compact-character-overlay");
-    expect(css).not.toContain(".brand-guide-window-mask");
+    expect(css).toContain(".brand-guide-window-mask");
     expect(guide).toContain("standardReadyKeys");
     expect(guide).not.toContain("compactReadyKeys");
     expect(guide).toContain("landscapeReadyKeys");
-    expect(guide).toContain('assetUrl("guide-static-foreground.webp")');
+    expect(guide).toContain('assetUrl("guide-static-foreground-v2.webp")');
     expect(guide).toContain('setAssetStatus("failed")');
     expect(guide).not.toContain("MotionStage");
     expect(guide).not.toContain("loadingFallback");
     expect(guide).not.toContain("guide-final-fallback-v3.webp");
-    expect(guide).not.toContain("brand-guide-window-mask");
+    expect(guide).toContain("brand-guide-window-mask");
     expect(css).not.toContain("brand-guide-paper-arm-occlusion");
     expect(css).not.toContain("brand-guide-paper-right-occlusion");
     expect(css).not.toContain("guide-right-arm-mask.webp");
@@ -492,6 +494,8 @@ describe("H5 motion isolation", () => {
     expect(artwork).toContain('moduleTwoAsset("资源 20.png")');
     expect(artwork).not.toContain("docs/input");
     expect(artwork).toContain('const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers"');
+    expect(artwork).toContain('moduleOneLayer("module-1-passed-copy", "module-1-passed-copy"');
+    expect(existsSync("public/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp")).toBe(true);
     expect(artwork).toContain("module-3-output.webp");
     expect(artwork).toContain('top: 4374.5, width: 1000, height: 1182.5, unoptimized: true');
     expect(artwork).toContain('loading="eager"');
