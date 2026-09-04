@@ -7,8 +7,10 @@
 - Homepage reference/problem evidence: `D:/xwechat_files/wxid_6c31uwcjo0zg22_62e1/temp/RWTemp/2026-09/b21806cd3096cc319427696cfa9339a3/c642ce4dd4ee46684fef339250bced15.jpg`.
 - Guide-to-home first-module reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-2d18e007-26a4-4a53-bf3f-831c61a4a793.png`.
 - Latest-public-batch second-module reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-22a34db5-631d-421a-8ad2-339f378388c6.png`.
-- Production preview checked at `http://127.0.0.1:3422/go` and `http://127.0.0.1:3422/reports`.
+- Homepage category-transition defect evidence: `D:/xwechat_files/wxid_6c31uwcjo0zg22_62e1/temp/RWTemp/2026-09/b21806cd3096cc319427696cfa9339a3/1b19805cd12d6735bfbe7178b445cf72.png`.
+- Production preview checked at `http://127.0.0.1:3423/reports` and the three category destinations.
 - Comparison artifact (not committed): `public/__qa__/guide-mask-comparison-final.png`, with the approved reference and production layer composite normalized to the same 750×1625 canvas.
+- Homepage/category continuity artifacts (not committed): `public/__qa__/category-route-transition/modules-reference-state.png`, `public/__qa__/category-route-transition/inspection-transition-frame.png`, and `public/__qa__/category-route-transition/homepage-480x812.png`.
 
 ## Guide mask repair
 
@@ -52,16 +54,30 @@
 - Transition and live homepage content widths now use the same safe-area-aware 750px content frame, preventing a width jump in notched landscape WebViews.
 - In-app browser verification used the existing 375×812 QA viewport. Frame sampling found zero book-opacity regressions, zero batch-opacity regressions, zero fallback-visible route frames, and zero visible ribbon-state mismatches. During route-buffer release and after live takeover, combined book and batch visibility remained `1.000`; the final route had no buffer and one live ribbon at `idle / 0.000`.
 
+## Homepage-to-category continuity repair
+
+- Removed the selected folder/title extraction path that independently faded and moved the largest green, yellow, or brown artwork layers before navigation. Press feedback remains immediate, but the complete approved homepage composition now stays painted until the destination takes ownership.
+- The non-native fallback deep-clones the already decoded live layered homepage DOM; it does not use a screenshot crop or redraw any source artwork. Green, yellow, brown, title, character, paper, and ribbon layers retain their existing stacking order.
+- The cloned page root, `.reports-archive-art`, and every motion module receive their current computed visual frame before animation is disabled. This prevents the clone from replaying `opacity:0` page/art entry keyframes—the direct cause of the missing-layer/white flash on fallback-capable WebViews.
+- Clone descendants are demoted from `will-change` after their current frame is frozen, avoiding unnecessary large compositing layers on low-end mobile devices. The route buffer itself remains compositor-transformed for the one release movement.
+- Native view transitions retain the browser-owned complete old-page snapshot until category artwork is decoded and stable. Native ownership is keyed by a unique attempt id, so an older completion cannot suppress or restyle a newer green/yellow/brown navigation.
+- After the browser snapshot releases, the native destination keeps an explicit settled entry state; it cannot restart the generic `h5-page-enter` opacity animation and flash the page a second time.
+- Fallback readiness is also keyed by attempt id and slug. Route-commit and target-artwork timeouts are measured separately; a slow route commit can no longer consume the destination's 3-second fail-open budget and expose an untranslated background.
+- Animation frames, timers, buffer generations, and `pagehide` cleanup are guarded. A stale callback or BFCache restoration cannot remove a newer buffer or bring back a suspended overlay.
+- The supplied defect screenshot and same-state browser capture were compared together. The repaired transition frame preserves the three module registrations and all approved source layers with no white/missing section; the destination completes with an empty continuity host and no residual root markers.
+- Android Chromium reduced-motion fallback coverage was repeated three times. Each run observed `animation-name:none` and `opacity:1` on both clone root and artwork, plus either all live module layers or the decoded complete reference fallback, before the category page settled.
+
 ## Verification
 
 - `pnpm lint`: passed.
 - `pnpm typecheck`: passed.
-- `pnpm test`: 35 files, 209 tests passed.
+- `pnpm test`: 36 files, 219 tests passed.
 - `pnpm prisma:validate`: passed.
 - `pnpm build`: passed; emitted `.brand-guide-portrait-scene,.h5-guide-route-snapshot.is-portrait{width:100vw;height:216.666667vw}` and retained the 750px desktop cap.
-- Targeted guide/route/motion unit regression: 3 files, 90 tests passed.
-- In-app browser visual and interaction walk-through: passed.
-- Browser warning/error log: empty.
+- Targeted category transition/readiness/motion regression: 3 files, 63 tests passed.
+- Android mobile hierarchy and transition E2E: 5/5 passed, including native snapshot release and reduced-motion fallback continuity.
+- In-app browser visual and interaction walk-through: passed; the 60ms click-transition frame retained the complete homepage composition.
+- Fresh route traversal had no current asset-load failure; an earlier transient local HMR entry from source patching was excluded from runtime QA.
 - `git diff --check`: passed.
 
 final result: passed

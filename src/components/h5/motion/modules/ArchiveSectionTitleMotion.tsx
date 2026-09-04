@@ -196,11 +196,11 @@ function ArchiveSectionClickCue({ enabled, active }: { enabled: boolean; active:
   );
 }
 
-function ArchiveSectionTitleGroup({ group, active, exiting, sequenceIndex }: { group: TitleGroup; active: boolean; exiting: boolean; sequenceIndex: number }) {
+function ArchiveSectionTitleGroup({ group, active, sequenceIndex }: { group: TitleGroup; active: boolean; sequenceIndex: number }) {
   const groupStyle = { ...position(group), "--archive-title-sequence-index": sequenceIndex } as CSSProperties;
 
   return (
-    <div className={`archive-section-title-group ${active ? "archive-module-pressed-layer" : ""} ${exiting ? "archive-module-exit-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-ready="true" data-title-sequence-order={sequenceIndex + 1} data-title-render-layer="poster" style={groupStyle}>
+    <div className={`archive-section-title-group ${active ? "archive-module-pressed-layer" : ""}`} data-title-group={group.slug} data-title-label={group.label} data-title-ready="true" data-title-sequence-order={sequenceIndex + 1} data-title-render-layer="poster" style={groupStyle}>
       <Image className="archive-section-title-layer archive-section-title-poster" src={group.poster} alt="" fill sizes="(max-width: 750px) 44vw, 330px" loading="eager" unoptimized />
       {group.numberParts.map((part) => (
         <Image
@@ -220,7 +220,7 @@ function ArchiveSectionTitleGroup({ group, active, exiting, sequenceIndex }: { g
   );
 }
 
-export function ArchiveSectionTitleMotion({ preview = false, activeSlug = null, exitingSlug = null }: { preview?: boolean; activeSlug?: string | null; exitingSlug?: string | null }) {
+export function ArchiveSectionTitleMotion({ preview = false, activeSlug = null }: { preview?: boolean; activeSlug?: string | null }) {
   const enabled = H5_MOTION_ENABLED && h5MotionModules.archiveSectionTitle && !preview;
   const { trigger, running } = useSequentialTitlePlayback(enabled);
   if (!enabled) return null;
@@ -229,7 +229,7 @@ export function ArchiveSectionTitleMotion({ preview = false, activeSlug = null, 
     <div className="archive-section-title-motion" data-motion-module="archiveSectionTitle" data-title-sequence-running={running} data-title-sequence-mode={running ? "css-compositor-loop" : "paused"} aria-hidden="true">
       <div ref={trigger} className="archive-section-title-sequence-trigger" />
       <ArchiveSectionClickCue enabled={enabled} active={activeSlug === "inspection-projects"} />
-      {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} active={group.slug === activeSlug} exiting={group.slug === exitingSlug} sequenceIndex={index} />)}
+      {titleGroups.map((group, index) => <ArchiveSectionTitleGroup key={group.slug} group={group} active={group.slug === activeSlug} sequenceIndex={index} />)}
     </div>
   );
 }

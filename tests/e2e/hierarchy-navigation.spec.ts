@@ -116,6 +116,77 @@ test("a direct report link right-swipes to its canonical parent without reopenin
   expect(page.url()).not.toBe(reportUrl);
 });
 
+test("the reduced-motion fallback keeps every archive layer painted while a category route commits", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/reports");
+  await waitForArchive(page);
+
+  const review = page.locator('.archive-category-hotspot[data-slug="review-assurance"]');
+  await expect(review).toBeEnabled({ timeout: 15_000 });
+  await review.scrollIntoViewIfNeeded();
+  await review.evaluate((element) => (element as HTMLButtonElement).click());
+
+  const clone = page.locator("#h5-category-route-buffer-host .reports-archive-final.is-category-route-buffer-clone");
+  await expect(clone).toHaveCount(1);
+  const frozenFrame = await clone.evaluate((element) => {
+    const artwork = element.querySelector<HTMLElement>(".reports-archive-art");
+    const moduleLayers = [...element.querySelectorAll<HTMLElement>("[data-archive-module]")];
+    const referenceFallback = element.querySelector<HTMLElement>(".reports-archive-reference-fallback");
+    const referenceFallbackImage = referenceFallback?.querySelector<HTMLImageElement>(".reports-archive-reference-fallback-image") ?? null;
+    const fallbackStyle = referenceFallback ? getComputedStyle(referenceFallback) : null;
+    return {
+      rootAnimation: getComputedStyle(element).animationName,
+      rootOpacity: getComputedStyle(element).opacity,
+      artworkAnimation: artwork ? getComputedStyle(artwork).animationName : null,
+      artworkOpacity: artwork ? getComputedStyle(artwork).opacity : null,
+      moduleSlugs: [...new Set(moduleLayers.map((layer) => layer.dataset.archiveModule))],
+      referenceFallbackVisible: Boolean(referenceFallbackImage?.complete && referenceFallbackImage.naturalWidth > 0
+        && fallbackStyle?.display !== "none" && fallbackStyle?.visibility !== "hidden" && Number(fallbackStyle?.opacity) > 0),
+      hiddenModuleLayers: moduleLayers.filter((layer) => {
+        const style = getComputedStyle(layer);
+        return style.visibility === "hidden" || style.display === "none" || Number(style.opacity) === 0;
+      }).length,
+    };
+  });
+  expect(frozenFrame.rootAnimation).toBe("none");
+  expect(frozenFrame.rootOpacity).toBe("1");
+  expect(frozenFrame.artworkAnimation).toBe("none");
+  expect(frozenFrame.artworkOpacity).toBe("1");
+  const hasEveryModuleLayer = ["inspection-projects", "review-assurance", "production-traceability"]
+    .every((slug) => frozenFrame.moduleSlugs.includes(slug));
+  expect(hasEveryModuleLayer || frozenFrame.referenceFallbackVisible).toBe(true);
+  expect(frozenFrame.hiddenModuleLayers).toBe(0);
+
+  await expect(page).toHaveURL(/\/reports\/review-assurance$/);
+  await waitForCategory(page);
+});
+
+test("a native category snapshot does not replay the generic page entrance after release", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/reports");
+  await waitForArchive(page);
+  test.skip(!(await page.evaluate(() => typeof document.startViewTransition === "function")), "View Transitions API is unavailable");
+
+  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
+  await expect(inspection).toBeEnabled({ timeout: 15_000 });
+  await inspection.evaluate((element) => (element as HTMLButtonElement).click());
+  await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
+  await waitForCategory(page);
+  await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute("data-category-native-transition"))).toBeNull();
+
+  const settledFrame = await page.locator(".category-page-final").evaluate((element) => ({
+    entry: element.getAttribute("data-route-entry"),
+    animation: getComputedStyle(element).animationName,
+    opacity: getComputedStyle(element).opacity,
+    transform: getComputedStyle(element).transform,
+  }));
+  expect(settledFrame.entry).toBe("reports-archive-native");
+  expect(settledFrame.animation).toBe("none");
+  expect(settledFrame.opacity).toBe("1");
+  expect(settledFrame.transform).toBe("none");
+});
+
 test("returning from a report restores the category reading position", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/reports");

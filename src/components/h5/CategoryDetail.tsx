@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
-import { AdaptiveReadinessGate, useAdaptiveReadiness } from "@/components/h5/AdaptiveReadinessGate";
+import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import { pushHierarchyRoute, readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
-import { announceCategoryRouteReady, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteMountedEvent, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
+import { announceCategoryRouteMounted, announceCategoryRouteReady, categoryRouteAttemptAttribute, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteNativeEntrySource, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -41,7 +41,7 @@ export function CategoryDetail(props: CategoryDetailProps) {
   const theme = getCategoryTheme(props.module.slug);
   if (props.preview || !theme.artworkLayers) return <CategoryDetailReady {...props}/>;
   const requests = theme.readinessAssets.map((src) => ({ src, priority: "high" as const }));
-  return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets" settleSelector={`.category-page-final[data-category="${props.module.slug}"]`} settleFrames={3}>
+  return <AdaptiveReadinessGate requests={requests} label={`正在准备${theme.label}`} reason="category-assets" settleSelector={`.category-page-final[data-category="${props.module.slug}"]`} settleFrames={3} failOpen>
     <CategoryDetailReady {...props}/>
   </AdaptiveReadinessGate>;
 }
@@ -49,8 +49,10 @@ export function CategoryDetail(props: CategoryDetailProps) {
 function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const router = useRouter();
   const readinessReady = useAdaptiveReadiness();
+  const readinessFailed = useAdaptiveReadinessFailed();
   const [leaving, setLeaving] = useState(false);
   const [routeEntrySource, setRouteEntrySource] = useState<string | null>(null);
+  const [routeEntryAttempt, setRouteEntryAttempt] = useState<{ attemptId: string; slug: string } | null>(null);
   const [routeReady, setRouteReady] = useState(false);
   const theme = getCategoryTheme(module.slug);
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.categoryEnter && !preview;
@@ -75,21 +77,27 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     if (preview) return;
     const root = document.documentElement;
     if (root.getAttribute(categoryRouteEntryAttribute) !== module.slug) return;
+    const attemptId = root.getAttribute(categoryRouteAttemptAttribute);
+    if (!attemptId) return;
     root.removeAttribute(categoryRouteEntryAttribute);
-    window.dispatchEvent(new Event(categoryRouteMountedEvent));
-    if (root.hasAttribute(categoryRouteNativeTransitionAttribute)) return;
+    announceCategoryRouteMounted({ attemptId, slug: module.slug });
+    setRouteEntryAttempt({ attemptId, slug: module.slug });
     if (motionEnabled) {
-      setRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
+      const nativeTransitionOwner = root.getAttribute(categoryRouteNativeTransitionAttribute);
+      setRouteEntrySource(nativeTransitionOwner === attemptId
+        ? categoryRouteNativeEntrySource
+        : root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
     }
   }, [module.slug, motionEnabled, preview]);
   useLayoutEffect(() => {
-    if (!readinessReady || !routeEntrySource) return;
+    if (!readinessReady || !routeEntryAttempt) return;
     setRouteReady(true);
-  }, [readinessReady, routeEntrySource]);
+  }, [readinessReady, routeEntryAttempt]);
   useLayoutEffect(() => {
-    if (!routeReady) return;
-    announceCategoryRouteReady();
-  }, [routeReady]);
+    if (!routeReady || !routeEntryAttempt) return;
+    announceCategoryRouteReady({ ...routeEntryAttempt, status: readinessFailed ? "failed" : "ready" });
+    setRouteEntryAttempt(null);
+  }, [readinessFailed, routeEntryAttempt, routeReady]);
 
   if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 

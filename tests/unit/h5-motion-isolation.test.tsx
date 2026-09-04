@@ -318,7 +318,7 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("moves the homepage left while the ready detail page enters from the right", () => {
+  it("keeps the complete homepage visible while the ready detail page enters from the right", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const archive = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
@@ -335,10 +335,10 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("transform: translate3d(-100dvw,0,0)");
     expect(css).toContain("transform: translate3d(100dvw,0,0)");
     expect(css).toContain("from { opacity: .72;");
-    expect(css).toContain("@keyframes archive-selected-module-extract-left");
+    expect(css).not.toContain("@keyframes archive-selected-module-extract-left");
     expect(css).not.toContain("archive-selected-module-extract-up");
-    expect(css).toContain(".reports-archive-source-layer.archive-module-exit-layer");
-    expect(css).toContain(".archive-section-title-group.archive-module-exit-layer");
+    expect(css).not.toContain(".reports-archive-source-layer.archive-module-exit-layer");
+    expect(css).not.toContain(".archive-section-title-group.archive-module-exit-layer");
     expect(css).not.toContain("@keyframes archive-category-exit-up-fade");
     expect(archive).toContain("document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);");
     expect(archive).toContain("navigateWithCategoryContinuity(() => pushHierarchyRoute");
@@ -346,17 +346,31 @@ describe("H5 motion isolation", () => {
     expect(artwork).toContain('"module-2-review-folder": "review-assurance"');
     expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
     expect(category).toContain("categoryRouteBufferedEntrySource");
-    expect(category).toContain("setRouteEntrySource(root.hasAttribute(categoryRouteBufferAttribute)");
+    expect(category).toContain("categoryRouteNativeEntrySource");
+    expect(category).toContain("setRouteEntrySource(nativeTransitionOwner === attemptId");
     expect(category).not.toContain("pendingRouteEntrySource");
     expect(category).toContain("data-route-ready={routeReady || undefined}");
     expect(category).toContain("setRouteReady(true)");
-    expect(category).toContain("announceCategoryRouteReady();");
+    expect(category).toContain("announceCategoryRouteReady({ ...routeEntryAttempt, status: readinessFailed ? \"failed\" : \"ready\" });");
+    expect(category).toContain("categoryRouteAttemptAttribute");
+    expect(category).toContain("settleFrames={3} failOpen");
     expect(category).not.toContain("window.setTimeout(() => router.push(destination), 220)");
     expect(routeTransition).toContain("prepareCategoryRouteContinuity");
     expect(routeTransition).toContain("startViewTransition?.bind(viewDocument)");
     expect(routeTransition).toContain("categoryRouteNativeTransitionAttribute");
     expect(routeTransition).not.toContain("querySelectorAll<HTMLImageElement>");
-    expect(routeTransition).not.toContain("cloneNode(true)");
+    expect(routeTransition).toContain("cloneNode(true)");
+    expect(routeTransition).toContain("is-category-route-buffer-clone");
+    expect(routeTransition).not.toContain('clone.removeAttribute("data-pressed-slug")');
+    expect(routeTransition).toContain("freezeCloneMotion(source, clone)");
+    expect(routeTransition).toContain("payload?.attemptId === detail.attemptId && payload.slug === detail.slug");
+    expect(routeTransition).toContain("bufferGeneration");
+    expect(routeTransition).toContain("categoryRouteReadyEvent");
+    expect(routeTransition).toContain("categoryRouteMountedEvent");
+    expect(category).toContain("announceCategoryRouteMounted({ attemptId, slug: module.slug });");
+    expect(css).toContain(".reports-archive-final.is-category-route-buffer-clone");
+    expect(css).toContain('.category-page-final[data-route-entry="reports-archive-native"]:not(.is-leaving)');
+    expect(css).toContain("animation: none !important;");
     expect(css).toContain("html[data-category-native-transition]::view-transition-old(root)");
     expect(css).toContain('background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp")');
     expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 0");
@@ -511,7 +525,7 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("ArchiveArtwork, archiveArtworkCriticalAssets");
     expect(reports).not.toContain("archiveArtworkDeferredAssets");
     expect(reports).toContain("const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);");
-    expect(reports).toContain("<ArchiveArtwork preview={preview} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />");
+    expect(reports).toContain("<ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />");
     expect(reports).toContain('data-archive-artwork-ready={artworkComplete ? "true" : "false"}');
     expect(reports).toContain('data-archive-artwork-failed={artworkFailed ? "true" : "false"}');
     expect(reports).toContain('className="reports-archive-reference-fallback"');
@@ -615,7 +629,9 @@ describe("H5 motion isolation", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(reports).toContain('import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion"');
     expect(reports).not.toContain("archiveSectionTitleWarmAssets");
-    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />");
+    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />");
+    expect(component).not.toContain("archive-module-exit-layer");
+    expect(component).not.toContain("exitingSlug");
     expect(component).toContain("/design/final-v1/motion/archive-runtime");
     expect(component).toContain("section-click-cue.gif");
     expect(component).not.toContain("section-title-inspection.gif");

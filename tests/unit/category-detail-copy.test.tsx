@@ -52,7 +52,9 @@ describe("CategoryDetail dynamic card copy", () => {
     sessionStorage.clear();
     window.history.replaceState({}, "", "/reports/inspection-projects");
     document.documentElement.removeAttribute("data-category-route-entry");
+    document.documentElement.removeAttribute("data-category-route-attempt");
     document.documentElement.removeAttribute("data-category-route-buffer");
+    document.documentElement.removeAttribute("data-category-native-transition");
   });
 
   it("renders card copy as HTML sourced from public content", () => {
@@ -83,24 +85,41 @@ describe("CategoryDetail dynamic card copy", () => {
     let resolveReadiness!: (value: { total: number; failed: string[] }) => void;
     vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise((resolve) => { resolveReadiness = resolve; }));
     const onReady = vi.fn();
+    const onMounted = vi.fn();
     window.addEventListener("h5-category-route-ready", onReady);
+    window.addEventListener("h5-category-route-mounted", onMounted);
     document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    document.documentElement.setAttribute("data-category-route-attempt", "test-entry");
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive");
+    expect(onMounted).toHaveBeenCalledTimes(1);
+    expect((onMounted.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ attemptId: "test-entry", slug: moduleFixture.slug });
     expect(onReady).not.toHaveBeenCalled();
     expect(document.documentElement).not.toHaveAttribute("data-category-route-entry");
     await act(async () => { resolveReadiness({ total: categoryReadinessAssets["inspection-projects"].length, failed: [] }); });
     await waitFor(() => expect(onReady).toHaveBeenCalledTimes(1));
+    expect((onReady.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ attemptId: "test-entry", slug: moduleFixture.slug, status: "ready" });
     window.removeEventListener("h5-category-route-ready", onReady);
+    window.removeEventListener("h5-category-route-mounted", onMounted);
   });
 
   it("uses the buffered entry marker immediately when archive continuity is active", () => {
     document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    document.documentElement.setAttribute("data-category-route-attempt", "test-buffered-entry");
     document.documentElement.setAttribute("data-category-route-buffer", "active");
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-buffer");
+  });
+
+  it("keeps a native category entry at its settled frame after the browser snapshot releases", () => {
+    document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    document.documentElement.setAttribute("data-category-route-attempt", "test-native-entry");
+    document.documentElement.setAttribute("data-category-native-transition", "test-native-entry");
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-native");
   });
 
   it("keeps direct category loads on their existing transition", async () => {

@@ -289,10 +289,10 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       {/* Runtime artwork is assembled from the approved source parts. The old
           plant decoration and module-two title layers are omitted because their
           supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
-      <ArchiveArtwork preview={preview} exitingSlug={exitingSlug} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
+      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
-      {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} exitingSlug={exitingSlug} />}
+      {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />}
       <div className="reports-archive-reference-fallback" data-fallback-image={fallbackImageMounted ? "mounted" : "released"}>
         {fallbackImageMounted ? <Image className="reports-archive-reference-fallback-image" src="/design/final-v1/archive-reference-public.webp" alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /> : null}
       </div>
