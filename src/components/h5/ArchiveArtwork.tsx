@@ -1,12 +1,16 @@
 import Image from "next/image";
 import { memo, type CSSProperties } from "react";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
+import {
+  archiveEntryBatchLayers,
+  archiveEntryBookLayers,
+  archiveEntryPaperLayer,
+} from "@/components/h5/archive-entry-transition-visual";
 
 const masterWidth = 1000;
 const masterHeight = 5557;
 const archiveOutputRoot = "/design/final-v1/长图输出";
 const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers";
-const paperTexture = `${archiveRuntimeRoot}/archive-paper-texture.runtime.webp`;
 const runtimeAsset = (name: string) => `${archiveRuntimeRoot}/${name}`;
 const moduleTwoAsset = (name: string) => `${archiveOutputRoot}/长图模块2/${name}`;
 const moduleThreeOutput = `${archiveRuntimeRoot}/module-3-output.webp`;
@@ -52,23 +56,19 @@ const alphaCroppedLayer = (id: string, src: string, originalLeft: number, origin
   eager,
   unoptimized: true,
 });
-const moduleOneLayer = (id: string, name: string, crop: AlphaCrop): ArtworkLayer => alphaCroppedLayer(id, runtimeAsset(`${name}.runtime.webp`), -406, 0, 1, crop, true);
+const entryLayer = (item: (typeof archiveEntryBookLayers)[number] | (typeof archiveEntryBatchLayers)[number]): ArtworkLayer => ({
+  ...item,
+  eager: true,
+  unoptimized: true,
+});
 
 // The order is the original visual stacking order. Resources 4–7 are the
 // retired plant decoration. Resources 11–19 move to the title-motion layer,
 // where the number pairs are restored and the static titles are replaced.
 const artworkLayers: readonly ArtworkLayer[] = [
-  { id: "paper-texture", src: paperTexture, left: -11, top: 0, width: 1022, height: 7093, eager: true, unoptimized: true },
-
-  moduleOneLayer("module-1-folder-back", "module-1-folder-back", { x: 118, y: 276, width: 1338, height: 1752 }),
-  moduleOneLayer("module-1-folder-front", "module-1-folder-front", { x: 194, y: 262, width: 1160, height: 1676 }),
-  moduleOneLayer("module-1-logo", "module-1-logo", { x: 475, y: 389, width: 260, height: 91 }),
-  moduleOneLayer("module-1-title", "module-1-title", { x: 447, y: 505, width: 632, height: 403 }),
-  moduleOneLayer("module-1-badge", "module-1-badge", { x: 527, y: 591, width: 962, height: 1158 }),
-  moduleOneLayer("module-1-batch-coil", "module-1-batch-coil", { x: 428, y: 1582, width: 465, height: 100 }),
-  moduleOneLayer("module-1-batch", "module-1-batch", { x: 463, y: 1602, width: 402, height: 158 }),
-  moduleOneLayer("module-1-passed-panel", "module-1-passed-panel", { x: 286, y: 1581, width: 904, height: 453 }),
-  moduleOneLayer("module-1-passed-copy", "module-1-passed-copy", { x: 469, y: 1821, width: 628, height: 113 }),
+  { ...archiveEntryPaperLayer, id: "paper-texture", eager: true, unoptimized: true },
+  ...archiveEntryBookLayers.map(entryLayer),
+  ...archiveEntryBatchLayers.map(entryLayer),
   atHalfSize("module-2-resource-02", moduleTwoAsset("资源 2.png"), 1244, 715, 190.5, 2247.5),
   atHalfSize("module-2-resource-03", moduleTwoAsset("资源 3.png"), 215, 251, 696, 2199),
   atHalfSize("module-2-resource-08", moduleTwoAsset("资源 8.png"), 1101, 1216, 51, 2624),

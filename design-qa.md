@@ -5,6 +5,8 @@
 - Approved guide reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-223bb4ab-5934-4e9b-9464-e5212e8c160d.jpg`.
 - Exact missing mask supplied by the user: `C:/Users/bu/Desktop/H5设计开发/DHA-h5素材全部打包-8.25/h5-封面-/kv部件/h5kv - 输出.png`.
 - Homepage reference/problem evidence: `D:/xwechat_files/wxid_6c31uwcjo0zg22_62e1/temp/RWTemp/2026-09/b21806cd3096cc319427696cfa9339a3/c642ce4dd4ee46684fef339250bced15.jpg`.
+- Guide-to-home first-module reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-2d18e007-26a4-4a53-bf3f-831c61a4a793.png`.
+- Latest-public-batch second-module reference: `C:/Users/bu/AppData/Local/Temp/codex-clipboard-22a34db5-631d-421a-8ad2-339f378388c6.png`.
 - Production preview checked at `http://127.0.0.1:3422/go` and `http://127.0.0.1:3422/reports`.
 - Comparison artifact (not committed): `public/__qa__/guide-mask-comparison-final.png`, with the approved reference and production layer composite normalized to the same 750×1625 canvas.
 
@@ -38,14 +40,26 @@
 - The guide became interactive only after required image decoding; clicking the entry control reached `/reports` without a white frame or failed asset.
 - The homepage remained normally scrollable after the entry animation, and the restored batch copy stayed registered to the book coordinate system.
 
+## Guide-to-home staged handoff repair
+
+- Removed the flattened `archive-transition-preview.webp` from the transition path. The guide preview, route buffer, and live homepage now use the same approved paper, five book layers, four latest-batch layers, and supplied purple ribbon asset.
+- The book is one first-stage group. The latest-public-batch panel is one second-stage group and begins at `0.8 × 520ms = 416ms`; its opacity and vertical offset move only toward the final state after commit.
+- The hidden prewarmed buffer has transitions disabled until its exact gesture state is written and layout is committed. Stage timing starts from the actual animation frame, so 30Hz or dropped-frame WebViews cannot release the buffer early.
+- The route buffer remains until both the book transition and latest-batch transition finish. Its release is generation-guarded, preventing stale animation frames or timers from restoring a route lock after cleanup.
+- The live homepage stays at final geometry underneath the buffer and no longer replays the parent artwork entrance animation. This removed the observed buffer-to-live opacity dip.
+- The supplied ribbon remains at `idle`, progress `0.000`, and bottom clip `87.240356%` in the guide preview, route buffer, normal live page, reduced-motion path, and disabled-motion path. Only trusted downward scrolling advances the live ribbon.
+- During guide entry, the baked full-state fallback is suppressed even on the failure path; it cannot flash the completed batch panel or full ribbon over the staged animation.
+- Transition and live homepage content widths now use the same safe-area-aware 750px content frame, preventing a width jump in notched landscape WebViews.
+- In-app browser verification used the existing 375×812 QA viewport. Frame sampling found zero book-opacity regressions, zero batch-opacity regressions, zero fallback-visible route frames, and zero visible ribbon-state mismatches. During route-buffer release and after live takeover, combined book and batch visibility remained `1.000`; the final route had no buffer and one live ribbon at `idle / 0.000`.
+
 ## Verification
 
 - `pnpm lint`: passed.
 - `pnpm typecheck`: passed.
-- `pnpm test`: 35 files, 208 tests passed.
+- `pnpm test`: 35 files, 209 tests passed.
 - `pnpm prisma:validate`: passed.
 - `pnpm build`: passed; emitted `.brand-guide-portrait-scene,.h5-guide-route-snapshot.is-portrait{width:100vw;height:216.666667vw}` and retained the 750px desktop cap.
-- Targeted guide/route/vw unit regression: 3 files, 51 tests passed.
+- Targeted guide/route/motion unit regression: 3 files, 90 tests passed.
 - In-app browser visual and interaction walk-through: passed.
 - Browser warning/error log: empty.
 - `git diff --check`: passed.

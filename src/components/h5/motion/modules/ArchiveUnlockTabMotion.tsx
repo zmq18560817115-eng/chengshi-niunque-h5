@@ -40,9 +40,17 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled: enabledOverri
 
   useEffect(() => {
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    if (!enabled || preview || reduced) {
+    if (preview) {
       applyProgress(1);
       setState("fallback");
+      return;
+    }
+    // Reduced/disabled motion must preserve the same short initial ribbon as
+    // the route buffer. Expanding it here caused a full-length flash during
+    // the buffer-to-live handoff and bypassed the requested scroll unlock.
+    if (!enabled || reduced) {
+      applyProgress(0);
+      setState("idle");
       return;
     }
     applyProgress(0);

@@ -1,14 +1,17 @@
+import { createArchiveEntryTransitionVisual } from "@/components/h5/archive-entry-transition-visual";
 import { requestVisualViewportHeightSync } from "@/components/h5/useVisualViewportHeight";
 
 export const guideRouteEntryAttribute = "data-guide-route-entry";
 export const guideRouteReadyEvent = "h5-guide-route-ready";
+export const guideRouteCompleteEvent = "h5-guide-route-complete";
 export const guideRouteBufferHostId = "h5-guide-route-buffer-host";
 export const guideRouteNavigationDelayMs = 16;
 export const guideRouteBufferReleaseDurationMs = 520;
+const guideRouteReducedReleaseDurationMs = 150;
+const guideRouteFallbackReleaseDurationMs = 180;
 export const guideRouteCommitDurationMs = 520;
 export const guideRouteAssetTimeoutMs = 4500;
 export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp";
-export const guideRouteDestinationSrc = "/design/guide/archive-transition-preview.webp";
 export const guideRouteForegroundSrc = "/design/guide/guide-foreground-top.webp";
 export const guideRouteHintSrc = "/design/guide/swipe-up-hint-v2.png";
 export const guideTransitionTravelRatio = 0.26;
@@ -43,9 +46,14 @@ export function getGuideTransitionVisualState(progressValue: number, viewportHei
 export const guideArchiveEntryTiming = {
   bookDelayMs: 0,
   bookDurationMs: 520,
-  batchOverlapProgress: 0.72,
+  batchOverlapProgress: 0.8,
   batchDurationMs: 420,
 } as const;
+
+export function getGuideArchiveBatchProgress(progressValue: number) {
+  return smoothstep((clamp(progressValue) - guideArchiveEntryTiming.batchOverlapProgress)
+    / (1 - guideArchiveEntryTiming.batchOverlapProgress));
+}
 
 export const guideArchiveBatchDelayMs = guideArchiveEntryTiming.bookDelayMs
   + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress;
@@ -57,11 +65,12 @@ let bufferCleanupTimer: number | undefined;
 let stageCleanupTimer: number | undefined;
 let revealDelayTimer: number | undefined;
 let bufferCommitReadyAt = 0;
+let bufferStageReadyAt = 0;
 let primeGeneration = 0;
 
 type PrimedGuideRouteBuffer = {
   buffer: HTMLDivElement;
-  destination: HTMLImageElement;
+  destinationImages: HTMLImageElement[];
   destinationFallback: boolean;
   orientation: GuideRouteOrientation;
   profile: ResolvedGuideRouteProfile;
@@ -144,7 +153,7 @@ function createGuideSnapshot(profile: ResolvedGuideRouteProfile) {
 function createGuideRouteBuffer(profile: ResolvedGuideRouteProfile, destinationFallback: boolean) {
   const orientation = guideRouteOrientation(profile);
   const snapshot = createGuideSnapshot(profile);
-  const destination = createTransitionImage(guideRouteDestinationSrc, "h5-guide-route-destination-image");
+  const destination = createArchiveEntryTransitionVisual(createTransitionImage);
 
   const guidePanel = document.createElement("div");
   guidePanel.className = "h5-guide-route-panel h5-guide-route-guide-panel";
@@ -153,7 +162,7 @@ function createGuideRouteBuffer(profile: ResolvedGuideRouteProfile, destinationF
   destinationPanel.className = "h5-guide-route-panel h5-guide-route-destination-panel";
   const destinationContent = document.createElement("div");
   destinationContent.className = "h5-guide-route-destination-content";
-  destinationContent.append(destination);
+  destinationContent.append(destination.visual);
   destinationPanel.append(destinationContent);
   const track = document.createElement("div");
   track.className = "h5-guide-route-track";
@@ -165,7 +174,7 @@ function createGuideRouteBuffer(profile: ResolvedGuideRouteProfile, destinationF
   buffer.dataset.guideOrientation = orientation;
   buffer.dataset.guideProfile = profile;
   buffer.append(track);
-  return { buffer, destination };
+  return { buffer, destinationImages: destination.images };
 }
 
 function waitForTransitionImage(image: HTMLImageElement, timeoutMs = guideRouteAssetTimeoutMs) {
@@ -223,14 +232,15 @@ export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile,
   window.clearTimeout(stageCleanupTimer);
   window.clearTimeout(revealDelayTimer);
   bufferCommitReadyAt = 0;
+  bufferStageReadyAt = 0;
 
-  const { buffer, destination } = createGuideRouteBuffer(profile, destinationFallback);
-  const next: PrimedGuideRouteBuffer = { buffer, destination, destinationFallback, orientation, profile, ready: false };
+  const { buffer, destinationImages } = createGuideRouteBuffer(profile, destinationFallback);
+  const next: PrimedGuideRouteBuffer = { buffer, destinationImages, destinationFallback, orientation, profile, ready: false };
   primedGuideRouteBuffer = next;
   host.replaceChildren(buffer);
 
   const images = Array.from(buffer.querySelectorAll<HTMLImageElement>("img"));
-  const requiredImages = destinationFallback ? images.filter((image) => image !== destination) : images;
+  const requiredImages = destinationFallback ? images.filter((image) => !destinationImages.includes(image)) : images;
   const promise = Promise.all(requiredImages.map((image) => waitForTransitionImage(image))).then((decoded) => {
     if (generation !== primeGeneration || primedGuideRouteBuffer !== next || !buffer.isConnected) return false;
     if (decoded.some((ready) => !ready)) {
@@ -281,7 +291,13 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   const end = getGuideTransitionVisualState(1, routeDistance);
   const progress = start.progress;
   const remainingDistance = Math.max(0, Math.round(routeDistance * (1 - progress)));
-  const commitDuration = Math.max(160, Math.round(guideRouteCommitDurationMs * (1 - progress)));
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const skipDestinationStage = destinationFallback || reducedMotion;
+  const commitDuration = skipDestinationStage ? 0 : Math.max(160, Math.round(guideRouteCommitDurationMs * (1 - progress)));
+  const batchStartProgress = getGuideArchiveBatchProgress(progress);
+  const batchDelay = skipDestinationStage ? 0 : Math.max(0, Math.round(guideArchiveEntryTiming.bookDurationMs
+    * (guideArchiveEntryTiming.batchOverlapProgress - progress)));
+  const batchDuration = skipDestinationStage ? 0 : Math.max(0, Math.round(guideArchiveEntryTiming.batchDurationMs * (1 - batchStartProgress)));
   root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);
   root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);
   root.style.setProperty("--guide-route-remaining-distance", `${remainingDistance}px`);
@@ -296,32 +312,56 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   buffer.style.setProperty("--guide-route-start-guide-opacity", `${start.guideOpacity.toFixed(4)}`);
   buffer.style.setProperty("--guide-route-start-destination-opacity", `${start.destinationOpacity.toFixed(4)}`);
   buffer.style.setProperty("--guide-route-commit-duration", `${commitDuration}ms`);
+  buffer.style.setProperty("--guide-route-batch-start-opacity", `${batchStartProgress.toFixed(4)}`);
+  buffer.style.setProperty("--guide-route-batch-start-y", `${(4 * (1 - batchStartProgress)).toFixed(3)}cqw`);
+  buffer.style.setProperty("--guide-route-batch-delay", `${batchDelay}ms`);
+  buffer.style.setProperty("--guide-route-batch-duration", `${batchDuration}ms`);
   buffer.dataset.commitState = "prepared";
 
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
   if (!buffer.isConnected) return false;
+  // Freeze the exact gesture handoff state before exposing the primed buffer.
+  // This prevents hidden CSS transitions from advancing before first paint.
+  void buffer.offsetWidth;
   buffer.classList.remove("is-preparing");
   root.setAttribute(guideRouteEntryAttribute, "active");
-  bufferCommitReadyAt = performance.now() + commitDuration;
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-    if (!buffer.isConnected) return;
+  const committed = await new Promise<boolean>((resolve) => window.requestAnimationFrame(() => {
+    if (!buffer.isConnected) {
+      resolve(false);
+      return;
+    }
     buffer.dataset.commitState = "committing";
     buffer.classList.add("is-committing");
+    const stageStartedAt = performance.now();
+    bufferCommitReadyAt = stageStartedAt + commitDuration;
+    bufferStageReadyAt = stageStartedAt + Math.max(commitDuration, batchDelay + batchDuration);
+    resolve(true);
   }));
-  return true;
+  return committed;
 }
 
-function revealGuideDestination() {
+function revealGuideDestination(expectedGeneration = primeGeneration) {
+  if (expectedGeneration !== primeGeneration) return;
   const root = document.documentElement;
   const buffer = document.querySelector<HTMLElement>(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`);
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const releaseDuration = reducedMotion
+    ? guideRouteReducedReleaseDurationMs
+    : primedGuideRouteBuffer?.destinationFallback
+      ? guideRouteFallbackReleaseDurationMs
+      : guideRouteBufferReleaseDurationMs;
+  buffer?.style.setProperty("--guide-route-buffer-release-duration", `${releaseDuration}ms`);
   const release = () => window.requestAnimationFrame(() => {
+      if (expectedGeneration !== primeGeneration) return;
       root.setAttribute(guideRouteEntryAttribute, "revealing");
       buffer?.classList.add("is-releasing");
       bufferCleanupTimer = window.setTimeout(() => {
+        if (expectedGeneration !== primeGeneration) return;
         buffer?.remove();
         if (primedGuideRouteBuffer?.buffer === buffer) primedGuideRouteBuffer = null;
-      }, guideRouteBufferReleaseDurationMs + 80);
+      }, releaseDuration + 80);
       stageCleanupTimer = window.setTimeout(() => {
+        if (expectedGeneration !== primeGeneration) return;
         root.removeAttribute(guideRouteEntryAttribute);
         root.style.removeProperty("--guide-route-travel-distance");
         root.style.removeProperty("--guide-route-exit-distance");
@@ -331,21 +371,24 @@ function revealGuideDestination() {
         document.body.scrollTop = 0;
         window.scrollTo(0, 0);
         window.requestAnimationFrame(() => window.scrollTo(0, 0));
-      }, guideRouteStageDurationMs);
+        window.dispatchEvent(new Event(guideRouteCompleteEvent));
+      }, releaseDuration + 80);
     });
-  const remainingCommitMs = Math.max(0, bufferCommitReadyAt - performance.now());
-  if (remainingCommitMs > 0) revealDelayTimer = window.setTimeout(release, remainingCommitMs);
+  const now = performance.now();
+  const remainingStageMs = Math.max(0, bufferCommitReadyAt - now, bufferStageReadyAt - now);
+  if (remainingStageMs > 0) revealDelayTimer = window.setTimeout(release, remainingStageMs);
   else release();
 }
 
 export function navigateWithGuideContinuity(navigate: () => void) {
+  const navigationGeneration = primeGeneration;
   let settled = false;
   const finish = () => {
     if (settled) return;
     settled = true;
     window.clearTimeout(fallbackTimer);
     window.removeEventListener(guideRouteReadyEvent, finish);
-    revealGuideDestination();
+    revealGuideDestination(navigationGeneration);
   };
   const fallbackTimer = window.setTimeout(finish, 12000);
   window.addEventListener(guideRouteReadyEvent, finish, { once: true });
@@ -357,10 +400,12 @@ export function announceGuideRouteReady() {
 }
 
 export function clearGuideRouteContinuity() {
+  const hadActiveEntry = document.documentElement.hasAttribute(guideRouteEntryAttribute);
   window.clearTimeout(bufferCleanupTimer);
   window.clearTimeout(stageCleanupTimer);
   window.clearTimeout(revealDelayTimer);
   bufferCommitReadyAt = 0;
+  bufferStageReadyAt = 0;
   primeGeneration += 1;
   primedGuideRouteBuffer = null;
   guideRoutePrimeRequest = null;
@@ -370,4 +415,5 @@ export function clearGuideRouteContinuity() {
   document.documentElement.style.removeProperty("--guide-route-exit-distance");
   document.documentElement.style.removeProperty("--guide-route-remaining-distance");
   requestVisualViewportHeightSync();
+  if (hadActiveEntry) window.dispatchEvent(new Event(guideRouteCompleteEvent));
 }

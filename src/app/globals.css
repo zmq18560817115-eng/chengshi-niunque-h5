@@ -311,8 +311,17 @@ button, a { font: inherit; }
 .brand-guide-portrait-scene { position: absolute; z-index: 1; top: 50%; left: 50%; width: min(100cqw,46.153846cqh); aspect-ratio: 6 / 13; overflow: hidden; translate: -50% -50%; }
 .brand-guide-live-stage { position: absolute; z-index: 2; inset: 0; opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide.is-ready .brand-guide-live-stage { opacity: 1; }
-.brand-guide-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
+.brand-guide-destination-content { container-type: inline-size; position: relative; width: min(calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)),var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
 .brand-guide-destination-image { position: absolute; top: 0; left: 0; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 6 / 13; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); backface-visibility: hidden; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.h5-guide-archive-entry-visual { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; backface-visibility: hidden; }
+.h5-guide-archive-entry-canvas { position: absolute; top: 0; left: 0; width: 100%; aspect-ratio: 1000 / 5557; transform: translate3d(0,-3.8869893828%,0); transform-origin: top center; backface-visibility: hidden; contain: layout paint style; }
+.h5-guide-archive-entry-layer { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
+.h5-guide-archive-entry-group { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; backface-visibility: hidden; }
+.h5-guide-archive-entry-group.is-book { z-index: 10; }
+.h5-guide-archive-entry-group.is-batch { z-index: 11; }
+.h5-guide-archive-entry-ribbon-clip { position: absolute; overflow: hidden; clip-path: inset(0 0 var(--archive-entry-ribbon-hidden-bottom,87.2403560831%) 0); pointer-events: none; backface-visibility: hidden; transform: translateZ(0); }
+.h5-guide-archive-entry-ribbon { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translateZ(0); }
+.brand-guide-destination-preview .h5-guide-archive-entry-group.is-batch { opacity: var(--guide-swipe-batch-opacity,0); transform: translate3d(0,var(--guide-swipe-batch-y,4cqw),0); }
 .brand-guide.has-destination-fallback .brand-guide-stage { opacity: 1; transform: translate3d(0,0,0); }
 .brand-guide.has-destination-fallback .brand-guide-destination-preview { visibility: hidden; opacity: 0; }
 .brand-guide-stage img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
@@ -384,6 +393,7 @@ button, a { font: inherit; }
 html[data-guide-route-entry] .reports-archive.reports-entry-transition,
 .reports-archive.reports-entry-transition[data-guide-entry] { animation: none; }
 html[data-guide-route-entry] .reports-archive-art { animation: none; }
+.reports-archive-final[data-guide-entry] .reports-archive-art { opacity: 1; transform: none; animation: none; }
 .h5-page-transition { animation: h5-page-enter .28s cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition.is-leaving { pointer-events: none; animation: h5-page-leave .22s cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition.is-swipe-back { pointer-events: none; animation: h5-page-swipe-back .22s cubic-bezier(.22,1,.36,1) both; }
@@ -401,6 +411,8 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 #h5-guide-route-buffer-host:empty { display: none; }
 .h5-guide-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f8e89d; background-image: url("/design/guide/guide-background.webp"); background-position: center; background-size: cover; backface-visibility: hidden; }
 .h5-guide-route-buffer.is-preparing { visibility: hidden; }
+.h5-guide-route-buffer.is-preparing .h5-guide-route-panel,
+.h5-guide-route-buffer.is-preparing .h5-guide-archive-entry-group.is-batch { transition: none !important; }
 .h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0); transition: opacity var(--guide-route-buffer-release-duration) ease-out; will-change: opacity; }
 .h5-guide-route-buffer, .h5-guide-route-buffer * { pointer-events: none !important; }
 .h5-guide-route-track { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; backface-visibility: hidden; contain: layout paint style; }
@@ -409,8 +421,10 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 .h5-guide-route-destination-panel { z-index: 2; background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp"); background-position: top center; background-size: cover; opacity: var(--guide-route-start-destination-opacity,0); transform: translate3d(0,var(--guide-route-start-destination-y,26dvh),0); }
 .h5-guide-route-snapshot { container-type: size; position: absolute; top: 50%; left: 50%; display: block; width: min(100cqw,46.153846cqh); aspect-ratio: 6 / 13; overflow: hidden; translate: -50% -50%; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
 .h5-guide-route-portrait-snapshot { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; user-select: none; -webkit-user-drag: none; }
-.h5-guide-route-destination-content { container-type: inline-size; position: relative; width: min(100%,var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
+.h5-guide-route-destination-content { container-type: inline-size; position: relative; width: min(calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)),var(--h5-content-width)); height: 100%; margin-inline: auto; overflow: hidden; }
 .h5-guide-route-destination-image { position: absolute; top: 0; left: 0; display: block; width: 100%; height: auto; max-width: none; aspect-ratio: 6 / 13; object-fit: fill; opacity: 1; transform: translate3d(0,0,0); user-select: none; -webkit-user-drag: none; backface-visibility: hidden; }
+.h5-guide-route-buffer .h5-guide-archive-entry-group.is-batch { opacity: var(--guide-route-batch-start-opacity,0); transform: translate3d(0,var(--guide-route-batch-start-y,4cqw),0); }
+.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,420ms) ease-out var(--guide-route-batch-delay,416ms), transform var(--guide-route-batch-duration,420ms) var(--guide-route-transition-easing) var(--guide-route-batch-delay,416ms); will-change: transform, opacity; }
 .h5-guide-route-buffer.is-committing .h5-guide-route-guide-panel { opacity: .08; transform: translate3d(0,var(--guide-route-end-guide-y,-26dvh),0); }
 .h5-guide-route-buffer.is-committing .h5-guide-route-destination-panel { opacity: 1; transform: translate3d(0,0,0); }
 .h5-guide-route-buffer.has-destination-fallback .h5-guide-route-guide-panel,
@@ -448,6 +462,10 @@ html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointe
 .reports-archive-canvas { position: absolute; inset-inline: 0; top: -4.0432503277%; width: 100%; height: 104.0432503277%; }
 .reports-archive-reference-fallback { position: absolute; z-index: 75; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; opacity: 1; pointer-events: none; user-select: none; -webkit-user-drag: none; transition: opacity 180ms ease-out, visibility 0s linear 180ms; }
 .reports-archive-final[data-archive-artwork-ready="true"] .reports-archive-reference-fallback { visibility: hidden; opacity: 0; }
+.reports-archive-final[data-guide-entry]:not([data-archive-artwork-failed="true"]) .reports-archive-reference-fallback,
+.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-reference-fallback,
+html[data-guide-route-entry] .reports-archive-final .reports-archive-reference-fallback { visibility: hidden; opacity: 0; transition: none; }
+.reports-archive-final[data-guide-entry="complete"][data-archive-artwork-failed="true"] .reports-archive-reference-fallback { visibility: visible; opacity: 1; }
 .reports-archive-artwork-error { position: sticky; z-index: 90; top: max(.75rem,env(safe-area-inset-top)); left: 50%; display: flex; width: min(calc(100% - 2rem),26rem); translate: -50% 0; align-items: center; justify-content: space-between; gap: .75rem; padding: .7rem .8rem .7rem 1rem; border: 1px solid rgb(64 41 31 / 22%); border-radius: 999px; color: #40291f; background: rgb(255 250 229 / 94%); box-shadow: 0 .35rem 1.2rem rgb(64 41 31 / 12%); font-size: .78rem; }
 .reports-archive-artwork-error button { min-height: 2.25rem; padding-inline: .9rem; border: 1px solid rgb(64 41 31 / 32%); border-radius: 999px; color: inherit; background: #fff8d9; font: inherit; font-weight: 700; white-space: nowrap; }
 .category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: auto; min-width: 0; min-height: 0; margin-inline: auto; overflow-x: hidden; overflow-y: auto; container-type: inline-size; background-color: #f5f0e7; background-image: url("/design/final-v1/category-runtime/category-paper-base.runtime.webp"); background-position: center top; background-size: auto min(216.65vw,1624.875px); background-repeat: repeat-x; overscroll-behavior-x: none; overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -465,12 +483,13 @@ html[data-guide-route-entry] .runtime-loading-layer { visibility: hidden; pointe
 .reports-archive-entry-coordinate-layer { position: absolute; top: 0; left: 0; width: 100%; height: 256.4374711583%; }
 .reports-archive-entry-book { z-index: 10; }
 .reports-archive-entry-batch { z-index: 11; }
-html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-book,
-html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-remaining-distance),0); will-change: transform, opacity; }
-html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-book,
-.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-book { z-index: 50; animation: archive-guide-entry-rise var(--archive-guide-book-duration) var(--guide-route-transition-easing) var(--archive-guide-book-delay) both, archive-guide-entry-fade var(--archive-guide-book-duration) var(--guide-route-transition-easing) var(--archive-guide-book-delay) both; will-change: transform, opacity; }
-html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-batch,
-.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-batch { z-index: 51; animation: archive-guide-entry-rise var(--archive-guide-batch-duration) var(--guide-route-transition-easing) var(--archive-guide-batch-delay) both, archive-guide-entry-fade var(--archive-guide-batch-duration) var(--guide-route-transition-easing) var(--archive-guide-batch-delay) both; will-change: transform, opacity; }
+/* The route buffer owns the staged guide-to-archive motion. The decoded live
+   groups remain at their final geometry underneath it, preventing a second
+   animation or a blank frame while the buffer crossfades away. */
+html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-book,
+html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch,
+.reports-archive-final[data-guide-entry] .reports-archive-entry-book,
+.reports-archive-final[data-guide-entry] .reports-archive-entry-batch { opacity: 1; transform: translate3d(0,0,0); animation: none; will-change: auto; }
 .reports-archive-source-layer { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .reports-archive-source-layer.archive-module-pressed-layer,
 .archive-section-title-group.archive-module-pressed-layer,
@@ -1068,6 +1087,7 @@ html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive
 
 @media (prefers-reduced-motion: reduce) {
   .guide-loading-buffer, .brand-guide, .brand-guide-stage, .brand-guide-destination-preview, .brand-guide-artwork, .brand-guide-destination-image, .h5-guide-route-panel, .h5-guide-route-snapshot, .h5-guide-route-destination-image, .reports-archive, .reports-archive-art, .h5-page-transition, .h5-page-transition.is-leaving, .h5-page-transition.is-swipe-back, .category-tile, .report-image-stage img, .report-image-skeleton { animation: none; transition: none; }
+  .h5-guide-archive-entry-group.is-batch { opacity: 1 !important; transform: none !important; transition: none !important; }
   .guide-loading-buffer-poster { visibility: visible; }
   .brand-guide { transition: opacity 150ms ease; }
   .brand-guide.is-leaving { opacity: 0; transform: none; }

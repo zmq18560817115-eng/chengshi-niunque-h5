@@ -11,7 +11,7 @@ const targetViewports = [
   { name: "landscape-956x440", width: 956, height: 440 },
 ] as const;
 
-const transitionProgress = [0, 0.25, 0.5, 0.75, 1] as const;
+const transitionProgress = [0, 0.25, 0.5, 0.75, 0.8, 1] as const;
 const expectedMaximumFrameWidth = 750;
 
 type CriticalResourceFailure = {
@@ -28,6 +28,8 @@ type TransitionMetric = {
   overlap: number;
   guideOpacity: number;
   destinationOpacity: number;
+  destinationBookOpacity: number;
+  destinationBatchOpacity: number;
   blurredRoots: string[];
 };
 
@@ -35,7 +37,26 @@ declare global {
   interface Window {
     __p1HandoffProbe?: {
       running: boolean;
-      samples: Array<{ at: number; coverage: number; active: string[]; path: string; routeState: string | null; bufferCount: number }>;
+      samples: Array<{
+        at: number;
+        coverage: number;
+        active: string[];
+        path: string;
+        routeState: string | null;
+        bufferCount: number;
+        bufferReleasing: boolean;
+        routeBookOpacity: number | null;
+        routeBatchOpacity: number | null;
+        liveBookOpacity: number | null;
+        liveBatchOpacity: number | null;
+        bookOpacity: number | null;
+        batchOpacity: number | null;
+        fallbackVisible: boolean;
+        ribbonProgress: number | null;
+        ribbonState: string | null;
+        ribbonClip: string | null;
+        ribbonImages: number;
+      }>;
     };
   }
 }
@@ -136,6 +157,27 @@ async function expectDecodedImages(root: Locator, selector = "img", minimum = 1)
     }));
     return decoded.every(Boolean);
   }, minimum), { timeout: 20_000 }).toBe(true);
+}
+
+async function expectLayeredGuideDestination(root: Locator) {
+  const book = root.locator('[data-guide-destination-group="archive-book"]');
+  const batch = root.locator('[data-guide-destination-group="latest-batch"]');
+  await expect(book).toHaveCount(1);
+  await expect(batch).toHaveCount(1);
+  await expect(book.locator('[data-source-part]')).toHaveCount(5);
+  await expect(batch.locator('[data-source-part]')).toHaveCount(4);
+  const ribbon = book.locator(".h5-guide-archive-entry-ribbon-clip");
+  await expect(ribbon).toHaveCount(1);
+  await expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
+  await expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
+  await expect(ribbon.locator(".h5-guide-archive-entry-ribbon")).toHaveCount(1);
+  expect(await ribbon.evaluate((element) => {
+    const clip = getComputedStyle(element).clipPath;
+    return clip !== "none" && !/^inset\((?:0(?:px|%)?(?:\s+|$)){1,4}\)$/i.test(clip);
+  })).toBe(true);
+  await expect(root.locator('img[src*="archive-transition-preview.webp"]')).toHaveCount(0);
+  await expectDecodedImages(root, '[data-guide-destination-group] img', 10);
+  return { book, batch };
 }
 
 async function expectFrameWidth(locator: Locator, viewportWidth: number) {
@@ -310,8 +352,10 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     const guide = document.querySelector<HTMLElement>(".brand-guide-stage");
     const guideArtwork = document.querySelector<HTMLElement>(".brand-guide-artwork");
     const destination = document.querySelector<HTMLElement>(".brand-guide-destination-preview");
-    const destinationImage = document.querySelector<HTMLElement>(".brand-guide-destination-image");
-    if (!root || !guide || !guideArtwork || !destination || !destinationImage) throw new Error("guide transition layers are unavailable");
+    const destinationContent = document.querySelector<HTMLElement>(".brand-guide-destination-content");
+    const destinationBook = destinationContent?.querySelector<HTMLElement>('[data-guide-destination-group="archive-book"]');
+    const destinationBatch = destinationContent?.querySelector<HTMLElement>('[data-guide-destination-group="latest-batch"]');
+    if (!root || !guide || !guideArtwork || !destination || !destinationContent || !destinationBook || !destinationBatch) throw new Error("guide transition layers are unavailable");
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
     const viewportArea = Math.max(1, viewportWidth * viewportHeight);
@@ -345,7 +389,7 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     const subjectElements = [
       ...guideSubjectSelectors,
       ".brand-guide-fallback",
-      ".brand-guide-destination-image",
+      ".brand-guide-destination-content [data-guide-destination-group] img",
     ].flatMap((selector) => [...document.querySelectorAll(selector)]);
     const subjectCoverage = Math.min(1, subjectElements.reduce((sum, element) => {
       if (element instanceof HTMLImageElement
@@ -354,13 +398,15 @@ async function readTransitionMetric(page: Page): Promise<TransitionMetric> {
     }, 0) / viewportArea);
     const overlapWidth = Math.max(0, Math.min(guideRect.right, destinationRect.right) - Math.max(guideRect.left, destinationRect.left));
     const overlapHeight = Math.max(0, Math.min(guideRect.bottom, destinationRect.bottom) - Math.max(guideRect.top, destinationRect.top));
-    const inspectedRoots = [root, guide, guideArtwork, destination, destinationImage];
+    const inspectedRoots = [root, guide, guideArtwork, destination, destinationContent, destinationBook, destinationBatch];
     return {
       progress: Number(root.dataset.swipeProgress),
       coverage: subjectCoverage,
       overlap: (overlapWidth * overlapHeight) / viewportArea,
       guideOpacity,
       destinationOpacity,
+      destinationBookOpacity: Number.parseFloat(getComputedStyle(destinationBook).opacity),
+      destinationBatchOpacity: Number.parseFloat(getComputedStyle(destinationBatch).opacity),
       blurredRoots: inspectedRoots.flatMap((element) => {
         const filter = getComputedStyle(element).filter;
         return /blur\(/.test(filter) ? [`${element.className}: ${filter}`] : [];
@@ -396,7 +442,7 @@ async function startHandoffCoverageProbe(page: Page) {
       const height = Math.max(0, Math.min(document.documentElement.clientHeight, rect.bottom) - Math.max(0, rect.top));
       return width * height;
     };
-    const probe = { running: true, samples: [] as Array<{ at: number; coverage: number; active: string[]; path: string; routeState: string | null; bufferCount: number }> };
+    const probe = { running: true, samples: [] as NonNullable<Window["__p1HandoffProbe"]>["samples"] };
     window.__p1HandoffProbe = probe;
     const sample = () => {
       if (!probe.running) return;
@@ -405,9 +451,9 @@ async function startHandoffCoverageProbe(page: Page) {
         ".brand-guide-artwork .brand-guide-paper-bottom",
         ".brand-guide-fallback",
         ".brand-guide-artwork > .guide-landscape-composition",
-        ".brand-guide-destination-image",
+        ".brand-guide-destination-content [data-guide-destination-group] img",
         ".h5-guide-route-snapshot",
-        ".h5-guide-route-destination-image",
+        ".h5-guide-route-destination-content [data-guide-destination-group] img",
         ".reports-archive-reference-fallback",
         '.reports-archive-source-layer:not([data-source-part="paper-texture"])',
       ].flatMap((selector) => [...document.querySelectorAll(selector)]);
@@ -422,6 +468,26 @@ async function startHandoffCoverageProbe(page: Page) {
         active.push(element.className.toString());
         weightedCoverage += area * opacity;
       }
+      const routeBuffer = document.querySelector<HTMLElement>("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+      const routeBook = routeBuffer?.querySelector<HTMLElement>('[data-guide-destination-group="archive-book"]') ?? null;
+      const routeBatch = routeBuffer?.querySelector<HTMLElement>('[data-guide-destination-group="latest-batch"]') ?? null;
+      const liveBook = document.querySelector<HTMLElement>('[data-guide-entry-group="archive-book"]');
+      const liveBatch = document.querySelector<HTMLElement>('[data-guide-entry-group="latest-batch"]');
+      const bufferReleasing = routeBuffer?.classList.contains("is-releasing") ?? false;
+      const routeBookOpacity = routeBook ? effectiveOpacity(routeBook) : null;
+      const routeBatchOpacity = routeBatch ? effectiveOpacity(routeBatch) : null;
+      const liveBookOpacity = liveBook ? effectiveOpacity(liveBook) : null;
+      const liveBatchOpacity = liveBatch ? effectiveOpacity(liveBatch) : null;
+      const visibleOpacity = (routeOpacity: number | null, liveOpacity: number | null) => {
+        if (!routeBuffer) return liveOpacity;
+        if (!bufferReleasing) return routeOpacity;
+        if (routeOpacity === null) return liveOpacity;
+        if (liveOpacity === null) return routeOpacity;
+        return 1 - (1 - routeOpacity) * (1 - liveOpacity);
+      };
+      const fallback = document.querySelector<HTMLElement>(".reports-archive-reference-fallback");
+      const ribbon = document.querySelector<HTMLElement>(".archive-unlock-tab-motion");
+      const ribbonClip = document.querySelector<HTMLElement>(".archive-unlock-tab-clip");
       probe.samples.push({
         at: performance.now(),
         coverage: Math.min(1, weightedCoverage / viewportArea()),
@@ -429,6 +495,18 @@ async function startHandoffCoverageProbe(page: Page) {
         path: window.location.pathname,
         routeState: document.documentElement.getAttribute("data-guide-route-entry"),
         bufferCount: document.querySelectorAll("#h5-guide-route-buffer-host > .h5-guide-route-buffer").length,
+        bufferReleasing,
+        routeBookOpacity,
+        routeBatchOpacity,
+        liveBookOpacity,
+        liveBatchOpacity,
+        bookOpacity: visibleOpacity(routeBookOpacity, liveBookOpacity),
+        batchOpacity: visibleOpacity(routeBatchOpacity, liveBatchOpacity),
+        fallbackVisible: fallback ? effectiveOpacity(fallback) > .01 : false,
+        ribbonProgress: ribbon ? Number.parseFloat(ribbon.dataset.unlockProgress || "0") : null,
+        ribbonState: ribbon?.dataset.unlockState ?? null,
+        ribbonClip: ribbonClip ? getComputedStyle(ribbonClip).clipPath : null,
+        ribbonImages: ribbon?.querySelectorAll(".archive-unlock-tab-image").length ?? 0,
       });
       requestAnimationFrame(sample);
     };
@@ -457,6 +535,7 @@ for (const viewport of targetViewports) {
     await expect(stage).toHaveAttribute("data-gesture-state", "ready", { timeout: 15_000 });
     await expect(stage).toHaveAttribute("data-destination-state", "ready", { timeout: 15_000 });
     await expectDecodedImages(root, ".brand-guide-artwork img, .brand-guide-destination-preview img", 3);
+    await expectLayeredGuideDestination(destination.locator(".brand-guide-destination-content"));
     const guideFrame = await expectFrameWidth(stage.locator(".brand-guide-artwork"), viewport.width);
     const destinationFrame = await expectFrameWidth(destination.locator(".brand-guide-destination-content"), viewport.width);
     expect(destinationFrame.width).toBeCloseTo(guideFrame.width, 0);
@@ -486,7 +565,7 @@ for (const viewport of targetViewports) {
       await captureEvidence(page, testInfo, `${viewport.name}-transition-${String(progress * 100).padStart(3, "0")}`);
     }
 
-    expect(states).toHaveLength(5);
+    expect(states).toHaveLength(transitionProgress.length);
     expect(states[0].guideOpacity).toBeGreaterThanOrEqual(0.94);
     expect(states.at(-1)?.destinationOpacity).toBeGreaterThanOrEqual(0.94);
     for (let index = 0; index < states.length; index += 1) {
@@ -502,7 +581,12 @@ for (const viewport of targetViewports) {
         expect(state.destinationOpacity).toBeGreaterThan(0.16);
         expect(state.overlap, `spatial overlap at ${transitionProgress[index] * 100}%`).toBeGreaterThanOrEqual(0.12);
       }
+      if (transitionProgress[index] < .8) {
+        expect(state.destinationBatchOpacity, `latest-batch must stay hidden at ${transitionProgress[index] * 100}%`).toBeLessThanOrEqual(.03);
+      }
     }
+    expect(states.at(-1)?.destinationBookOpacity).toBeGreaterThanOrEqual(.94);
+    expect(states.at(-1)?.destinationBatchOpacity).toBeGreaterThanOrEqual(.94);
 
     await startHandoffCoverageProbe(page);
     await dispatchSingleTouch(root, "touchend", startX, 0);
@@ -512,6 +596,7 @@ for (const viewport of targetViewports) {
     await expect(routeBuffer).toHaveAttribute("data-guide-profile", routeProfile);
     await expect(routeBuffer).toHaveAttribute("data-commit-state", /^(prepared|committing)$/);
     await expectDecodedImages(routeBuffer, "img", 2);
+    await expectLayeredGuideDestination(routeBuffer.locator(".h5-guide-route-destination-content"));
     if (routeProfile === "portrait-standard" || routeProfile === "portrait-compact") {
       const routeSnapshot = routeBuffer.locator(".h5-guide-route-snapshot");
       const routeSnapshotImage = routeSnapshot.locator(".h5-guide-route-portrait-snapshot");
@@ -533,8 +618,7 @@ for (const viewport of targetViewports) {
     } else {
       await expect(routeBuffer.locator(".h5-guide-route-portrait-snapshot")).toHaveCount(0);
     }
-    await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toHaveAttribute("data-decode-state", "ready");
-    const routeDestinationBox = await routeBuffer.locator(".h5-guide-route-destination-image").boundingBox();
+    const routeDestinationBox = await routeBuffer.locator(".h5-guide-route-destination-content").boundingBox();
     expect(routeDestinationBox).not.toBeNull();
     if (!routeDestinationBox) throw new Error("route destination frame has no box");
     expect(routeDestinationBox.width).toBeCloseTo(guideFrame.width, 0);
@@ -554,6 +638,27 @@ for (const viewport of targetViewports) {
     expect(handoffSamples.length).toBeGreaterThan(4);
     const emptySamples = handoffSamples.filter((sample) => sample.coverage < 0.72);
     expect(emptySamples, `handoff samples with insufficient painted content: ${JSON.stringify(emptySamples.slice(0, 5))}`).toEqual([]);
+    const stagedSamples = handoffSamples.filter((sample) => sample.bookOpacity !== null && sample.batchOpacity !== null);
+    expect(stagedSamples.length).toBeGreaterThan(4);
+    const revealingSamples = stagedSamples.filter((sample) => sample.path === "/reports" && sample.routeState === "revealing");
+    expect(revealingSamples.length).toBeGreaterThan(0);
+    expect(revealingSamples.every((sample) => !sample.fallbackVisible), "the full archive fallback must not paint over staged entry groups").toBe(true);
+    expect(revealingSamples.every((sample) => sample.ribbonImages === 1), "the unlock ribbon must remain one stable compositor image").toBe(true);
+    expect(revealingSamples.every((sample) => sample.ribbonProgress === 0 && sample.ribbonState === "idle"), "route handoff must not reveal then reset the ribbon").toBe(true);
+    expect(revealingSamples.every((sample) => sample.ribbonClip !== null
+      && sample.ribbonClip !== "none"
+      && !/^inset\((?:0(?:px|%)?(?:\s+|$)){1,4}\)$/i.test(sample.ribbonClip)), "the route handoff must keep only the approved initial ribbon tip visible").toBe(true);
+    const firstVisibleBatch = stagedSamples.findIndex((sample) => (sample.batchOpacity ?? 0) > .03);
+    expect(firstVisibleBatch).toBeGreaterThan(0);
+    expect(stagedSamples.slice(0, firstVisibleBatch).every((sample) => (sample.batchOpacity ?? 0) <= .03)).toBe(true);
+    for (let index = firstVisibleBatch + 1; index < stagedSamples.length; index += 1) {
+      expect(stagedSamples[index].batchOpacity ?? 0, "latest-batch must not disappear after its first paint")
+        .toBeGreaterThanOrEqual((stagedSamples[index - 1].batchOpacity ?? 0) - .04);
+    }
+    const firstRelease = stagedSamples.findIndex((sample) => sample.bufferReleasing);
+    expect(firstRelease).toBeGreaterThan(0);
+    expect(stagedSamples[firstRelease].routeBatchOpacity ?? 0, "handoff buffer must remain until the second group settles")
+      .toBeGreaterThanOrEqual(.97);
     await captureEvidence(page, testInfo, `${viewport.name}-transition-complete`);
     await expectNoHorizontalOverflow(page, viewport.width);
     resources.stop();

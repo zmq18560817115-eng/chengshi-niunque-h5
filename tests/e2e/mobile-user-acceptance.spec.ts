@@ -200,6 +200,121 @@ async function expectPrimedGuideBuffer(page: Page, profile: GuideProfile) {
   return buffer;
 }
 
+async function expectLayeredGuideDestination(root: Locator) {
+  const book = root.locator('[data-guide-destination-group="archive-book"]');
+  const batch = root.locator('[data-guide-destination-group="latest-batch"]');
+  await expect(book).toHaveCount(1);
+  await expect(batch).toHaveCount(1);
+  await expect(book.locator('[data-source-part]')).toHaveCount(5);
+  await expect(batch.locator('[data-source-part]')).toHaveCount(4);
+  await expect(root.locator('img[src*="archive-transition-preview.webp"]')).toHaveCount(0);
+  await expectImagesDecodedWithoutStretch(root.locator('[data-guide-destination-group] img'));
+  return { book, batch };
+}
+
+type GuideEntryTimelineSample = {
+  at: number;
+  routeState: string | null;
+  commitState: string | null;
+  bufferConnected: boolean;
+  bufferReleasing: boolean;
+  routeBookOpacity: number | null;
+  routeBatchOpacity: number | null;
+  liveBookOpacity: number | null;
+  liveBatchOpacity: number | null;
+  bookOpacity: number | null;
+  batchOpacity: number | null;
+  fallbackVisible: boolean;
+  ribbons: Array<{ state: string | null; progress: number; clip: string; images: number }>;
+};
+
+async function startGuideEntryTimelineProbe(page: Page) {
+  await page.evaluate(() => {
+    const timelineWindow = window as typeof window & {
+      __guideEntryTimelineProbe?: { running: boolean; samples: GuideEntryTimelineSample[] };
+    };
+    const effectiveOpacity = (element: Element | null) => {
+      if (!element) return 0;
+      let opacity = 1;
+      let current: Element | null = element;
+      while (current) {
+        const style = getComputedStyle(current);
+        if (style.display === "none" || style.visibility === "hidden") return 0;
+        opacity *= Number.parseFloat(style.opacity || "1");
+        current = current.parentElement;
+      }
+      return opacity;
+    };
+    const probe = { running: true, samples: [] as GuideEntryTimelineSample[] };
+    timelineWindow.__guideEntryTimelineProbe = probe;
+    const sample = () => {
+      if (!probe.running) return;
+      const buffer = document.querySelector<HTMLElement>("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
+      const routeBook = buffer?.querySelector<HTMLElement>('[data-guide-destination-group="archive-book"]') ?? null;
+      const routeBatch = buffer?.querySelector<HTMLElement>('[data-guide-destination-group="latest-batch"]') ?? null;
+      const liveBook = document.querySelector<HTMLElement>('[data-guide-entry-group="archive-book"]');
+      const liveBatch = document.querySelector<HTMLElement>('[data-guide-entry-group="latest-batch"]');
+      const bufferReleasing = buffer?.classList.contains("is-releasing") ?? false;
+      const fallback = document.querySelector<HTMLElement>(".reports-archive-reference-fallback");
+      const routeBookOpacity = routeBook ? effectiveOpacity(routeBook) : null;
+      const routeBatchOpacity = routeBatch ? effectiveOpacity(routeBatch) : null;
+      const liveBookOpacity = liveBook ? effectiveOpacity(liveBook) : null;
+      const liveBatchOpacity = liveBatch ? effectiveOpacity(liveBatch) : null;
+      const visibleOpacity = (routeOpacity: number | null, liveOpacity: number | null) => {
+        if (!buffer) return liveOpacity;
+        if (!bufferReleasing) return routeOpacity;
+        if (routeOpacity === null) return liveOpacity;
+        if (liveOpacity === null) return routeOpacity;
+        return 1 - (1 - routeOpacity) * (1 - liveOpacity);
+      };
+      const ribbons = [...document.querySelectorAll<HTMLElement>(
+        ".brand-guide-destination-content .h5-guide-archive-entry-ribbon-clip, #h5-guide-route-buffer-host > .h5-guide-route-buffer .h5-guide-archive-entry-ribbon-clip, .archive-unlock-tab-motion",
+      )].map((ribbon) => {
+        const live = ribbon.classList.contains("archive-unlock-tab-motion");
+        const clip = live ? ribbon.querySelector<HTMLElement>(".archive-unlock-tab-clip") : ribbon;
+        return {
+          state: ribbon.dataset.unlockState ?? ribbon.dataset.guideDestinationRibbon ?? null,
+          progress: Number.parseFloat(ribbon.dataset.unlockProgress || "0"),
+          clip: clip ? getComputedStyle(clip).clipPath : "none",
+          images: ribbon.querySelectorAll(live ? ".archive-unlock-tab-image" : ".h5-guide-archive-entry-ribbon").length,
+        };
+      });
+      probe.samples.push({
+        at: performance.now(),
+        routeState: document.documentElement.getAttribute("data-guide-route-entry"),
+        commitState: buffer?.dataset.commitState ?? null,
+        bufferConnected: Boolean(buffer),
+        bufferReleasing,
+        routeBookOpacity,
+        routeBatchOpacity,
+        liveBookOpacity,
+        liveBatchOpacity,
+        bookOpacity: visibleOpacity(routeBookOpacity, liveBookOpacity),
+        batchOpacity: visibleOpacity(routeBatchOpacity, liveBatchOpacity),
+        fallbackVisible: effectiveOpacity(fallback) > .01,
+        ribbons,
+      });
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+
+async function stopGuideEntryTimelineProbe(page: Page) {
+  return page.evaluate(() => {
+    const timelineWindow = window as typeof window & {
+      __guideEntryTimelineProbe?: { running: boolean; samples: GuideEntryTimelineSample[] };
+    };
+    const probe = timelineWindow.__guideEntryTimelineProbe;
+    if (!probe) return [];
+    probe.running = false;
+    return probe.samples;
+  });
+}
+
+const isPartialRibbonClip = (clip: string) => clip !== "none"
+  && !/^inset\((?:0(?:px|%)?(?:\s+|$)){1,4}\)$/i.test(clip);
+
 for (const device of devices) {
   test(`${device.name} completes guide to archive at ${device.width}x${device.height}`, async ({ page }) => {
     const runtimeErrors: string[] = [];
@@ -231,11 +346,7 @@ for (const device of devices) {
     expect(frameBox.width).toBeCloseTo(Math.min(device.width, 750), 0);
     expect(frameBox.x).toBeCloseTo((device.width - frameBox.width) / 2, 0);
     await expect(guideStage).toHaveAttribute("data-destination-state", "ready");
-    const destinationImage = page.locator(".brand-guide-destination-image");
-    await expect.poll(async () => destinationImage.evaluate((element) => {
-      return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
-    })).toBe(true);
-    await expectImagesDecodedWithoutStretch(destinationImage);
+    await expectLayeredGuideDestination(page.locator(".brand-guide-destination-content"));
 
     if (profile === "portrait-standard" || profile === "portrait-compact") {
       await expect(page.locator(".brand-guide-portrait-edge-bleed")).toHaveCount(0);
@@ -308,11 +419,7 @@ test("375x812 upward drag moves and crossfades the guide continuously before com
   const routeBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
   await page.waitForURL(/\/reports$/);
   await expect(routeBuffer).toBeVisible();
-  await expect(routeBuffer.locator(".h5-guide-route-destination-image")).toBeVisible();
-  await expect.poll(async () => routeBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
-    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
-  })).toBe(true);
-  await expectImagesDecodedWithoutStretch(routeBuffer.locator(".h5-guide-route-destination-image"));
+  await expectLayeredGuideDestination(routeBuffer.locator(".h5-guide-route-destination-content"));
   await expect(routeBuffer.locator(".h5-guide-route-destination-panel")).toHaveCSS("opacity", "1", { timeout: 2000 });
   await page.screenshot({ path: "artifacts/design-qa/guide-progress-100-375x812.png" });
   await expect(page.locator(".reports-archive-final")).toBeVisible({ timeout: 15000 });
@@ -362,10 +469,7 @@ test("guide handoff reuses the predecoded route buffer until homepage artwork is
   const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
   await expect(guideBuffer).toBeVisible({ timeout: 3000 });
   await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toHaveCount(1);
-  await expect(guideBuffer.locator(".h5-guide-route-destination-image")).toHaveCount(1);
-  await expect.poll(async () => guideBuffer.locator(".h5-guide-route-destination-image").evaluate((element) => {
-    return element instanceof HTMLImageElement && element.complete && element.naturalWidth === 750 && element.naturalHeight === 1625;
-  })).toBe(true);
+  await expectLayeredGuideDestination(guideBuffer.locator(".h5-guide-route-destination-content"));
   await expect(guideBuffer).toHaveAttribute("data-test-prime-id", "mobile-acceptance");
   await expect(guideBuffer).toHaveAttribute("data-guide-profile", "portrait-standard");
   await expect(guideBuffer.locator(".brand-guide-paper, .brand-guide-character")).toHaveCount(0);
@@ -558,7 +662,7 @@ test("cold-cache standard guide keeps the complete fallback until every live lay
 
 test("guide keeps the complete source fallback when the destination preview cannot decode", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.route("**/design/guide/archive-transition-preview.webp", (route) => route.abort());
+  await page.route("**/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp", (route) => route.abort());
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const stage = page.locator(".brand-guide-stage");
   const enter = page.getByRole("button", { name: "进入档案" });
@@ -577,15 +681,6 @@ test("guide keeps the complete source fallback when the destination preview cann
 test("375x812 guide handoff exposes staged timing and restores archive scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
-  let releaseHomepageAssets!: () => void;
-  const homepageAssetsReleased = new Promise<void>((resolve) => {
-    releaseHomepageAssets = resolve;
-  });
-  await page.route("**/design/final-v1/**", async (route) => {
-    await homepageAssetsReleased;
-    await route.continue();
-  });
-
   await page.goto("/go", { waitUntil: "domcontentloaded" });
   const enter = page.getByRole("button", { name: "进入档案" });
   await expect(enter).toBeEnabled({ timeout: 5000 });
@@ -594,41 +689,41 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
   const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
   const archive = page.locator(".reports-archive-final");
-  const book = page.locator('[data-guide-entry-group="archive-book"]');
-  const batch = page.locator('[data-guide-entry-group="latest-batch"]');
+  const fallback = page.locator(".reports-archive-reference-fallback");
+  const ribbon = page.locator(".archive-unlock-tab-motion");
 
+  await startGuideEntryTimelineProbe(page);
   await enter.click();
   await expect(page).toHaveURL(/\/reports$/);
   await expect(root).toHaveAttribute("data-guide-route-entry", "active");
   await expect(guideBuffer).toBeVisible();
-  await page.waitForTimeout(300);
+  await expect(guideBuffer).toHaveClass(/is-committing/);
   await expect(runtimeLoadingLayer).toHaveCount(0);
 
-  releaseHomepageAssets();
-  await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
-  await expect(guideBuffer).toHaveClass(/is-releasing/);
-  await expect(runtimeLoadingLayer).toHaveCount(0);
-  await expect(archive).toHaveAttribute("data-guide-entry", "reference-staged");
-
-  const timing = await Promise.all([book, batch].map((group) => group.evaluate((element) => {
-    const style = window.getComputedStyle(element);
+  const routeBatch = guideBuffer.locator('[data-guide-destination-group="latest-batch"]');
+  const routeTiming = await routeBatch.evaluate((element) => {
+    const style = getComputedStyle(element);
     const toMilliseconds = (value: string) => value.split(",").map((part) => {
       const time = part.trim();
       return time.endsWith("ms") ? Number.parseFloat(time) : Number.parseFloat(time) * 1000;
     });
     return {
-      names: style.animationName.split(",").map((name) => name.trim()),
-      durations: toMilliseconds(style.animationDuration),
-      delays: toMilliseconds(style.animationDelay),
+      durations: toMilliseconds(style.transitionDuration),
+      delays: toMilliseconds(style.transitionDelay),
     };
-  })));
+  });
+  expect(routeTiming.durations).toEqual([420, 420]);
+  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(416, 3));
 
-  expect(timing[0].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
-  expect(timing[0].durations).toEqual([520, 520]);
-  expect(timing[0].delays).toEqual([0, 0]);
-  expect(timing[1].names).toEqual(["archive-guide-entry-rise", "archive-guide-entry-fade"]);
-  expect(timing[1].durations).toEqual([420, 420]);
-  timing[1].delays.forEach((delay) => expect(delay).toBeCloseTo(374.4, 3));
+  await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
+  await expect(guideBuffer).toHaveClass(/is-releasing/);
+  await expect(runtimeLoadingLayer).toHaveCount(0);
+  await expect(archive).toHaveAttribute("data-guide-entry", "reference-staged");
+  await expect(fallback).toBeHidden();
+  await expect(ribbon).toHaveCount(1);
+  await expect(ribbon.locator(".archive-unlock-tab-image")).toHaveCount(1);
+  await expect(ribbon).toHaveAttribute("data-unlock-state", "idle");
+  await expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
   await page.screenshot({ path: "artifacts/design-qa/guide-to-archive-revealing-375x812.png" });
 
   await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });
@@ -640,7 +735,49 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   await expect(archive).toHaveAttribute("data-deferred-artwork", "mounted");
   await expect(runtimeLoadingLayer).toHaveCount(0);
 
-  await page.evaluate(() => window.scrollTo(0, 500));
+  const entrySamples = await stopGuideEntryTimelineProbe(page);
+  const stagedSamples = entrySamples.filter((sample) => sample.bookOpacity !== null && sample.batchOpacity !== null);
+  expect(stagedSamples.length).toBeGreaterThan(8);
+  const firstBookVisible = stagedSamples.findIndex((sample) => (sample.bookOpacity ?? 0) > .03);
+  const firstBatchVisible = stagedSamples.findIndex((sample) => (sample.batchOpacity ?? 0) > .03);
+  expect(firstBookVisible).toBeGreaterThanOrEqual(0);
+  expect(firstBatchVisible).toBeGreaterThan(firstBookVisible);
+  expect(stagedSamples.slice(0, firstBatchVisible).every((sample) => (sample.batchOpacity ?? 0) <= .03)).toBe(true);
+  const commitStart = stagedSamples.find((sample) => sample.commitState === "committing");
+  expect(commitStart).toBeDefined();
+  expect(stagedSamples[firstBatchVisible].at - (commitStart?.at ?? stagedSamples[firstBatchVisible].at)).toBeGreaterThanOrEqual(340);
+  for (let index = firstBookVisible + 1; index < stagedSamples.length; index += 1) {
+    expect(stagedSamples[index].bookOpacity ?? 0).toBeGreaterThanOrEqual((stagedSamples[index - 1].bookOpacity ?? 0) - .04);
+  }
+  for (let index = firstBatchVisible + 1; index < stagedSamples.length; index += 1) {
+    expect(stagedSamples[index].batchOpacity ?? 0).toBeGreaterThanOrEqual((stagedSamples[index - 1].batchOpacity ?? 0) - .04);
+  }
+  expect(entrySamples.filter((sample) => sample.routeState && sample.fallbackVisible)).toEqual([]);
+  expect(entrySamples.flatMap((sample) => sample.ribbons).length).toBeGreaterThan(8);
+  expect(entrySamples.flatMap((sample) => sample.ribbons).every((sample) => sample.images === 1
+    && sample.state === "idle"
+    && sample.progress === 0
+    && isPartialRibbonClip(sample.clip))).toBe(true);
+  const firstRelease = stagedSamples.findIndex((sample) => sample.bufferReleasing);
+  expect(firstRelease).toBeGreaterThan(0);
+  expect(stagedSamples[firstRelease].routeBatchOpacity ?? 0, "route buffer cannot release before latest-batch settles").toBeGreaterThanOrEqual(.97);
+
+  const scrollMetrics = await page.evaluate(() => ({ height: document.scrollingElement?.scrollHeight ?? 0, viewport: window.innerHeight }));
+  expect(scrollMetrics.height).toBeGreaterThan(scrollMetrics.viewport);
+  await page.evaluate(() => {
+    window.dispatchEvent(new WheelEvent("wheel", { deltaY: 240 }));
+    window.scrollTo(0, 240);
+  });
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await expect.poll(async () => Number(await ribbon.getAttribute("data-unlock-progress"))).toBeGreaterThan(0);
+  await expect(ribbon).toHaveAttribute("data-unlock-state", /^(revealing|revealed)$/);
+  const firstRevealProgress = Number(await ribbon.getAttribute("data-unlock-progress"));
+  await page.evaluate(() => {
+    window.dispatchEvent(new WheelEvent("wheel", { deltaY: 240 }));
+    window.scrollTo(0, 480);
+  });
+  await expect.poll(async () => Number(await ribbon.getAttribute("data-unlock-progress"))).toBeGreaterThanOrEqual(firstRevealProgress);
+  await expect(ribbon).toHaveAttribute("data-unlock-state", "revealed");
+  await expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
   await page.screenshot({ path: "artifacts/design-qa/archive-after-guide-375x812.png" });
 });

@@ -6,7 +6,7 @@ import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { archiveModuleExitDelayMs } from "@/components/h5/category-route-transition";
-import { clearGuideRouteContinuity, guideRouteAssetTimeoutMs, guideRouteBufferHostId, guideRouteDestinationSrc, guideRouteEntryAttribute, guideRouteNavigationDelayMs, primeGuideRouteContinuity, type GuideRouteProfile } from "@/components/h5/guide-route-transition";
+import { clearGuideRouteContinuity, guideRouteAssetTimeoutMs, guideRouteBufferHostId, guideRouteEntryAttribute, guideRouteNavigationDelayMs, primeGuideRouteContinuity, type GuideRouteProfile } from "@/components/h5/guide-route-transition";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
@@ -15,6 +15,7 @@ import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUn
 import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
 import { adaptiveFailOpenDelayMs } from "@/components/h5/AdaptiveReadinessGate";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { archiveEntryTransitionSources } from "@/components/h5/archive-entry-transition-visual";
 
 type PendingImage = { src: string; kind: "dom" | "preload"; settled: boolean; resolve: () => void; reject: () => void };
 let pendingImages: PendingImage[] = [];
@@ -86,11 +87,14 @@ async function resolveAllPendingImages(predicate: (image: PendingImage) => boole
 }
 
 const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
+const guideEntryTransitionSourceSet = new Set<string>(archiveEntryTransitionSources);
+const isGuideRoutePrimeAsset = (image: PendingImage) => isGuideReadinessAsset(image)
+  || guideEntryTransitionSourceSet.has(image.src);
 
 function signalVisibleGuideDestinationDecoded(container: HTMLElement) {
-  const destination = container.querySelector<HTMLImageElement>(".brand-guide-destination-image");
-  if (!destination) throw new Error("Guide destination preview was not mounted");
-  fireEvent.load(destination);
+  const destinationImages = [...container.querySelectorAll<HTMLImageElement>('[data-guide-destination-group] img')];
+  if (destinationImages.length === 0) throw new Error("Guide destination preview was not mounted");
+  destinationImages.forEach((destination) => fireEvent.load(destination));
 }
 
 async function settleGuideRenderEffects() {
@@ -112,9 +116,10 @@ async function decodeMountedGuideImages() {
   await act(async () => { await resolvePendingImages(() => true); });
   const profile = document.querySelector<HTMLElement>(".brand-guide")?.dataset.guideProfile as GuideRouteProfile | "unknown" | undefined;
   if (profile && profile !== "unknown") {
+    const prime = primeGuideRouteContinuity(profile, false);
     await act(async () => {
-      await primeGuideRouteContinuity(profile, false);
-      await Promise.resolve();
+      await resolvePendingImages(() => true);
+      await prime;
     });
   }
   await settleGuideRenderEffects();
@@ -443,7 +448,8 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
     expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fallback");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-progress", "0.000");
   });
 
   it("stays on the guide after five seconds and only enters once from the hint action", async () => {
@@ -466,13 +472,14 @@ describe("multi-page H5 interactions", () => {
 
     expect(container.querySelector(".guide-loading-buffer")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
-    await act(async () => {
-      await resolvePendingImages(isGuideReadinessAsset);
-    });
-    expect(pendingImages.every(isGuideReadinessAsset)).toBe(true);
-    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.webp"))).toBe(false);
+    await decodeMountedGuideImages();
+    expect(pendingImages.every(isGuideRoutePrimeAsset)).toBe(true);
+    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.runtime.webp"))).toBe(true);
     expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
-    expect(container.querySelector(".brand-guide-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
+    expect(pendingImages.some(({ src }) => src.includes("archive-reference-public.webp"))).toBe(false);
+    expect(container.querySelector('[data-guide-destination-group="archive-book"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-guide-destination-group="latest-batch"]')).toBeInTheDocument();
+    expect(container.querySelector('[src*="archive-transition-preview.webp"]')).not.toBeInTheDocument();
     expect(document.querySelector(`#${guideRouteBufferHostId} > .h5-guide-route-buffer`)).toHaveAttribute("data-guide-profile", "portrait-standard");
   });
 
@@ -816,11 +823,15 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<BrandGuide/>);
     const page = screen.getByRole("main");
     const stage = container.querySelector(".brand-guide-stage");
-    const destination = container.querySelector(".brand-guide-destination-image");
-    failDomImage(destination as Element);
-    expect(stage).toHaveAttribute("data-destination-state", "fallback");
-    expect(page).toHaveClass("has-destination-fallback");
+    const destination = container.querySelector('[data-guide-destination-group="latest-batch"] img');
+    await act(async () => {
+      failDomImage(destination as Element);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     await resolveAllPendingImages();
+    await waitFor(() => expect(stage).toHaveAttribute("data-destination-state", "fallback"));
+    expect(page).toHaveClass("has-destination-fallback");
     expect(stage).toHaveAttribute("data-destination-state", "fallback");
     expect(page).toHaveClass("has-destination-fallback");
     consoleError.mockRestore();
@@ -836,7 +847,19 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
-    expect(container.querySelector(".brand-guide-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
+    expect(container.querySelector('[data-guide-destination-group="archive-book"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-guide-destination-group="latest-batch"]')).toBeInTheDocument();
+    const routeRibbon = container.querySelector<HTMLElement>(".h5-guide-archive-entry-ribbon-clip");
+    expect(routeRibbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
+    expect(routeRibbon).toHaveAttribute("data-unlock-progress", "0.000");
+    const liveRibbonRender = render(<ArchiveUnlockTabMotion />);
+    const liveRibbon = liveRibbonRender.container.querySelector<HTMLElement>(".archive-unlock-tab-motion");
+    expect(liveRibbon).toHaveAttribute("data-unlock-state", "idle");
+    expect(liveRibbon).toHaveAttribute("data-unlock-progress", "0.000");
+    expect(Number.parseFloat(liveRibbon?.style.getPropertyValue("--archive-unlock-hidden-bottom") ?? "0"))
+      .toBeCloseTo(Number.parseFloat(routeRibbon?.style.getPropertyValue("--archive-entry-ribbon-hidden-bottom") ?? "0"), 8);
+    liveRibbonRender.unmount();
+    expect(container.querySelector('[src*="archive-transition-preview.webp"]')).not.toBeInTheDocument();
   });
 
   it("keeps the 750 by 1625 guide stage stable while disabled", async () => {

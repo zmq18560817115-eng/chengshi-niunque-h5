@@ -2,10 +2,9 @@ import {
   announceGuideRouteReady,
   clearGuideRouteContinuity,
   guideRouteBufferHostId,
-  guideRouteCommitDurationMs,
-  guideRouteDestinationSrc,
   guideRouteEntryAttribute,
   guideRouteSnapshotSrc,
+  guideRouteStageDurationMs,
   navigateWithGuideContinuity,
   prepareGuideRouteContinuity,
   primeGuideRouteContinuity,
@@ -48,6 +47,7 @@ describe("guide route transition priming", () => {
   afterEach(() => {
     clearGuideRouteContinuity();
     vi.useRealTimers();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     if (originalComplete) Object.defineProperty(HTMLImageElement.prototype, "complete", originalComplete);
     if (originalNaturalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalNaturalWidth);
@@ -60,13 +60,34 @@ describe("guide route transition priming", () => {
     await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(true);
     const host = document.getElementById(guideRouteBufferHostId)!;
     const primed = host.firstElementChild as HTMLElement;
-    expect([...primed.querySelectorAll("img")].map((image) => image.getAttribute("src"))).toEqual([
-      guideRouteSnapshotSrc,
-      guideRouteDestinationSrc,
+    const destinationBook = primed.querySelector<HTMLElement>('[data-guide-destination-group="archive-book"]');
+    const destinationBatch = primed.querySelector<HTMLElement>('[data-guide-destination-group="latest-batch"]');
+    expect(destinationBook).not.toBeNull();
+    expect(destinationBatch).not.toBeNull();
+    expect([...destinationBook!.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
+      "module-1-folder-back",
+      "module-1-folder-front",
+      "module-1-logo",
+      "module-1-title",
+      "module-1-badge",
     ]);
+    expect([...destinationBatch!.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
+      "module-1-batch-coil",
+      "module-1-batch",
+      "module-1-passed-panel",
+      "module-1-passed-copy",
+    ]);
+    const ribbon = destinationBook!.querySelector<HTMLElement>(".h5-guide-archive-entry-ribbon-clip");
+    expect(ribbon).not.toBeNull();
+    expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
+    expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
+    expect(ribbon!.querySelectorAll(".h5-guide-archive-entry-ribbon")).toHaveLength(1);
+    const imageSources = [...primed.querySelectorAll("img")].map((image) => image.getAttribute("src") ?? "");
+    expect(imageSources[0]).toBe(guideRouteSnapshotSrc);
+    expect(imageSources).not.toContain("/design/guide/archive-transition-preview.webp");
     expect(primed).toHaveClass("is-preparing");
     expect(primed.dataset.guideProfile).toBe("portrait-standard");
-    expect(decodedSources).toEqual([guideRouteSnapshotSrc, guideRouteDestinationSrc]);
+    expect(decodedSources).toEqual(imageSources);
     expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
 
     await expect(prepareGuideRouteContinuity(.25, false)).resolves.toBe(true);
@@ -74,7 +95,7 @@ describe("guide route transition priming", () => {
     expect(host.childElementCount).toBe(1);
     expect(primed).not.toHaveClass("is-preparing");
     expect(primed).toHaveClass("is-committing");
-    expect(decodedSources).toHaveLength(2);
+    expect(decodedSources).toHaveLength(imageSources.length);
     expect(document.documentElement).toHaveAttribute(guideRouteEntryAttribute, "active");
   });
 
@@ -113,14 +134,15 @@ describe("guide route transition priming", () => {
     expect(first?.isConnected).toBe(false);
     expect(host.childElementCount).toBe(1);
     expect(buffer).toHaveClass("has-destination-fallback");
-    expect(buffer.querySelector(".h5-guide-route-destination-image")).toHaveAttribute("src", guideRouteDestinationSrc);
+    expect(buffer.querySelector('[data-guide-destination-group="archive-book"]')).not.toBeNull();
+    expect(buffer.querySelector('[data-guide-destination-group="latest-batch"]')).not.toBeNull();
   });
 
   it("does not expose a partial buffer or route lock after required decoding fails", async () => {
     Object.defineProperty(HTMLImageElement.prototype, "decode", {
       configurable: true,
       value: vi.fn(function decode(this: HTMLImageElement) {
-        return this.getAttribute("src") === guideRouteDestinationSrc ? Promise.reject(new Error("decode failed")) : Promise.resolve();
+        return this.closest('[data-guide-destination-group="latest-batch"]') ? Promise.reject(new Error("decode failed")) : Promise.resolve();
       }),
     });
     await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(false);
@@ -136,32 +158,75 @@ describe("guide route transition priming", () => {
     const preparation = prepareGuideRouteContinuity(.25, false);
     await Promise.resolve();
     rafCallbacks.shift()?.(0);
+    await Promise.resolve();
+    rafCallbacks.shift()?.(0);
     await expect(preparation).resolves.toBe(true);
 
     const buffer = document.querySelector<HTMLElement>(".h5-guide-route-buffer")!;
+    expect(buffer).toHaveClass("is-committing");
     const navigate = vi.fn();
     navigateWithGuideContinuity(navigate);
     announceGuideRouteReady();
     expect(navigate).toHaveBeenCalledOnce();
     expect(buffer).not.toHaveClass("is-releasing");
 
-    rafCallbacks.shift()?.(0);
-    rafCallbacks.shift()?.(0);
-    expect(buffer).toHaveClass("is-committing");
     expect(buffer).not.toHaveClass("is-releasing");
-    await vi.advanceTimersByTimeAsync(guideRouteCommitDurationMs);
-    rafCallbacks.shift()?.(guideRouteCommitDurationMs);
+    await vi.advanceTimersByTimeAsync(guideRouteStageDurationMs);
+    rafCallbacks.shift()?.(guideRouteStageDurationMs);
     expect(buffer).toHaveClass("is-releasing");
+  });
+
+  it("keeps the prepared handoff hidden for one layout frame and ignores a stale release frame after clear", async () => {
+    vi.useFakeTimers();
+    const rafCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { rafCallbacks.push(callback); return rafCallbacks.length; }));
+    const now = vi.spyOn(performance, "now").mockReturnValue(1_000);
+    await expect(primeGuideRouteContinuity("portrait-standard", false)).resolves.toBe(true);
+
+    const preparation = prepareGuideRouteContinuity(.5, false);
+    await Promise.resolve();
+    await Promise.resolve();
+    const buffer = document.querySelector<HTMLElement>(".h5-guide-route-buffer")!;
+    expect(buffer).toHaveClass("is-preparing");
+    expect(buffer).toHaveAttribute("data-commit-state", "prepared");
+    expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
+
+    rafCallbacks.shift()?.(1_000);
+    await Promise.resolve();
+    expect(buffer).not.toHaveClass("is-preparing");
+    expect(buffer).not.toHaveClass("is-committing");
+    expect(document.documentElement).toHaveAttribute(guideRouteEntryAttribute, "active");
+
+    rafCallbacks.shift()?.(1_000);
+    await expect(preparation).resolves.toBe(true);
+    expect(buffer).toHaveClass("is-committing");
+
+    const complete = vi.fn();
+    window.addEventListener("h5-guide-route-complete", complete);
+    navigateWithGuideContinuity(vi.fn());
+    now.mockReturnValue(10_000);
+    announceGuideRouteReady();
+    expect(rafCallbacks).toHaveLength(1);
+
+    clearGuideRouteContinuity();
+    rafCallbacks.shift()?.(10_000);
+    await vi.runAllTimersAsync();
+    expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
+    expect(document.getElementById(guideRouteBufferHostId)).toBeEmptyDOMElement();
+    expect(complete).toHaveBeenCalledOnce();
+    window.removeEventListener("h5-guide-route-complete", complete);
   });
 
   it("clear removes the hidden buffer and resets the prime cache", async () => {
     await primeGuideRouteContinuity("portrait-standard", false);
     const host = document.getElementById(guideRouteBufferHostId)!;
     const first = host.firstElementChild;
+    const firstPrimeDecodeCount = decodedSources.length;
+    expect(firstPrimeDecodeCount).toBeGreaterThan(2);
     clearGuideRouteContinuity();
     expect(host).toBeEmptyDOMElement();
     await primeGuideRouteContinuity("portrait-standard", false);
     expect(host.firstElementChild).not.toBe(first);
-    expect(decodedSources).toHaveLength(4);
+    expect(decodedSources).toHaveLength(firstPrimeDecodeCount * 2);
   });
 });

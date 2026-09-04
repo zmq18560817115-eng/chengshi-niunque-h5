@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { createArchiveEntryTransitionVisual } from "./archive-entry-transition-visual";
 import { replaceHierarchyRoute } from "./hierarchy-navigation";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
 import {
-  guideRouteDestinationSrc,
+  getGuideArchiveBatchProgress,
+  guideRouteAssetTimeoutMs,
   guideRouteNavigationDelayMs,
   getGuideTransitionVisualState,
   navigateWithGuideContinuity,
@@ -120,27 +122,58 @@ function GuideLandscapeComposition({ onReady, onError }: { onReady: (key: string
 }
 
 function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; onError: () => void }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const destination = createArchiveEntryTransitionVisual();
+    let cancelled = false;
+    host.replaceChildren(destination.visual);
+
+    const decode = (image: HTMLImageElement) => new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (ready: boolean) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        image.removeEventListener("load", onLoad);
+        image.removeEventListener("error", onImageError);
+        image.dataset.decodeState = ready ? "ready" : "failed";
+        resolve(ready);
+      };
+      const decodeLoadedImage = async () => {
+        try {
+          if (typeof image.decode === "function") await image.decode();
+          finish(image.naturalWidth > 0);
+        } catch {
+          finish(false);
+        }
+      };
+      const onLoad = () => { void decodeLoadedImage(); };
+      const onImageError = () => finish(false);
+      const timeout = window.setTimeout(() => finish(false), guideRouteAssetTimeoutMs);
+      if (image.complete) void decodeLoadedImage();
+      else {
+        image.addEventListener("load", onLoad, { once: true });
+        image.addEventListener("error", onImageError, { once: true });
+      }
+    });
+
+    void Promise.all(destination.images.map(decode)).then((ready) => {
+      if (cancelled) return;
+      if (ready.every(Boolean)) onReady();
+      else onError();
+    });
+
+    return () => {
+      cancelled = true;
+      host.replaceChildren();
+    };
+  }, [onError, onReady]);
+
   return <section className="brand-guide-destination-preview" aria-hidden="true">
-    <div className="brand-guide-destination-content">
-      <Image
-        className="brand-guide-destination-image"
-        src={guideRouteDestinationSrc}
-        alt=""
-        width={750}
-        height={1625}
-        sizes="(max-width: 750px) 100vw, 750px"
-        priority
-        fetchPriority="high"
-        unoptimized
-        decoding="async"
-        onLoad={(event) => {
-          const image = event.currentTarget;
-          if (typeof image.decode === "function") void image.decode().then(onReady, onError);
-          else onReady();
-        }}
-        onError={onError}
-      />
-    </div>
+    <div ref={hostRef} className="brand-guide-destination-content" />
   </section>;
 }
 
@@ -240,6 +273,9 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     root.style.setProperty("--guide-swipe-destination-y", `${visual.destinationY.toFixed(3)}px`);
     root.style.setProperty("--guide-swipe-guide-opacity", `${visual.guideOpacity.toFixed(4)}`);
     root.style.setProperty("--guide-swipe-destination-opacity", `${visual.destinationOpacity.toFixed(4)}`);
+    const batchProgress = getGuideArchiveBatchProgress(progress);
+    root.style.setProperty("--guide-swipe-batch-opacity", `${batchProgress.toFixed(4)}`);
+    root.style.setProperty("--guide-swipe-batch-y", `${(4 * (1 - batchProgress)).toFixed(3)}cqw`);
     root.dataset.swipeProgress = progress.toFixed(3);
   }, []);
 
@@ -443,9 +479,10 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setGestureReady(true);
   }, []);
   const handleDestinationError = useCallback(() => {
-    console.error(`[BrandGuide] asset failed: ${guideRouteDestinationSrc}`);
+    console.error("[BrandGuide] archive entry transition layer failed");
     setDestinationStatus("fallback");
   }, []);
+  const handleDestinationReady = useCallback(() => setDestinationStatus("ready"), []);
   const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
   const mountLivePortrait = layoutProfile !== "landscape" && layoutProfile !== "unknown" && motionEnabled && motionPreference === "allowed";
   const motionStyle = {
@@ -527,7 +564,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
         <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
         <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={leaving || preview || !transitionSwipeReady}>进入档案</button>
       </section>
-      <GuideDestinationPreview onReady={() => setDestinationStatus("ready")} onError={handleDestinationError}/>
+      <GuideDestinationPreview onReady={handleDestinationReady} onError={handleDestinationError}/>
     </div>
   </main>;
 }

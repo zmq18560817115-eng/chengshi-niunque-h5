@@ -207,25 +207,26 @@ describe("H5 motion isolation", () => {
     const guide = readFileSync("src/components/h5/BrandGuide.tsx", "utf8");
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
+    const transitionVisual = readFileSync("src/components/h5/archive-entry-transition-visual.ts", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     const routeTransition = readFileSync("src/components/h5/guide-route-transition.ts", "utf8");
     expect(css).toContain(".brand-guide.is-leaving { pointer-events: none; }");
     expect(css).toContain(".brand-guide.is-dragging .brand-guide-stage, .brand-guide.is-dragging .brand-guide-destination-preview { will-change: transform, opacity; }");
     expect(css).toContain(".brand-guide.is-settling .brand-guide-stage, .brand-guide.is-settling .brand-guide-destination-preview { transition: transform 240ms");
-    expect(css).toContain(".brand-guide-destination-image");
+    expect(transitionVisual).toContain('book.dataset.guideDestinationGroup = "archive-book"');
+    expect(transitionVisual).toContain('batch.dataset.guideDestinationGroup = "latest-batch"');
     expect(css).toContain(".reports-archive.reports-entry-transition[data-guide-entry] { animation: none; }");
     expect(reports).toContain("enteredFromGuide.current = true;");
     expect(reports).toContain('data-guide-entry={enteredFromGuide.current ? (guideEntry ? "reference-staged" : "complete") : undefined}');
     expect(css).toContain("@keyframes archive-guide-entry-rise { from { transform: translate3d(0,var(--guide-route-remaining-distance),0); } to { transform: translate3d(0,0,0); } }");
     expect(css).toContain("@keyframes archive-guide-entry-fade { from { opacity: 0; } to { opacity: 1; } }");
-    expect(css).toContain('html[data-guide-route-entry="active"] .reports-archive-final .reports-archive-entry-batch { opacity: .001; transform: translate3d(0,var(--guide-route-remaining-distance),0);');
-    expect(css).toContain('html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-book,');
-    expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-book');
+    expect(css).toContain('.h5-guide-route-buffer .h5-guide-archive-entry-group.is-batch { opacity: var(--guide-route-batch-start-opacity,0); transform: translate3d(0,var(--guide-route-batch-start-y,4cqw),0); }');
+    expect(css).toContain('.reports-archive-final[data-guide-entry]:not([data-archive-artwork-failed="true"]) .reports-archive-reference-fallback');
+    expect(css).toContain('html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-book,');
+    expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-book,');
     expect(css).toContain("--guide-route-transition-easing: cubic-bezier(.25,.1,.25,1);");
-    expect(css).toContain("archive-guide-entry-fade var(--archive-guide-book-duration) var(--guide-route-transition-easing) var(--archive-guide-book-delay) both;");
-    expect(css).toContain('html[data-guide-route-entry="revealing"] .reports-archive-final .reports-archive-entry-batch,');
-    expect(css).toContain('.reports-archive-final[data-guide-entry="reference-staged"] .reports-archive-entry-batch');
-    expect(css).toContain("archive-guide-entry-fade var(--archive-guide-batch-duration) var(--guide-route-transition-easing) var(--archive-guide-batch-delay) both;");
+    expect(css).toContain('.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,420ms) ease-out var(--guide-route-batch-delay,416ms)');
+    expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-batch { opacity: 1; transform: translate3d(0,0,0); animation: none; will-change: auto; }');
     expect(css).toContain(".h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0);");
     expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) ease-out;");
     expect(css).toContain(".h5-guide-route-buffer.is-committing .h5-guide-route-guide-panel { opacity: .08;");
@@ -247,7 +248,9 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("setGuideEntry(false);");
     expect(reports).toContain("setDeferredMounted(true);");
     expect(reports).toContain("setDeepDeferredMounted(true);");
-    expect(reports).toContain("}, guideRouteStageDurationMs + 32);");
+    expect(reports).toContain("window.addEventListener(guideRouteCompleteEvent, completeEntry, { once: true });");
+    expect(reports).toContain("completionFallbackTimer = window.setTimeout(() => {");
+    expect(reports).toContain("clearGuideRouteContinuity();");
     expect(reports).toContain('settleSelector=".reports-archive-final"');
     expect(reports).toContain("revealDelayMs={160}");
     expect(artwork).toContain("data-guide-entry-stage={layerEntryStage(layer.id)}");
@@ -258,7 +261,8 @@ describe("H5 motion isolation", () => {
       guideArchiveEntryTiming.bookDelayMs
       + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress,
     );
-    expect(guideArchiveEntryTiming.batchOverlapProgress).toBe(0.72);
+    expect(guideArchiveEntryTiming.batchOverlapProgress).toBe(0.8);
+    expect(guideArchiveBatchDelayMs).toBe(416);
     expect(guideRouteStageDurationMs).toBeGreaterThanOrEqual(
       guideArchiveBatchDelayMs + guideArchiveEntryTiming.batchDurationMs,
     );
@@ -266,19 +270,26 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
     expect(routeTransition).toContain('snapshot.className = `h5-guide-route-snapshot is-${guideRouteOrientation(profile)}`');
     expect(routeTransition).toContain('createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot")');
-    expect(routeTransition).toContain('createTransitionImage(guideRouteDestinationSrc, "h5-guide-route-destination-image")');
     expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp"');
-    expect(routeTransition).toContain('export const guideRouteDestinationSrc = "/design/guide/archive-transition-preview.webp"');
+    expect(routeTransition).not.toContain("archive-transition-preview.webp");
+    expect(routeTransition).toContain("createArchiveEntryTransitionVisual(createTransitionImage)");
+    expect(routeTransition).not.toContain('dataset.guideDestinationGroup = "archive-book"');
+    expect(routeTransition).not.toContain('dataset.guideDestinationGroup = "latest-batch"');
     expect(routeTransition).toContain('export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile');
     expect(routeTransition).not.toContain("function createGuideCompactComposition()");
     expect(routeTransition).toContain('character.append(createTransitionImage(src, `guide-landscape-crop-master is-${name}`))');
     expect(routeTransition).not.toContain('crop("character", guideRouteSnapshotSrc)');
     expect(routeTransition).toContain('track.className = "h5-guide-route-track"');
     expect(routeTransition).toContain("Promise.all(requiredImages.map((image) => waitForTransitionImage(image)))");
-    expect(routeTransition).toContain("const requiredImages = destinationFallback ? images.filter((image) => image !== destination) : images;");
+    expect(routeTransition).toContain("const requiredImages = destinationFallback ? images.filter((image) => !destinationImages.includes(image)) : images;");
     expect(routeTransition).toContain("const primed = await primeGuideRouteContinuity(profile, destinationFallback);");
     expect(routeTransition).toContain("host.replaceChildren(buffer)");
     expect(routeTransition).toContain("primeGeneration += 1;");
+    expect(routeTransition).toContain("void buffer.offsetWidth;");
+    expect(routeTransition).toContain("const stageStartedAt = performance.now();");
+    expect(routeTransition).toContain("if (expectedGeneration !== primeGeneration) return;");
+    expect(routeTransition).toContain("? guideRouteReducedReleaseDurationMs");
+    expect(routeTransition).toContain("? guideRouteFallbackReleaseDurationMs");
     expect(routeTransition).toContain("const routeDistance = Math.max(1, Math.round(sourceRect.height || window.innerHeight));");
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);');
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);');
@@ -289,7 +300,11 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain('buffer?.classList.add("is-releasing")');
     expect(routeTransition).not.toContain("freezeClone");
     expect(css).toContain(".h5-guide-route-snapshot { container-type: size; position: absolute;");
-    expect(css).toContain(".h5-guide-route-destination-image { position: absolute;");
+    expect(css).toContain(".h5-guide-route-buffer.is-preparing { visibility: hidden; }");
+    expect(css).toContain(".h5-guide-route-buffer.is-preparing .h5-guide-route-panel,");
+    expect(css).toContain("transition: none !important;");
+    expect(css).toContain(".h5-guide-archive-entry-group.is-book { z-index: 10; }");
+    expect(css).toContain(".h5-guide-archive-entry-group.is-batch { z-index: 11; }");
     expect(css).not.toContain("translate3d(100%,0,0)");
     expect(css).not.toMatch(/\.h5-guide-route-track\s*\{[^}]*height:\s*200%;/);
 
@@ -492,6 +507,7 @@ describe("H5 motion isolation", () => {
   it("keeps the reference composite only as a decoded layered-artwork fallback", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
+    const transitionVisual = readFileSync("src/components/h5/archive-entry-transition-visual.ts", "utf8");
     expect(reports).toContain("ArchiveArtwork, archiveArtworkCriticalAssets");
     expect(reports).not.toContain("archiveArtworkDeferredAssets");
     expect(reports).toContain("const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);");
@@ -506,7 +522,8 @@ describe("H5 motion isolation", () => {
     expect(artwork).toContain('moduleTwoAsset("资源 20.png")');
     expect(artwork).not.toContain("docs/input");
     expect(artwork).toContain('const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers"');
-    expect(artwork).toContain('moduleOneLayer("module-1-passed-copy", "module-1-passed-copy"');
+    expect(artwork).toContain("archiveEntryBatchLayers.map(entryLayer)");
+    expect(transitionVisual).toContain('layer("module-1-passed-copy", 63, 1821, 628, 113, 40)');
     expect(existsSync("public/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp")).toBe(true);
     expect(artwork).toContain("module-3-output.webp");
     expect(artwork).toContain('top: 4374.5, width: 1000, height: 1182.5, unoptimized: true');

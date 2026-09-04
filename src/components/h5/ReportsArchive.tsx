@@ -18,8 +18,8 @@ import {
   clearGuideRouteContinuity,
   guideArchiveBatchDelayMs,
   guideArchiveEntryTiming,
+  guideRouteCompleteEvent,
   guideRouteEntryAttribute,
-  guideRouteStageDurationMs,
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 import { pushHierarchyRoute } from "@/components/h5/hierarchy-navigation";
@@ -143,38 +143,52 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       return;
     }
     enteredFromGuide.current = true;
+    setFallbackImageMounted(false);
     setGuideEntry(true);
     let revealFrame = 0;
     let paintedFrame = 0;
-    let stageTimer = 0;
+    let completionFallbackTimer = 0;
     let deferredTimer = 0;
     let idleId: number | undefined;
+    let entryCompleted = false;
     const idleWindow = window as typeof window & { requestIdleCallback?: Window["requestIdleCallback"]; cancelIdleCallback?: Window["cancelIdleCallback"] };
+    const completeEntry = () => {
+      if (entryCompleted) return;
+      entryCompleted = true;
+      window.clearTimeout(completionFallbackTimer);
+      window.removeEventListener(guideRouteCompleteEvent, completeEntry);
+      setGuideEntry(false);
+      setDeferredMounted(true);
+      deferredTimer = window.setTimeout(() => {
+        if (typeof idleWindow.requestIdleCallback === "function") {
+          idleId = idleWindow.requestIdleCallback(() => setDeepDeferredMounted(true), { timeout: 1200 });
+        } else {
+          setDeepDeferredMounted(true);
+        }
+      }, 320);
+    };
+    window.addEventListener(guideRouteCompleteEvent, completeEntry, { once: true });
+    completionFallbackTimer = window.setTimeout(() => {
+      // A missed completion signal must not leave the fixed buffer or the
+      // document-level route lock behind indefinitely.
+      clearGuideRouteContinuity();
+      completeEntry();
+    }, 12_000);
     revealFrame = window.requestAnimationFrame(() => {
       paintedFrame = window.requestAnimationFrame(() => {
         // The mounted critical images are decoded and painted at this point.
-        // Release duplicate preload references before the two composited groups
-        // begin moving so mobile WebViews do not hit a texture-memory spike.
+        // Release duplicate preload references before the route buffer begins
+        // its single staged transition, then wait for its completion event.
         releaseHomepagePreloadedAssets();
         announceGuideRouteReady();
-        stageTimer = window.setTimeout(() => {
-          setGuideEntry(false);
-          setDeferredMounted(true);
-          deferredTimer = window.setTimeout(() => {
-            if (typeof idleWindow.requestIdleCallback === "function") {
-              idleId = idleWindow.requestIdleCallback(() => setDeepDeferredMounted(true), { timeout: 1200 });
-            } else {
-              setDeepDeferredMounted(true);
-            }
-          }, 320);
-        }, guideRouteStageDurationMs + 32);
       });
     });
     return () => {
       window.cancelAnimationFrame(revealFrame);
       window.cancelAnimationFrame(paintedFrame);
-      window.clearTimeout(stageTimer);
+      window.clearTimeout(completionFallbackTimer);
       window.clearTimeout(deferredTimer);
+      window.removeEventListener(guideRouteCompleteEvent, completeEntry);
       if (idleId !== undefined) idleWindow.cancelIdleCallback?.(idleId);
     };
   }, [preview, readinessReady]);
@@ -225,7 +239,15 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   }, [deferredMounted, deepDeferredMounted]);
 
   useEffect(() => {
-    if (!artworkReady || artworkFailed) {
+    if (artworkFailed) {
+      setFallbackImageMounted(true);
+      return;
+    }
+    if (enteredFromGuide.current) {
+      setFallbackImageMounted(false);
+      return;
+    }
+    if (!artworkReady) {
       setFallbackImageMounted(true);
       return;
     }
