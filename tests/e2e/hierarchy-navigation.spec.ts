@@ -187,6 +187,34 @@ test("a native category snapshot does not replay the generic page entrance after
   expect(settledFrame.transform).toBe("none");
 });
 
+test("a slow category asset hands the pressed archive to the painted loading page", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  let releaseAsset!: () => void;
+  const heldAsset = new Promise<void>((resolve) => { releaseAsset = resolve; });
+  await page.route("**/inspection-folder-layer.runtime.webp", async (route) => {
+    await heldAsset;
+    await route.continue();
+  });
+  await page.goto("/reports");
+  await waitForArchive(page);
+
+  const inspection = page.locator('.archive-inspection-mascot-hotspot[data-mascot-slug="inspection-projects"]');
+  await expect(inspection).toBeEnabled({ timeout: 15_000 });
+  await inspection.evaluate((element) => (element as HTMLButtonElement).click());
+  await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
+
+  const root = page.locator("html");
+  const loading = page.locator(".runtime-loading-layer:not(.is-leaving)");
+  await expect(root).toHaveAttribute("data-category-loading-feedback", /category-.+/, { timeout: 5_000 });
+  await expect(loading).toBeVisible();
+  await expect(loading.locator(".guide-loading-buffer-poster")).toHaveJSProperty("complete", true);
+
+  releaseAsset();
+  await waitForCategory(page);
+  await expect(root).not.toHaveAttribute("data-category-loading-feedback", /.+/);
+  await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 5_000 });
+});
+
 test("returning from a report restores the category reading position", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/reports");

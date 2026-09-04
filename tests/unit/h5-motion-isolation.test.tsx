@@ -225,7 +225,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-book,');
     expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-book,');
     expect(css).toContain("--guide-route-transition-easing: cubic-bezier(.25,.1,.25,1);");
-    expect(css).toContain('.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,420ms) ease-out var(--guide-route-batch-delay,416ms)');
+    expect(css).toContain('.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,480ms) ease-out var(--guide-route-batch-delay,480ms)');
     expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-batch { opacity: 1; transform: translate3d(0,0,0); animation: none; will-change: auto; }');
     expect(css).toContain(".h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0);");
     expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) ease-out;");
@@ -255,14 +255,14 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("revealDelayMs={160}");
     expect(artwork).toContain("data-guide-entry-stage={layerEntryStage(layer.id)}");
     expect(guideRouteBufferReleaseDurationMs).toBe(520);
-    expect(guideArchiveEntryTiming.bookDurationMs).toBe(520);
-    expect(guideArchiveEntryTiming.batchDurationMs).toBe(420);
+    expect(guideArchiveEntryTiming.bookDurationMs).toBe(600);
+    expect(guideArchiveEntryTiming.batchDurationMs).toBe(480);
     expect(guideArchiveBatchDelayMs).toBe(
       guideArchiveEntryTiming.bookDelayMs
       + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress,
     );
     expect(guideArchiveEntryTiming.batchOverlapProgress).toBe(0.8);
-    expect(guideArchiveBatchDelayMs).toBe(416);
+    expect(guideArchiveBatchDelayMs).toBe(480);
     expect(guideRouteStageDurationMs).toBeGreaterThanOrEqual(
       guideArchiveBatchDelayMs + guideArchiveEntryTiming.batchDurationMs,
     );
@@ -456,7 +456,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain(".runtime-loading-layer { position: fixed;");
     expect(css).toContain("z-index: 2147483600;");
     expect(css).toContain("#h5-category-route-buffer-host { position: fixed; z-index: 2147483640;");
-    expect(css).toContain("html[data-category-route-buffer] .runtime-loading-layer { visibility: hidden; }");
+    expect(css).toContain("html[data-category-route-buffer]:not([data-category-loading-feedback]) .runtime-loading-layer { visibility: hidden; }");
+    expect(css).toContain("html[data-category-loading-feedback] .runtime-loading-layer { visibility: visible; z-index: 2147483646; }");
     expect(css).toContain(".guide-loading-buffer.is-leaving");
     expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*width:\s*min\([^;}]*var\(--h5-content-width\)\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;/);
     expect(css).toMatch(/\.guide-loading-buffer-poster\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/);

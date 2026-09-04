@@ -712,8 +712,8 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
       delays: toMilliseconds(style.transitionDelay),
     };
   });
-  expect(routeTiming.durations).toEqual([420, 420]);
-  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(416, 3));
+  expect(routeTiming.durations).toEqual([480, 480]);
+  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(480, 3));
 
   await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
   await expect(guideBuffer).toHaveClass(/is-releasing/);
@@ -760,7 +760,9 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
     && isPartialRibbonClip(sample.clip))).toBe(true);
   const firstRelease = stagedSamples.findIndex((sample) => sample.bufferReleasing);
   expect(firstRelease).toBeGreaterThan(0);
-  expect(stagedSamples[firstRelease].routeBatchOpacity ?? 0, "route buffer cannot release before latest-batch settles").toBeGreaterThanOrEqual(.97);
+  // Once `is-releasing` is sampled, effectiveOpacity also includes the
+  // already-fading parent buffer. Check the last pre-release frame instead.
+  expect(stagedSamples[firstRelease - 1].routeBatchOpacity ?? 0, "route buffer cannot release before latest-batch settles").toBeGreaterThanOrEqual(.97);
 
   const scrollMetrics = await page.evaluate(() => ({ height: document.scrollingElement?.scrollHeight ?? 0, viewport: window.innerHeight }));
   expect(scrollMetrics.height).toBeGreaterThan(scrollMetrics.viewport);

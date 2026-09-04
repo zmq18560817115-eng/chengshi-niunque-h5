@@ -7,6 +7,8 @@ import {
   categoryRouteBufferReleaseDurationMs,
   categoryRouteCommitTimeoutMs,
   categoryRouteEntryAttribute,
+  categoryRouteLoadingFeedbackAttribute,
+  categoryRouteLoadingFeedbackDelayMs,
   categoryRouteNativeTransitionAttribute,
   categoryRouteReadyEvent,
   categoryRouteReadyTimeoutMs,
@@ -68,6 +70,7 @@ describe("category route transition continuity", () => {
     vi.useFakeTimers();
     document.documentElement.removeAttribute(categoryRouteBufferAttribute);
     document.documentElement.removeAttribute(categoryRouteNativeTransitionAttribute);
+    document.documentElement.removeAttribute(categoryRouteLoadingFeedbackAttribute);
     document.documentElement.removeAttribute(categoryRouteAttemptAttribute);
     document.documentElement.removeAttribute(categoryRouteEntryAttribute);
     Object.defineProperty(document, "startViewTransition", { configurable: true, value: undefined });
@@ -81,6 +84,7 @@ describe("category route transition continuity", () => {
     vi.restoreAllMocks();
     document.documentElement.removeAttribute(categoryRouteBufferAttribute);
     document.documentElement.removeAttribute(categoryRouteNativeTransitionAttribute);
+    document.documentElement.removeAttribute(categoryRouteLoadingFeedbackAttribute);
     document.documentElement.removeAttribute(categoryRouteAttemptAttribute);
     document.documentElement.removeAttribute(categoryRouteEntryAttribute);
     document.body.innerHTML = "";
@@ -195,6 +199,123 @@ describe("category route transition continuity", () => {
     await Promise.resolve();
     expect(document.documentElement).not.toHaveAttribute(categoryRouteNativeTransitionAttribute);
     expect(document.documentElement).not.toHaveAttribute(categoryRouteAttemptAttribute);
+  });
+
+  it("hands a slow native route to the painted system loading page instead of freezing the archive", async () => {
+    const { flushFrame } = installManualAnimationFrames();
+    const finished = deferred<void>();
+    let updatePromise: Promise<void> | undefined;
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void | Promise<void>) => {
+        updatePromise = Promise.resolve(update());
+        return { finished: finished.promise };
+      }),
+    });
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    });
+    document.documentElement.setAttribute(categoryRouteEntryAttribute, "inspection-projects");
+
+    navigateWithCategoryContinuity(vi.fn());
+    const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
+    const layer = document.createElement("div");
+    layer.className = "runtime-loading-layer is-loading";
+    const poster = document.createElement("img");
+    poster.className = "guide-loading-buffer-poster";
+    Object.defineProperty(poster, "complete", { configurable: true, value: true });
+    Object.defineProperty(poster, "naturalWidth", { configurable: true, value: 750 });
+    Object.defineProperty(poster, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+    layer.append(poster);
+    document.body.append(layer);
+
+    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    await Promise.resolve();
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+    flushFrame();
+    flushFrame();
+    await updatePromise;
+    expect(document.documentElement).toHaveAttribute(categoryRouteNativeTransitionAttribute, attemptId);
+
+    finished.resolve();
+    await finished.promise;
+    await Promise.resolve();
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteNativeTransitionAttribute);
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteAttemptAttribute);
+  });
+
+  it("removes the fallback clone behind a painted loading page when the target becomes ready", async () => {
+    const { flushFrame } = installManualAnimationFrames();
+    document.documentElement.setAttribute(categoryRouteEntryAttribute, "review-assurance");
+    navigateWithCategoryContinuity(vi.fn());
+    const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
+    flushFrame();
+    flushFrame();
+
+    const layer = document.createElement("div");
+    layer.className = "runtime-loading-layer is-loading";
+    const poster = document.createElement("img");
+    poster.className = "guide-loading-buffer-poster";
+    Object.defineProperty(poster, "complete", { configurable: true, value: true });
+    Object.defineProperty(poster, "naturalWidth", { configurable: true, value: 750 });
+    Object.defineProperty(poster, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+    layer.append(poster);
+    document.body.append(layer);
+
+    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    await Promise.resolve();
+    flushFrame();
+    flushFrame();
+    await Promise.resolve();
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+
+    announceCategoryRouteMounted({ attemptId, slug: "review-assurance" });
+    announceCategoryRouteReady({ attemptId, slug: "review-assurance", status: "ready" });
+    await Promise.resolve();
+    expect(document.getElementById(categoryRouteBufferHostId)).toBeEmptyDOMElement();
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteBufferAttribute);
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
+    expect(layer).toBeInTheDocument();
+  });
+
+  it("keeps a committed loading handoff when readiness lands between its paint frames", async () => {
+    const { flushFrame } = installManualAnimationFrames();
+    document.documentElement.setAttribute(categoryRouteEntryAttribute, "review-assurance");
+    navigateWithCategoryContinuity(vi.fn());
+    const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
+    flushFrame();
+    flushFrame();
+
+    const layer = document.createElement("div");
+    layer.className = "runtime-loading-layer is-loading";
+    const poster = document.createElement("img");
+    poster.className = "guide-loading-buffer-poster";
+    Object.defineProperty(poster, "complete", { configurable: true, value: true });
+    Object.defineProperty(poster, "naturalWidth", { configurable: true, value: 750 });
+    Object.defineProperty(poster, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+    layer.append(poster);
+    document.body.append(layer);
+
+    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    await Promise.resolve();
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+    announceCategoryRouteMounted({ attemptId, slug: "review-assurance" });
+    announceCategoryRouteReady({ attemptId, slug: "review-assurance", status: "ready" });
+    await Promise.resolve();
+    expect(document.querySelector(".h5-category-route-buffer")).toBeInTheDocument();
+
+    flushFrame();
+    await Promise.resolve();
+    expect(document.querySelector(".h5-category-route-buffer")).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+
+    flushFrame();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.getElementById(categoryRouteBufferHostId)).toBeEmptyDOMElement();
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
   });
 
   it("cancels stale buffer frames and lets only the newest preparation own cleanup", async () => {
