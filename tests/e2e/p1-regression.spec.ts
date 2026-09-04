@@ -581,7 +581,7 @@ for (const viewport of targetViewports) {
         expect(state.destinationOpacity).toBeGreaterThan(0.16);
         expect(state.overlap, `spatial overlap at ${transitionProgress[index] * 100}%`).toBeGreaterThanOrEqual(0.12);
       }
-      if (transitionProgress[index] < .8) {
+      if (transitionProgress[index] <= .8) {
         expect(state.destinationBatchOpacity, `latest-batch must stay hidden at ${transitionProgress[index] * 100}%`).toBeLessThanOrEqual(.03);
       }
     }
@@ -607,7 +607,15 @@ for (const viewport of targetViewports) {
       if (!routeSnapshotBox) throw new Error("portrait route snapshot has no layout box");
       expect(routeSnapshotBox.width / routeSnapshotBox.height).toBeCloseTo(6 / 13, 3);
       expect(routeSnapshotBox.x + routeSnapshotBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
-      expect(routeSnapshotBox.y + routeSnapshotBox.height / 2).toBeCloseTo(viewport.height / 2, 0);
+      const routeSnapshotCenterY = routeSnapshotBox.y + routeSnapshotBox.height / 2;
+      const routeEndGuideY = await routeBuffer.evaluate((element) => Number.parseFloat(
+        element.style.getPropertyValue("--guide-route-end-guide-y"),
+      ));
+      // The route buffer is sampled while the guide is actively fading upward.
+      // Its snapshot center may be anywhere between the gesture handoff frame
+      // and the final translated frame, but it must remain on that exact path.
+      expect(routeSnapshotCenterY).toBeLessThanOrEqual(viewport.height / 2 + 1);
+      expect(routeSnapshotCenterY).toBeGreaterThanOrEqual(viewport.height / 2 + routeEndGuideY - 1);
       expect(routeSnapshotBox.width).toBeCloseTo(Math.min(viewport.width, expectedMaximumFrameWidth), 0);
       expect(routeSnapshotBox.height).toBeCloseTo(Math.min(viewport.width, expectedMaximumFrameWidth) * 13 / 6, 0);
       await expect.poll(async () => routeSnapshotImage.evaluate((element) => element instanceof HTMLImageElement

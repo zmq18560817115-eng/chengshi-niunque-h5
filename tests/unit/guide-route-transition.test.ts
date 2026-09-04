@@ -5,6 +5,7 @@ import {
   guideRouteEntryAttribute,
   guideRouteSnapshotSrc,
   guideRouteStageDurationMs,
+  getGuideArchiveBatchProgress,
   navigateWithGuideContinuity,
   prepareGuideRouteContinuity,
   primeGuideRouteContinuity,
@@ -54,6 +55,13 @@ describe("guide route transition priming", () => {
     if (originalDecode) Object.defineProperty(HTMLImageElement.prototype, "decode", originalDecode);
     else delete (HTMLImageElement.prototype as Partial<HTMLImageElement>).decode;
     document.body.innerHTML = "";
+  });
+
+  it("starts the latest-batch module only after the book reaches exactly eighty percent", () => {
+    expect(getGuideArchiveBatchProgress(0.7999)).toBe(0);
+    expect(getGuideArchiveBatchProgress(0.8)).toBe(0);
+    expect(getGuideArchiveBatchProgress(0.81)).toBeGreaterThan(0);
+    expect(getGuideArchiveBatchProgress(1)).toBe(1);
   });
 
   it("primes decoded portrait assets, keeps the buffer hidden, and reuses it on commit", async () => {
@@ -171,7 +179,9 @@ describe("guide route transition priming", () => {
     expect(buffer).not.toHaveClass("is-releasing");
 
     expect(buffer).not.toHaveClass("is-releasing");
-    await vi.advanceTimersByTimeAsync(guideRouteStageDurationMs);
+    await vi.advanceTimersByTimeAsync(guideRouteStageDurationMs - 1);
+    expect(buffer).not.toHaveClass("is-releasing");
+    await vi.advanceTimersByTimeAsync(1);
     rafCallbacks.shift()?.(guideRouteStageDurationMs);
     expect(buffer).toHaveClass("is-releasing");
   });

@@ -703,17 +703,20 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   const routeBatch = guideBuffer.locator('[data-guide-destination-group="latest-batch"]');
   const routeTiming = await routeBatch.evaluate((element) => {
     const style = getComputedStyle(element);
+    const panel = element.closest(".h5-guide-route-buffer")?.querySelector<HTMLElement>(".h5-guide-route-panel");
     const toMilliseconds = (value: string) => value.split(",").map((part) => {
       const time = part.trim();
       return time.endsWith("ms") ? Number.parseFloat(time) : Number.parseFloat(time) * 1000;
     });
     return {
+      panelDurations: panel ? toMilliseconds(getComputedStyle(panel).transitionDuration) : [],
       durations: toMilliseconds(style.transitionDuration),
       delays: toMilliseconds(style.transitionDelay),
     };
   });
-  expect(routeTiming.durations).toEqual([480, 480]);
-  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(480, 3));
+  expect(routeTiming.panelDurations).toEqual([630, 630]);
+  expect(routeTiming.durations).toEqual([504, 504]);
+  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(504, 3));
 
   await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
   await expect(guideBuffer).toHaveClass(/is-releasing/);
@@ -745,7 +748,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   expect(stagedSamples.slice(0, firstBatchVisible).every((sample) => (sample.batchOpacity ?? 0) <= .03)).toBe(true);
   const commitStart = stagedSamples.find((sample) => sample.commitState === "committing");
   expect(commitStart).toBeDefined();
-  expect(stagedSamples[firstBatchVisible].at - (commitStart?.at ?? stagedSamples[firstBatchVisible].at)).toBeGreaterThanOrEqual(340);
+  expect(stagedSamples[firstBatchVisible].at - (commitStart?.at ?? stagedSamples[firstBatchVisible].at)).toBeGreaterThanOrEqual(470);
   for (let index = firstBookVisible + 1; index < stagedSamples.length; index += 1) {
     expect(stagedSamples[index].bookOpacity ?? 0).toBeGreaterThanOrEqual((stagedSamples[index - 1].bookOpacity ?? 0) - .04);
   }

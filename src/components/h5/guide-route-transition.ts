@@ -9,7 +9,7 @@ export const guideRouteNavigationDelayMs = 16;
 export const guideRouteBufferReleaseDurationMs = 520;
 const guideRouteReducedReleaseDurationMs = 150;
 const guideRouteFallbackReleaseDurationMs = 180;
-export const guideRouteCommitDurationMs = 600;
+export const guideRouteCommitDurationMs = 630;
 export const guideRouteAssetTimeoutMs = 4500;
 export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp";
 export const guideRouteForegroundSrc = "/design/guide/guide-foreground-top.webp";
@@ -45,9 +45,9 @@ export function getGuideTransitionVisualState(progressValue: number, viewportHei
 
 export const guideArchiveEntryTiming = {
   bookDelayMs: 0,
-  bookDurationMs: 600,
+  bookDurationMs: guideRouteCommitDurationMs,
   batchOverlapProgress: 0.8,
-  batchDurationMs: 480,
+  batchDurationMs: 504,
 } as const;
 
 export function getGuideArchiveBatchProgress(progressValue: number) {
@@ -57,7 +57,7 @@ export function getGuideArchiveBatchProgress(progressValue: number) {
 
 export const guideArchiveBatchDelayMs = guideArchiveEntryTiming.bookDelayMs
   + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress;
-export const guideRouteStageSettleMs = 80;
+export const guideRouteStageSettleMs = 120;
 export const guideRouteStageDurationMs = guideArchiveBatchDelayMs
   + guideArchiveEntryTiming.batchDurationMs
   + guideRouteStageSettleMs;
