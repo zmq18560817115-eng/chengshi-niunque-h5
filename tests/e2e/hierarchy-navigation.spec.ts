@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const hierarchyStateKey = "__honestNutriH5Hierarchy";
+const categorySlugs = ["inspection-projects", "review-assurance", "production-traceability"] as const;
 
 async function historyLength(page: Page) {
   return page.evaluate(() => window.history.length);
@@ -35,7 +36,9 @@ async function waitForArchive(page: Page) {
 
 async function waitForCategory(page: Page) {
   await expect(page.locator(".category-page-final")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".category-page-scroll-region")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator("#h5-category-route-buffer-host > *")).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator("html")).not.toHaveAttribute("data-category-loading-feedback", /.+/, { timeout: 15_000 });
 }
 
 test("guide is replaced while category and report follow the platform Back hierarchy", async ({ page }) => {
@@ -116,76 +119,108 @@ test("a direct report link right-swipes to its canonical parent without reopenin
   expect(page.url()).not.toBe(reportUrl);
 });
 
-test("the reduced-motion fallback keeps every archive layer painted while a category route commits", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/reports");
-  await waitForArchive(page);
+for (const categorySlug of categorySlugs) {
+  test(`${categorySlug} synchronously hands an archive tap to the persistent loading page`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.addInitScript(() => {
+      const trackedWindow = window as typeof window & { __categoryStartViewTransitionCalls?: number };
+      trackedWindow.__categoryStartViewTransitionCalls = 0;
+      Object.defineProperty(document, "startViewTransition", {
+        configurable: true,
+        value: (update: () => void | Promise<void>) => {
+          trackedWindow.__categoryStartViewTransitionCalls = (trackedWindow.__categoryStartViewTransitionCalls ?? 0) + 1;
+          const updateCallbackDone = Promise.resolve().then(update);
+          return {
+            ready: Promise.resolve(),
+            updateCallbackDone,
+            finished: updateCallbackDone,
+            skipTransition: () => undefined,
+          };
+        },
+      });
+    });
+    await page.setViewportSize({ width: 375, height: 812 });
 
-  const review = page.locator('.archive-category-hotspot[data-slug="review-assurance"]');
-  await expect(review).toBeEnabled({ timeout: 15_000 });
-  await review.scrollIntoViewIfNeeded();
-  await review.evaluate((element) => (element as HTMLButtonElement).click());
+    let releaseCategoryRoute!: () => void;
+    let routeReleased = false;
+    let heldCategoryRequests = 0;
+    const heldCategoryRoute = new Promise<void>((resolve) => {
+      releaseCategoryRoute = () => {
+        if (routeReleased) return;
+        routeReleased = true;
+        resolve();
+      };
+    });
+    await page.route(`**/reports/${categorySlug}**`, async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const isCategoryRsc = url.pathname === `/reports/${categorySlug}`
+        && (url.searchParams.has("_rsc") || request.headers().rsc === "1");
+      if (!isCategoryRsc) {
+        await route.continue();
+        return;
+      }
+      heldCategoryRequests += 1;
+      await heldCategoryRoute;
+      await route.continue();
+    });
 
-  const clone = page.locator("#h5-category-route-buffer-host .reports-archive-final.is-category-route-buffer-clone");
-  await expect(clone).toHaveCount(1);
-  const frozenFrame = await clone.evaluate((element) => {
-    const artwork = element.querySelector<HTMLElement>(".reports-archive-art");
-    const moduleLayers = [...element.querySelectorAll<HTMLElement>("[data-archive-module]")];
-    const referenceFallback = element.querySelector<HTMLElement>(".reports-archive-reference-fallback");
-    const referenceFallbackImage = referenceFallback?.querySelector<HTMLImageElement>(".reports-archive-reference-fallback-image") ?? null;
-    const fallbackStyle = referenceFallback ? getComputedStyle(referenceFallback) : null;
-    return {
-      rootAnimation: getComputedStyle(element).animationName,
-      rootOpacity: getComputedStyle(element).opacity,
-      artworkAnimation: artwork ? getComputedStyle(artwork).animationName : null,
-      artworkOpacity: artwork ? getComputedStyle(artwork).opacity : null,
-      moduleSlugs: [...new Set(moduleLayers.map((layer) => layer.dataset.archiveModule))],
-      referenceFallbackVisible: Boolean(referenceFallbackImage?.complete && referenceFallbackImage.naturalWidth > 0
-        && fallbackStyle?.display !== "none" && fallbackStyle?.visibility !== "hidden" && Number(fallbackStyle?.opacity) > 0),
-      hiddenModuleLayers: moduleLayers.filter((layer) => {
-        const style = getComputedStyle(layer);
-        return style.visibility === "hidden" || style.display === "none" || Number(style.opacity) === 0;
-      }).length,
-    };
+    try {
+      await page.goto("/reports");
+      await waitForArchive(page);
+      const categoryButton = page.locator(`.archive-category-hotspot[data-slug="${categorySlug}"]`);
+      await expect(categoryButton).toBeEnabled({ timeout: 15_000 });
+      await categoryButton.scrollIntoViewIfNeeded();
+
+      // element.click() and the returned measurements run in one browser task.
+      // The marker and painted persistent surface must therefore be installed
+      // synchronously, before a network response or another animation frame.
+      const immediateHandoff = await categoryButton.evaluate((element) => {
+        (element as HTMLButtonElement).click();
+        const root = document.documentElement;
+        const loadingHost = document.querySelector<HTMLElement>("#h5-category-route-loading-host");
+        const loading = loadingHost?.querySelector<HTMLElement>(".runtime-loading-layer.is-persistent") ?? null;
+        const loadingStyle = loading ? getComputedStyle(loading) : null;
+        const trackedWindow = window as typeof window & { __categoryStartViewTransitionCalls?: number };
+        return {
+          attempt: root.getAttribute("data-category-route-attempt"),
+          loadingFeedback: root.getAttribute("data-category-loading-feedback"),
+          loadingAriaHidden: loadingHost?.getAttribute("aria-hidden") ?? null,
+          loadingOpacity: loadingStyle ? Number(loadingStyle.opacity) : 0,
+          loadingVisibility: loadingStyle?.visibility ?? null,
+          loadingDisplay: loadingStyle?.display ?? null,
+          bufferChildren: document.querySelector("#h5-category-route-buffer-host")?.childElementCount ?? 0,
+          hasBufferMarker: root.hasAttribute("data-category-route-buffer"),
+          hasNativeMarker: root.hasAttribute("data-category-native-transition"),
+          startViewTransitionCalls: trackedWindow.__categoryStartViewTransitionCalls ?? 0,
+        };
+      });
+
+      expect(immediateHandoff.attempt).toMatch(/^category-/);
+      expect(immediateHandoff.loadingFeedback).toBe(immediateHandoff.attempt);
+      expect(immediateHandoff.loadingAriaHidden).toBe("false");
+      expect(immediateHandoff.loadingOpacity).toBe(1);
+      expect(immediateHandoff.loadingVisibility).toBe("visible");
+      expect(immediateHandoff.loadingDisplay).not.toBe("none");
+      expect(immediateHandoff.bufferChildren).toBe(0);
+      expect(immediateHandoff.hasBufferMarker).toBe(false);
+      expect(immediateHandoff.hasNativeMarker).toBe(false);
+      expect(immediateHandoff.startViewTransitionCalls).toBe(0);
+      await expect.poll(() => heldCategoryRequests, { timeout: 5_000 }).toBeGreaterThan(0);
+      await expect(page.locator("#h5-category-route-buffer-host > *")).toHaveCount(0);
+      await expect(page.locator("html")).not.toHaveAttribute("data-category-native-transition", /.+/);
+
+      releaseCategoryRoute();
+      await expect(page).toHaveURL(new RegExp(`/reports/${categorySlug}$`));
+      await waitForCategory(page);
+      await expect(page.locator("html")).not.toHaveAttribute("data-category-route-attempt", /.+/);
+      expect(await page.evaluate(() => (window as typeof window & { __categoryStartViewTransitionCalls?: number })
+        .__categoryStartViewTransitionCalls ?? 0)).toBe(0);
+    } finally {
+      releaseCategoryRoute();
+    }
   });
-  expect(frozenFrame.rootAnimation).toBe("none");
-  expect(frozenFrame.rootOpacity).toBe("1");
-  expect(frozenFrame.artworkAnimation).toBe("none");
-  expect(frozenFrame.artworkOpacity).toBe("1");
-  const hasEveryModuleLayer = ["inspection-projects", "review-assurance", "production-traceability"]
-    .every((slug) => frozenFrame.moduleSlugs.includes(slug));
-  expect(hasEveryModuleLayer || frozenFrame.referenceFallbackVisible).toBe(true);
-  expect(frozenFrame.hiddenModuleLayers).toBe(0);
-
-  await expect(page).toHaveURL(/\/reports\/review-assurance$/);
-  await waitForCategory(page);
-});
-
-test("a native category snapshot does not replay the generic page entrance after release", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/reports");
-  await waitForArchive(page);
-  test.skip(!(await page.evaluate(() => typeof document.startViewTransition === "function")), "View Transitions API is unavailable");
-
-  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
-  await expect(inspection).toBeEnabled({ timeout: 15_000 });
-  await inspection.evaluate((element) => (element as HTMLButtonElement).click());
-  await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
-  await waitForCategory(page);
-  await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute("data-category-native-transition"))).toBeNull();
-
-  const settledFrame = await page.locator(".category-page-final").evaluate((element) => ({
-    entry: element.getAttribute("data-route-entry"),
-    animation: getComputedStyle(element).animationName,
-    opacity: getComputedStyle(element).opacity,
-    transform: getComputedStyle(element).transform,
-  }));
-  expect(settledFrame.entry).toBe("reports-archive-native");
-  expect(settledFrame.animation).toBe("none");
-  expect(settledFrame.opacity).toBe("1");
-  expect(settledFrame.transform).toBe("none");
-});
+}
 
 test("a slow category asset hands the pressed archive to the painted loading page", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
@@ -359,7 +394,7 @@ test("returning from a report restores the category reading position", async ({ 
   await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
   await waitForCategory(page);
 
-  const category = page.locator(".category-page-final");
+  const category = page.locator(".category-page-scroll-region");
   const savedScroll = await category.evaluate((element) => {
     element.scrollTop = Math.min(90, element.scrollHeight - element.clientHeight);
     return element.scrollTop;

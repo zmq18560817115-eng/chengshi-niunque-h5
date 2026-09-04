@@ -176,7 +176,7 @@ describe("H5 motion isolation", () => {
 
   it.each([
     [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
-    [393, 797], [393, 852], [414, 896], [430, 932], [768, 1024], [766, 1472],
+    [393, 797], [393, 852], [412, 892], [414, 896], [428, 926], [430, 932], [768, 1024], [766, 1472],
   ])("maps every %ix%i portrait width to the shared 6:13 guide canvas", (width) => {
     const canvasHeight = width * 13 / 6;
     const landmarks = [
@@ -344,7 +344,7 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain(".archive-section-title-group.archive-module-exit-layer");
     expect(css).not.toContain("@keyframes archive-category-exit-up-fade");
     expect(archive).toContain("document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);");
-    expect(archive).toContain("navigateWithCategoryContinuity(() => pushHierarchyRoute");
+    expect(archive).toContain("navigateWithCategoryLoadingHandoff(() => pushHierarchyRoute");
     expect(archive).toContain("data-exit-slug={exitingSlug ?? undefined}");
     expect(artwork).toContain('"module-2-review-folder": "review-assurance"');
     expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
@@ -379,40 +379,60 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("html[data-category-native-transition]::view-transition-old(root)");
     expect(css).toContain('background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp")');
     expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 0");
+    expect(routeTransition).toContain("navigateWithCategoryLoadingHandoff");
+    expect(routeTransition).toContain("createLoadingFeedback(attemptId, { immediate: true })");
     expect(archive).not.toContain("prepareCategoryRouteContinuity();");
   });
 
   it.each([
-    [320, 568], [360, 640], [375, 667], [375, 812], [390, 844],
-    [393, 852], [414, 896], [430, 932],
-  ])("keeps the approved detail canvas width-first with internal vertical scrolling at %ix%i", (width, height) => {
+    [320, 568], [360, 640], [375, 667],
+  ])("keeps short %ix%i screens width-first with internal category scrolling", (width, height) => {
     const canvasWidth = width;
     const canvasHeight = canvasWidth * 4333 / 2000;
-    const visualContentHeight = canvasWidth * 4100 / 2000;
     expect(canvasWidth).toBe(width);
     expect(canvasHeight / canvasWidth).toBeCloseTo(4333 / 2000, 8);
-    expect(Math.max(0, visualContentHeight - height)).toBeGreaterThanOrEqual(0);
+    expect(canvasHeight).toBeGreaterThan(height);
     const css = readFileSync("src/app/globals.css", "utf8");
     const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
     expect(css).toContain(".category-page-viewport { position: relative;");
     expect(css).toContain("inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
-    expect(css).toMatch(/\.category-page-final\s*\{[^}]*display:\s*block;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;[^}]*container-type:\s*inline-size;/);
-    expect(css).toMatch(/\.category-page-viewport\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*aspect-ratio:\s*2000 \/ 4333;[^}]*overflow:\s*hidden;/);
+    expect(css).toMatch(/\.category-page-final\s*\{[^}]*overflow:\s*hidden;[^}]*container:\s*category-stage \/ size;/);
+    expect(css).toMatch(/\.category-page-scroll-region\s*\{[^}]*height:\s*100%;[^}]*overflow-y:\s*auto;[^}]*touch-action:\s*pan-y;/);
+    expect(css).toMatch(/\.category-page-viewport\s*\{[^}]*width:\s*100cqw;[^}]*max-width:\s*100%;[^}]*aspect-ratio:\s*2000 \/ 4333;[^}]*overflow:\s*hidden;/);
     expect(css).toContain("touch-action: pan-y;");
-    expect(css).not.toContain("width: min(100%, 48.780488cqh);");
     expect(css).toContain('html[data-h5-page-lock="category"]');
     expect(css).toContain("aspect-ratio: 2000 / 4333;");
     expect(css).toContain("container-type: inline-size;");
     expect(css).toContain('background-image: url("/design/final-v1/category-runtime/category-paper-base.runtime.webp")');
     expect(css).toContain("background-position: center top;");
-    expect(css).toContain("background-size: auto min(216.65vw,1624.875px);");
+    expect(css).toContain("background-size: auto min(216.65cqw,1624.875px);");
     expect(category).toContain('data-artwork-source="layered-components"');
     expect(category).toContain('data-category-layer={layer.id}');
     expect(category).not.toContain("-source.jpg");
     expect(category).not.toContain('"--category-page-background-image"');
     expect(category).toContain('root.setAttribute("data-h5-page-lock", "category")');
     expect(category).toContain("window.scrollTo(0, 0)");
+    expect(category).toContain('className="category-page-scroll-region"');
     expect(category).toContain('className="category-page-viewport"');
+  });
+
+  it.each([
+    [375, 812], [390, 844], [393, 797], [393, 852], [412, 892],
+    [414, 896], [428, 926], [430, 932],
+  ])("fits and locks the complete approved detail canvas at %ix%i", (width, height) => {
+    const canvasWidth = Math.min(width, height * 2000 / 4333);
+    const canvasHeight = canvasWidth * 4333 / 2000;
+    expect(canvasWidth).toBeGreaterThanOrEqual(320);
+    expect(canvasWidth).toBeLessThanOrEqual(width);
+    expect(canvasHeight).toBeLessThanOrEqual(height + 1e-8);
+    expect(canvasHeight / canvasWidth).toBeCloseTo(4333 / 2000, 8);
+
+    const css = readFileSync("src/app/globals.css", "utf8");
+    const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
+    expect(css).toContain("@container category-stage (min-width: 320px) and (min-height: 693.28px)");
+    expect(css).toMatch(/@container category-stage[^}]+\.category-page-scroll-region\s*\{[^}]*overflow-y:\s*hidden;[^}]*touch-action:\s*pan-x;[\s\S]*}/);
+    expect(css).toContain("width: min(100cqw,46.1574cqh);");
+    expect(category).toContain("scrollHeight > scrollRegion.clientHeight + 1");
   });
 
   it("keeps report images in document scroll at 100% and isolates the zoomed pan surface", () => {

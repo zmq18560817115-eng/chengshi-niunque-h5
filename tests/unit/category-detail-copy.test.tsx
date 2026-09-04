@@ -159,10 +159,11 @@ describe("CategoryDetail dynamic card copy", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     const initialPage = container.querySelector<HTMLElement>(".category-page-final");
-    expect(initialPage?.scrollTop).toBe(86);
+    const initialScrollRegion = container.querySelector<HTMLElement>(".category-page-scroll-region");
+    expect(initialScrollRegion?.scrollTop).toBe(86);
     await act(async () => { resolveReadiness({ total: categoryReadinessAssets["inspection-projects"].length, failed: [] }); });
 
-    await waitFor(() => expect(container.querySelector<HTMLElement>(".category-page-final")?.scrollTop).toBe(86));
+    await waitFor(() => expect(container.querySelector<HTMLElement>(".category-page-scroll-region")?.scrollTop).toBe(86));
     expect(container.querySelector<HTMLElement>(".category-page-final")).toBe(initialPage);
   });
 
@@ -170,27 +171,61 @@ describe("CategoryDetail dynamic card copy", () => {
     vi.useFakeTimers();
     vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise(() => undefined));
     const { container } = render(<CategoryDetail module={moduleFixture} />);
-    const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
+    const scrollRegion = container.querySelector<HTMLElement>(".category-page-scroll-region");
 
-    categoryPage!.scrollTop = 86;
+    scrollRegion!.scrollTop = 86;
     act(() => vi.advanceTimersByTime(120));
 
-    expect(categoryPage?.scrollTop).toBe(86);
+    expect(scrollRegion?.scrollTop).toBe(86);
     vi.useRealTimers();
+  });
+
+  it("clears a stale reading offset when the responsive scroll region fits the viewport", () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) { resizeCallback = callback; }
+      observe = observe;
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    saveCategoryScrollPosition(moduleFixture.slug, 86);
+
+    const { container, unmount } = render(<CategoryDetail module={moduleFixture} />);
+    const scrollRegion = container.querySelector<HTMLElement>(".category-page-scroll-region");
+    expect(scrollRegion).not.toBeNull();
+    expect(observe).toHaveBeenCalledTimes(2);
+
+    Object.defineProperties(scrollRegion!, {
+      clientHeight: { configurable: true, value: 700 },
+      scrollHeight: { configurable: true, value: 900 },
+    });
+    act(() => resizeCallback?.([], {} as ResizeObserver));
+    expect(scrollRegion?.scrollTop).toBe(86);
+
+    Object.defineProperty(scrollRegion!, "scrollHeight", { configurable: true, value: 701 });
+    act(() => resizeCallback?.([], {} as ResizeObserver));
+    expect(scrollRegion?.scrollTop).toBe(0);
+
+    unmount();
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 
   it("does not overwrite the saved reading position while the report route is committing", () => {
     vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise(() => undefined));
     const { container, unmount } = render(<CategoryDetail module={moduleFixture} />);
-    const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
+    const scrollRegion = container.querySelector<HTMLElement>(".category-page-scroll-region");
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
-    expect(categoryPage).not.toBeNull();
+    expect(scrollRegion).not.toBeNull();
     expect(firstCard).not.toBeNull();
 
-    categoryPage!.scrollTop = 86;
+    scrollRegion!.scrollTop = 86;
     fireEvent.click(firstCard!);
     expect(readCategoryScrollPosition(moduleFixture.slug)).toBe(86);
-    categoryPage!.scrollTop = 0;
+    scrollRegion!.scrollTop = 0;
     unmount();
 
     expect(readCategoryScrollPosition(moduleFixture.slug)).toBe(86);
@@ -245,9 +280,10 @@ describe("CategoryDetail dynamic card copy", () => {
 
     const firstCard = container.querySelector<HTMLButtonElement>('.category-card-hotspot[data-index="0"]');
     const categoryPage = container.querySelector<HTMLElement>(".category-page-final");
+    const scrollRegion = container.querySelector<HTMLElement>(".category-page-scroll-region");
     expect(firstCard).not.toBeNull();
     expect(categoryPage).not.toBeNull();
-    if (categoryPage) categoryPage.scrollTop = 86;
+    if (scrollRegion) scrollRegion.scrollTop = 86;
     fireEvent.click(firstCard!);
     expect(categoryPage).toHaveClass("is-leaving");
     expect(container.querySelector('.runtime-loading-layer[data-loading-reason="report-route"]')).toBeInTheDocument();

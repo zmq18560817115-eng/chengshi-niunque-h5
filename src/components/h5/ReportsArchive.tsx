@@ -12,7 +12,7 @@ import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFi
 import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { archiveUnlockWarmAssets } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
-import { archiveModuleExitDelayMs, archiveModuleNavigationDelayMs, categoryRouteEntryAttribute, navigateWithCategoryContinuity } from "@/components/h5/category-route-transition";
+import { categoryRouteEntryAttribute, navigateWithCategoryLoadingHandoff } from "@/components/h5/category-route-transition";
 import {
   announceGuideRouteReady,
   clearGuideRouteContinuity,
@@ -266,11 +266,8 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     setNavigationSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
-    window.setTimeout(() => {
-      setPressedSlug(null);
-      setLeaving(true);
-      window.setTimeout(() => navigateWithCategoryContinuity(() => pushHierarchyRoute(router, `/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
-    }, archiveModuleExitDelayMs);
+    setLeaving(true);
+    navigateWithCategoryLoadingHandoff(() => pushHierarchyRoute(router, `/reports/${module.slug}`));
   };
 
   const pressModule = (slug: string) => {

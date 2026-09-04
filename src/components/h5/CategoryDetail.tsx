@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
@@ -49,6 +49,7 @@ export function CategoryDetail(props: CategoryDetailProps) {
 
 function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   const router = useRouter();
+  const scrollRegionRef = useRef<HTMLDivElement>(null);
   const readinessReady = useAdaptiveReadiness();
   const readinessFailed = useAdaptiveReadinessFailed();
   const [leaving, setLeaving] = useState(false);
@@ -62,14 +63,36 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     if (preview) return;
     const root = document.documentElement;
     root.setAttribute("data-h5-page-lock", "category");
-    const page = document.querySelector<HTMLElement>(`.category-page-final[data-category="${module.slug}"]`);
+    const scrollRegion = scrollRegionRef.current;
     const initialScroll = readCategoryScrollPosition(module.slug);
     const restoreScroll = () => {
-      if (page) page.scrollTop = initialScroll;
+      if (scrollRegion) scrollRegion.scrollTop = initialScroll;
       window.scrollTo(0, 0);
     };
+    const resetScrollWhenContentFits = () => {
+      if (!scrollRegion || scrollRegion.clientHeight <= 0 || scrollRegion.scrollHeight <= 0) return;
+      if (scrollRegion.scrollHeight > scrollRegion.clientHeight + 1) return;
+      if (scrollRegion.scrollTop !== 0) scrollRegion.scrollTop = 0;
+    };
     restoreScroll();
+    resetScrollWhenContentFits();
+
+    let settleFrame = 0;
+    if (typeof window.requestAnimationFrame === "function") {
+      settleFrame = window.requestAnimationFrame(resetScrollWhenContentFits);
+    }
+    const resizeObserver = typeof ResizeObserver === "undefined" || !scrollRegion
+      ? null
+      : new ResizeObserver(resetScrollWhenContentFits);
+    if (resizeObserver && scrollRegion) {
+      resizeObserver.observe(scrollRegion);
+      const viewport = scrollRegion.querySelector<HTMLElement>(".category-page-viewport");
+      if (viewport) resizeObserver.observe(viewport);
+    }
+
     return () => {
+      if (settleFrame) window.cancelAnimationFrame(settleFrame);
+      resizeObserver?.disconnect();
       if (root.getAttribute("data-h5-page-lock") === "category") root.removeAttribute("data-h5-page-lock");
     };
   }, [module.slug, preview]);
@@ -115,7 +138,8 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
 
   return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${leaving ? "is-leaving" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     {leaving ? <RuntimeLoadingBuffer label="正在打开报告" reason="report-route"/> : null}
-    <div className="category-page-viewport" data-artwork-source="layered-components">
+    <div ref={scrollRegionRef} className="category-page-scroll-region">
+      <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {
         const style = {
@@ -160,12 +184,12 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
             if (leaving) return;
             setLeaving(true);
             const destination = `/reports/${module.slug}/items/${cardId}/reports` as const;
-            const page = document.querySelector<HTMLElement>(`.category-page-final[data-category="${module.slug}"]`);
-            saveCategoryScrollPosition(module.slug, page?.scrollTop ?? 0);
+            saveCategoryScrollPosition(module.slug, scrollRegionRef.current?.scrollTop ?? 0);
             pushHierarchyRoute(router, destination);
           }}>{copy}</button>;
       })}
       </section>
+      </div>
     </div>
   </SwipeBackPage>;
 }

@@ -5,7 +5,7 @@ import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { ReportsArchive } from "@/components/h5/ReportsArchive";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
-import { archiveModuleExitDelayMs } from "@/components/h5/category-route-transition";
+import { categoryRouteAttemptAttribute, categoryRouteLoadingFeedbackAttribute } from "@/components/h5/category-route-transition";
 import { clearGuideRouteContinuity, guideRouteAssetTimeoutMs, guideRouteBufferHostId, guideRouteEntryAttribute, guideRouteNavigationDelayMs, primeGuideRouteContinuity, type GuideRouteProfile } from "@/components/h5/guide-route-transition";
 import { h5MotionTiming } from "@/components/h5/motion/motion-config";
 import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFishFloatMotion";
@@ -226,10 +226,7 @@ describe("multi-page H5 interactions", () => {
     ["inspection-projects", "检测项目"],
     ["review-assurance", "复核保障"],
     ["production-traceability", "生产溯源"],
-  ] as const)("shows immediate feedback and releases the %s pressed state within 16–32 ms", (slug, title) => {
-    vi.useFakeTimers();
-    expect(archiveModuleExitDelayMs).toBeGreaterThanOrEqual(16);
-    expect(archiveModuleExitDelayMs).toBeLessThanOrEqual(32);
+  ] as const)("shows immediate feedback and hands the %s route to the loading layer synchronously", (slug, title) => {
     const modules = [{ id: slug, slug, title, description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
 
@@ -243,16 +240,13 @@ describe("multi-page H5 interactions", () => {
     fireEvent.click(hotspot);
 
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
-    expect(archive).not.toHaveClass("is-leaving");
-    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs - 1));
-    expect(archive).toHaveAttribute("data-pressed-slug", slug);
-    expect(hotspot).toHaveClass("is-pressed");
-
-    act(() => vi.advanceTimersByTime(1));
     expect(archive).toHaveClass("is-leaving");
     expect(archive).toHaveAttribute("data-exit-slug", slug);
-    expect(archive).not.toHaveAttribute("data-pressed-slug");
-    expect(hotspot).not.toHaveClass("is-pressed");
+    expect(archive).toHaveAttribute("data-pressed-slug", slug);
+    const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute);
+    expect(attemptId).toBeTruthy();
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId!);
+    window.dispatchEvent(new Event("pagehide"));
   });
 
   it("does not drop a category click while the completed guide reveal marker awaits cleanup", () => {
@@ -267,8 +261,8 @@ describe("multi-page H5 interactions", () => {
 
     expect(document.documentElement).not.toHaveAttribute(guideRouteEntryAttribute);
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", "inspection-projects");
-    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs));
     expect(archive).toHaveClass("is-leaving");
+    window.dispatchEvent(new Event("pagehide"));
   });
 
   it("maps the supplied click cue to inspection and covers the complete brown board", () => {

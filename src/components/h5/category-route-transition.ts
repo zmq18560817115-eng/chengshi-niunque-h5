@@ -55,6 +55,10 @@ type LoadingFeedback = {
   wasPainted: () => boolean;
 };
 
+type LoadingFeedbackOptions = {
+  immediate?: boolean;
+};
+
 const frozenVisualProperties = [
   "opacity",
   "visibility",
@@ -124,7 +128,7 @@ function waitForLoadingImage(image: HTMLImageElement) {
   });
 }
 
-function createLoadingFeedback(attemptId: string) {
+function createLoadingFeedback(attemptId: string, { immediate = false }: LoadingFeedbackOptions = {}) {
   activeLoadingFeedback?.cancel();
   const root = document.documentElement;
   let cancelled = false;
@@ -161,9 +165,12 @@ function createLoadingFeedback(attemptId: string) {
     // Once visibility changes, this loading frame owns the handoff. A target
     // becoming ready during the following paint frames must not cancel it and
     // briefly expose the old clone again.
-    committed = true;
-    root.setAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
-    setPersistentLoadingAccessibility(true);
+    if (!committed) {
+      committed = true;
+      root.setAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+      setPersistentLoadingAccessibility(true);
+    }
+    if (painted || paintFrames.length > 0) return;
     // Two compositor frames guarantee that the decoded system loading poster
     // is paintable before either a fallback overlay or native snapshot uses it.
     queuePaintFrame(() => queuePaintFrame(() => {
@@ -208,7 +215,13 @@ function createLoadingFeedback(attemptId: string) {
     findLoadingLayer();
   };
 
-  if (categoryRouteLoadingFeedbackDelayMs > 0) {
+  // Homepage category taps use the server-rendered persistent layer as a
+  // deterministic handoff surface. Its solid fallback and poster already
+  // exist in the reports layout, so visibility must never wait for image
+  // load/decode. Decoding can continue independently behind the overlay.
+  if (immediate) {
+    finishPaint();
+  } else if (categoryRouteLoadingFeedbackDelayMs > 0) {
     revealTimer = window.setTimeout(startWatching, categoryRouteLoadingFeedbackDelayMs);
   } else {
     startWatching();
@@ -234,6 +247,49 @@ function createLoadingFeedback(attemptId: string) {
   };
   activeLoadingFeedback = feedback;
   return feedback;
+}
+
+/**
+ * Gives category navigation a continuously painted loading handoff.
+ *
+ * The loading surface is made visible synchronously before the router starts.
+ * This intentionally bypasses the legacy full-page clone and native View
+ * Transition paths: both can block the first response frame on mobile WebKit.
+ */
+export function navigateWithCategoryLoadingHandoff(navigate: () => void) {
+  const root = document.documentElement;
+  const slug = root.getAttribute(categoryRouteEntryAttribute) ?? "unknown";
+  const attemptId = createAttemptId();
+
+  activeReadyLatch?.settle();
+  activeLoadingFeedback?.cancel();
+  clearBufferSchedules();
+  bufferGeneration += 1;
+  document.getElementById(categoryRouteBufferHostId)?.replaceChildren();
+  root.removeAttribute(categoryRouteBufferAttribute);
+  root.removeAttribute(categoryRouteNativeTransitionAttribute);
+  root.removeAttribute(categoryRouteLoadingFeedbackAttribute);
+  setPersistentLoadingAccessibility(false);
+  root.setAttribute(categoryRouteAttemptAttribute, attemptId);
+
+  const loadingFeedback = createLoadingFeedback(attemptId, { immediate: true });
+  const latch = createReadyLatch({ attemptId, slug });
+
+  try {
+    navigate();
+  } catch (error) {
+    latch.settle();
+    disposeCategoryRouteAttempt(attemptId);
+    throw error;
+  }
+
+  void latch.promise.then(() => {
+    // The target announces readiness only after its approved artwork settles.
+    // Keep the loading layer above it for two more target paint frames so the
+    // handoff cannot expose an intermediate or blank frame.
+    if (loadingFeedback.wasPainted()) disposeCategoryRouteAttemptAfterPaint(attemptId);
+    else void loadingFeedback.promise.then(() => disposeCategoryRouteAttemptAfterPaint(attemptId));
+  });
 }
 
 function clearAttemptMarkers(attemptId: string) {
