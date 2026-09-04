@@ -17,9 +17,10 @@ export const archiveModuleNavigationDelayMs = 0;
 export const categoryRouteBufferReleaseDurationMs = 520;
 export const categoryRouteReadyTimeoutMs = 3400;
 export const categoryRouteCommitTimeoutMs = 5000;
-// Avoid flashing a loading page for fast, already-cached route changes while
-// still acknowledging a genuinely slow tap well before it feels unresponsive.
-export const categoryRouteLoadingFeedbackDelayMs = 280;
+// Begin observing the shared loading page as soon as navigation starts. The
+// loading components keep their own short reveal threshold, so cached routes
+// still hand off directly without stacking another controller-side delay.
+export const categoryRouteLoadingFeedbackDelayMs = 0;
 
 type CategoryRouteReadyStatus = "ready" | "failed";
 export type CategoryRouteReadyDetail = {
@@ -192,12 +193,18 @@ function createLoadingFeedback(attemptId: string) {
     if (layer) prepareLayer(layer);
   };
 
-  revealTimer = window.setTimeout(() => {
+  const startWatching = () => {
     if (!ownsAttempt()) return;
-    findLoadingLayer();
     observer = new MutationObserver(findLoadingLayer);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-  }, categoryRouteLoadingFeedbackDelayMs);
+    findLoadingLayer();
+  };
+
+  if (categoryRouteLoadingFeedbackDelayMs > 0) {
+    revealTimer = window.setTimeout(startWatching, categoryRouteLoadingFeedbackDelayMs);
+  } else {
+    startWatching();
+  }
 
   const cancel = () => {
     if (cancelled) return;

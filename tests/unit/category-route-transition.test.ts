@@ -66,6 +66,10 @@ function mountArchiveSource() {
 describe("category route transition continuity", () => {
   const originalStartViewTransition = Object.getOwnPropertyDescriptor(document, "startViewTransition");
 
+  it("does not add a controller-side delay before accepting the shared loading page", () => {
+    expect(categoryRouteLoadingFeedbackDelayMs).toBe(0);
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     document.documentElement.removeAttribute(categoryRouteBufferAttribute);
@@ -230,7 +234,8 @@ describe("category route transition continuity", () => {
     layer.append(poster);
     document.body.append(layer);
 
-    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    // Flush observer/decode microtasks without advancing through a positive delay.
+    await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
     expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
     flushFrame();
@@ -264,7 +269,7 @@ describe("category route transition continuity", () => {
     layer.append(poster);
     document.body.append(layer);
 
-    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
     flushFrame();
     flushFrame();
@@ -298,7 +303,7 @@ describe("category route transition continuity", () => {
     layer.append(poster);
     document.body.append(layer);
 
-    await vi.advanceTimersByTimeAsync(categoryRouteLoadingFeedbackDelayMs);
+    await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
     expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
     announceCategoryRouteMounted({ attemptId, slug: "review-assurance" });
