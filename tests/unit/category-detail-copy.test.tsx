@@ -227,6 +227,8 @@ describe("CategoryDetail dynamic card copy", () => {
     if (categoryPage) categoryPage.scrollTop = 86;
     fireEvent.click(firstCard!);
     expect(categoryPage).toHaveClass("is-leaving");
+    expect(container.querySelector('.runtime-loading-layer[data-loading-reason="report-route"]')).toBeInTheDocument();
+    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
     expect(readCategoryScrollPosition("inspection-projects")).toBe(86);
     expect(navigation.push).toHaveBeenCalledWith("/reports/inspection-projects/items/nutrition/reports");
     expect(navigation.replace).not.toHaveBeenCalled();

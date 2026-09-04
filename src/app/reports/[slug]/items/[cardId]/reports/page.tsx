@@ -17,7 +17,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   const theme = getCategoryTheme(slug);
   const images = result.card.assets.filter((asset) => asset.type === "IMAGE");
 
-  return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final h5-page-transition ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} showBackControl={false} data-theme={theme.theme}>
+  return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} showBackControl={false} data-theme={theme.theme}>
     <section className="report-page-title">
       <p>{theme.label}</p><h1>{result.card.title}</h1>{result.card.description && <div>{result.card.description}</div>}
     </section>

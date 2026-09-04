@@ -6,7 +6,10 @@ import { useVisualViewportHeight } from "@/components/h5/useVisualViewportHeight
 
 export type RuntimeLoadingPhase = "loading" | "leaving" | "failed";
 
-export const routeLoadingRevealDelayMs = 220;
+// Route loading must be paintable on the first fallback frame. Delaying this
+// layer lets the source page finish its exit before Next has mounted a visual
+// replacement, which exposes the document background on slow navigations.
+export const routeLoadingRevealDelayMs = 0;
 
 export function DeferredRuntimeLoadingBuffer({
   delayMs = routeLoadingRevealDelayMs,
@@ -17,9 +20,13 @@ export function DeferredRuntimeLoadingBuffer({
   label?: string;
   reason?: string;
 }) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(delayMs <= 0);
 
   useEffect(() => {
+    if (delayMs <= 0) {
+      setVisible(true);
+      return;
+    }
     const timer = window.setTimeout(() => setVisible(true), delayMs);
     return () => window.clearTimeout(timer);
   }, [delayMs]);

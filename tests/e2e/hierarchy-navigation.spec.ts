@@ -215,6 +215,140 @@ test("a slow category asset hands the pressed archive to the painted loading pag
   await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 5_000 });
 });
 
+for (const categorySlug of ["inspection-projects", "review-assurance"] as const) {
+test(`a slow ${categorySlug} report route keeps immediate card feedback and hands the loading page to an opaque target`, async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  let releaseReportRoute!: () => void;
+  let reportRouteReleased = false;
+  let heldReportRequests = 0;
+  const heldReportRoute = new Promise<void>((resolve) => {
+    releaseReportRoute = () => {
+      if (reportRouteReleased) return;
+      reportRouteReleased = true;
+      resolve();
+    };
+  });
+
+  await page.route("**/reports/**/items/**/reports**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const isReportRsc = url.searchParams.has("_rsc") || request.headers().rsc === "1";
+    if (!isReportRsc) {
+      await route.continue();
+      return;
+    }
+    heldReportRequests += 1;
+    await heldReportRoute;
+    await route.continue();
+  });
+
+  try {
+    await page.goto(`/reports/${categorySlug}`);
+    await waitForCategory(page);
+    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 15_000 });
+
+    const firstReport = page.locator('.category-card-hotspot[data-index="0"]');
+    await expect(firstReport).toBeEnabled({ timeout: 15_000 });
+    await firstReport.scrollIntoViewIfNeeded();
+    const cardBox = await firstReport.boundingBox();
+    if (!cardBox) throw new Error("first report card has no layout box");
+
+    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+    await page.mouse.down();
+    await expect.poll(() => firstReport.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe("rgba(0, 0, 0, 0)");
+    await page.mouse.up();
+
+    await expect.poll(() => heldReportRequests, { timeout: 5_000 }).toBeGreaterThan(0);
+    const loading = page.locator(".runtime-loading-layer:not(.is-leaving)");
+    const loadingPoster = loading.locator(".guide-loading-buffer-poster");
+    await expect(loading).toBeVisible({ timeout: 5_000 });
+    await expect.poll(() => loadingPoster.evaluate(async (image) => {
+      if (!(image instanceof HTMLImageElement) || !image.complete || image.naturalWidth <= 0) return false;
+      await image.decode?.();
+      return true;
+    })).toBe(true);
+    const loadingCoverage = await loading.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        opacity: Number(style.opacity),
+        visibility: style.visibility,
+      };
+    });
+    expect(loadingCoverage.left).toBeLessThanOrEqual(0.5);
+    expect(loadingCoverage.top).toBeLessThanOrEqual(0.5);
+    expect(loadingCoverage.right).toBeGreaterThanOrEqual(374.5);
+    expect(loadingCoverage.bottom).toBeGreaterThanOrEqual(811.5);
+    expect(loadingCoverage.opacity).toBe(1);
+    expect(loadingCoverage.visibility).toBe("visible");
+
+    await page.evaluate(() => {
+      const probeWindow = window as typeof window & {
+        __reportRouteHandoffActive?: boolean;
+        __reportRouteHandoffSamples?: Array<{
+          loadingVisible: boolean;
+          targetAnimation: string | null;
+          targetOpacity: number | null;
+        }>;
+      };
+      probeWindow.__reportRouteHandoffActive = true;
+      probeWindow.__reportRouteHandoffSamples = [];
+      const isVisible = (element: Element | null) => {
+        if (!(element instanceof HTMLElement)) return false;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) > 0
+          && rect.width >= window.innerWidth - 1 && rect.height >= window.innerHeight - 1;
+      };
+      const sample = () => {
+        const target = document.querySelector<HTMLElement>(".report-page-final");
+        const targetStyle = target ? getComputedStyle(target) : null;
+        probeWindow.__reportRouteHandoffSamples?.push({
+          loadingVisible: isVisible(document.querySelector(".runtime-loading-layer")),
+          targetAnimation: targetStyle?.animationName ?? null,
+          targetOpacity: targetStyle ? Number(targetStyle.opacity) : null,
+        });
+        if (probeWindow.__reportRouteHandoffActive) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+
+    releaseReportRoute();
+    await expect(page).toHaveURL(new RegExp(`/reports/${categorySlug}/items/[^/]+/reports$`));
+    const reportPage = page.locator(".report-page-final");
+    await expect(reportPage).toBeVisible({ timeout: 15_000 });
+    await expect(reportPage).toHaveCSS("opacity", "1");
+    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 5_000 });
+    const handoffSamples = await page.evaluate(() => {
+      const probeWindow = window as typeof window & {
+        __reportRouteHandoffActive?: boolean;
+        __reportRouteHandoffSamples?: Array<{
+          loadingVisible: boolean;
+          targetAnimation: string | null;
+          targetOpacity: number | null;
+        }>;
+      };
+      probeWindow.__reportRouteHandoffActive = false;
+      return probeWindow.__reportRouteHandoffSamples ?? [];
+    });
+    const firstTargetFrame = handoffSamples.find((sample) => sample.targetOpacity !== null);
+    expect(firstTargetFrame, "the handoff probe must observe the report target's first frame").toBeDefined();
+    expect(firstTargetFrame?.targetOpacity).toBe(1);
+    expect(firstTargetFrame?.targetAnimation).not.toBe("h5-page-enter");
+    expect(handoffSamples.some((sample) => sample.loadingVisible)).toBe(true);
+    expect(handoffSamples.filter((sample) => sample.targetOpacity === null).every((sample) => sample.loadingVisible),
+      "the painted loading page must continuously cover every pre-target frame").toBe(true);
+  } finally {
+    releaseReportRoute();
+  }
+});
+}
+
 test("returning from a report restores the category reading position", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/reports");

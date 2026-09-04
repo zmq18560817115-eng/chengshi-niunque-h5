@@ -12,7 +12,7 @@ import { ArchiveFishFloatMotion } from "@/components/h5/motion/modules/ArchiveFi
 import { ArchiveSectionTitleMotion, archiveTitleBounceDurationMs } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { ArchiveStoryCopyMotion } from "@/components/h5/motion/modules/ArchiveStoryCopyMotion";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
-import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
+import { DeferredRuntimeLoadingBuffer, routeLoadingRevealDelayMs, RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
 import { adaptiveFailOpenDelayMs } from "@/components/h5/AdaptiveReadinessGate";
 import { preloadHomepageAssets, releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 import { archiveEntryTransitionSources } from "@/components/h5/archive-entry-transition-visual";
@@ -497,6 +497,23 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(60_000));
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
+  });
+
+  it("paints the route loading poster on the fallback's first render", () => {
+    expect(routeLoadingRevealDelayMs).toBe(0);
+    const { container } = render(<DeferredRuntimeLoadingBuffer />);
+    expect(container.querySelector(".runtime-loading-layer")).toBeInTheDocument();
+    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
+  });
+
+  it("still supports an explicit delayed loading fallback", () => {
+    vi.useFakeTimers();
+    const { container } = render(<DeferredRuntimeLoadingBuffer delayMs={120} />);
+    expect(container.querySelector(".runtime-loading-layer")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(119));
+    expect(container.querySelector(".runtime-loading-layer")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(container.querySelector(".runtime-loading-layer")).toBeInTheDocument();
   });
 
   it("keeps the lightweight loading poster for reduced-motion users", () => {

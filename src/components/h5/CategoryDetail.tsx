@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } fro
 import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
 import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
+import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import { pushHierarchyRoute, readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
 import { announceCategoryRouteMounted, announceCategoryRouteReady, categoryRouteAttemptAttribute, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteNativeEntrySource, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
@@ -102,6 +103,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 
   return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${leaving ? "is-leaving" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
+    {leaving ? <RuntimeLoadingBuffer label="正在打开报告" reason="report-route"/> : null}
     <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {

@@ -493,6 +493,20 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("@keyframes guide-paper-from-right { from { transform: translate3d(39%,-1.2%,0) rotate(3.4deg); } to { transform: translate3d(0,0,0) rotate(0); } }");
   });
 
+  it("keeps category-to-report navigation continuously painted", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
+    const reportPage = readFileSync("src/app/reports/[slug]/items/[cardId]/reports/page.tsx", "utf8");
+    const runtimeBuffer = readFileSync("src/components/h5/RuntimeLoadingBuffer.tsx", "utf8");
+
+    expect(css).toContain(".category-page-final.h5-page-transition.is-leaving { opacity: 1; transform: none; animation: none; }");
+    expect(category).toContain('leaving ? <RuntimeLoadingBuffer label="正在打开报告" reason="report-route"/> : null');
+    expect(reportPage).toContain("report-page report-page-final ${theme.backgroundClass}");
+    expect(reportPage).not.toContain("report-page-final h5-page-transition");
+    expect(runtimeBuffer).toContain("routeLoadingRevealDelayMs = 0");
+    expect(runtimeBuffer).toContain("useState(delayMs <= 0)");
+  });
+
   it("keeps archive motion visible long enough to be perceived", () => {
     expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeGreaterThanOrEqual(200);
     expect(h5MotionTiming.archiveLatestCircle.delayMs).toBeLessThanOrEqual(300);

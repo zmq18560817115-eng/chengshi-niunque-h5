@@ -398,6 +398,7 @@ html[data-guide-route-entry] .reports-archive-art { animation: none; }
 .h5-page-transition.is-leaving { pointer-events: none; animation: h5-page-leave .22s cubic-bezier(.22,1,.36,1) both; }
 .h5-page-transition.is-swipe-back { pointer-events: none; animation: h5-page-swipe-back .22s cubic-bezier(.22,1,.36,1) both; }
 .reports-archive-final.h5-page-transition.is-leaving { animation: none; }
+.category-page-final.h5-page-transition.is-leaving { opacity: 1; transform: none; animation: none; }
 .category-page-final[data-route-entry="reports-archive"] { opacity: .72; transform: translate3d(var(--category-route-entry-distance),0,0); animation: none; }
 .category-page-final[data-route-entry="reports-archive-buffer"] { opacity: 1; transform: translate3d(100dvw,0,0); animation: none; }
 .category-page-final[data-route-entry="reports-archive-native"]:not(.is-leaving) { opacity: 1; transform: none; animation: none; }
