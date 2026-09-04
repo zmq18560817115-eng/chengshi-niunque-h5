@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import HomePage from "@/app/page";
-import GoPage from "@/app/go/page";
+import GoPage, { dynamic as goRouteRenderingMode } from "@/app/go/page";
 
 const { redirect, router } = vi.hoisted(() => ({
   redirect: vi.fn(),
@@ -12,6 +12,10 @@ describe("brand guide", () => {
   it("redirects the root entry to the canonical /go route", () => {
     HomePage();
     expect(redirect).toHaveBeenCalledWith("/go");
+  });
+
+  it("serves the guide shell from the current deployment instead of a long-lived route cache", () => {
+    expect(goRouteRenderingMode).toBe("force-dynamic");
   });
 
   it("renders the guide immediately instead of fixing the loading buffer before it", () => {
