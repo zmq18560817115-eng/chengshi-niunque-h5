@@ -13,7 +13,7 @@ async function expectCategoryArtworkPainted(page: Page, stage: Locator) {
     const bitmap = image as HTMLImageElement;
     return bitmap.complete && bitmap.naturalWidth > 0;
   })), { timeout: 15000 }).toBe(true);
-  await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 15000 });
+  await expect(page.locator(".runtime-loading-layer:not(.is-persistent)")).toHaveCount(0, { timeout: 15000 });
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
 }
 

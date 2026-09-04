@@ -63,11 +63,11 @@ html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; h
    进入首页的路由交接同理:缓冲层滑离瞬间即使首页贴图晚一帧,露出的也是同色黄,
    不再出现浅色/闪白。 */
 html:has(.brand-guide), html:has(.brand-guide) body,
-html:has(.guide-loading-buffer), html:has(.guide-loading-buffer) body { background: #f8e89d; }
+html:has(.guide-loading-buffer:not(.is-persistent)), html:has(.guide-loading-buffer:not(.is-persistent)) body { background: #f8e89d; }
 html[data-category-route-buffer], html[data-category-route-buffer] body { background-color: #f5f0e7; }
 html[data-h5-page-lock="category"], html[data-h5-page-lock="category"] body { width: 100%; height: 100%; min-height: 100%; overflow: hidden; overscroll-behavior: none; background: #f5f0e7; }
-html:has(.guide-loading-buffer), html:has(.brand-guide), html:has(.h5-shell) { scrollbar-width: none; }
-html:has(.guide-loading-buffer)::-webkit-scrollbar, html:has(.brand-guide)::-webkit-scrollbar, html:has(.h5-shell)::-webkit-scrollbar { width: 0; height: 0; }
+html:has(.guide-loading-buffer:not(.is-persistent)), html:has(.brand-guide), html:has(.h5-shell) { scrollbar-width: none; }
+html:has(.guide-loading-buffer:not(.is-persistent))::-webkit-scrollbar, html:has(.brand-guide)::-webkit-scrollbar, html:has(.h5-shell)::-webkit-scrollbar { width: 0; height: 0; }
 button, a { font: inherit; }
 .h5-shell { width: 100%; max-width: var(--h5-content-width); min-width: 320px; margin-inline: auto; overflow-x: hidden; background: var(--color-canvas); box-shadow: var(--shadow-paper); }
 .section { padding: var(--space-12) var(--space-6); }
@@ -340,6 +340,7 @@ button, a { font: inherit; }
 .brand-guide.is-animating .brand-guide-character-closed { will-change: opacity; }
 .brand-guide-foreground-top { z-index: 35; }
 .brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom); display: block; width: var(--guide-entry-hint-width); height: auto; translate: -50% 0; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translate3d(0,0,0); }
+.brand-guide-stage[data-swipe-state="locked"] .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
 .brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint { animation: guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out infinite; will-change: transform; }
 .brand-guide-fallback { z-index: 1; visibility: visible; opacity: 1; transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
@@ -402,6 +403,7 @@ html[data-guide-route-entry] .reports-archive-art { animation: none; }
 .category-page-final[data-route-entry="reports-archive"] { opacity: .72; transform: translate3d(var(--category-route-entry-distance),0,0); animation: none; }
 .category-page-final[data-route-entry="reports-archive-buffer"] { opacity: 1; transform: translate3d(100dvw,0,0); animation: none; }
 .category-page-final[data-route-entry="reports-archive-native"]:not(.is-leaving) { opacity: 1; transform: none; animation: none; }
+.category-page-final[data-route-entry="reports-archive-loading"]:not(.is-leaving) { opacity: 1; transform: none; animation: none; }
 .category-page-final[data-route-entry="reports-archive"][data-route-ready="true"] { animation: category-detail-enter-from-right var(--category-route-entry-duration) var(--h5-route-transition-easing) both; }
 .category-page-final[data-route-entry="reports-archive-buffer"][data-route-ready="true"] { animation: category-route-buffer-enter-from-right var(--category-route-buffer-release-duration) var(--category-route-buffer-easing) both; }
 html[data-category-native-transition] .category-page-final { opacity: 1; transform: none; animation: none; }
@@ -441,6 +443,11 @@ html[data-category-native-transition]::view-transition-new(root) { animation: ca
 }
 #h5-category-route-buffer-host { position: fixed; z-index: 2147483640; inset: 0; overflow: hidden; pointer-events: none; }
 #h5-category-route-buffer-host:empty { display: none; }
+#h5-category-route-loading-host { position: fixed; z-index: 2147483645; inset: 0; overflow: hidden; visibility: hidden; opacity: 0; pointer-events: none; }
+#h5-category-route-loading-host .runtime-loading-layer { visibility: hidden; opacity: 0; pointer-events: none; }
+html[data-category-loading-feedback] #h5-category-route-loading-host,
+html[data-category-loading-feedback] #h5-category-route-loading-host .runtime-loading-layer { visibility: visible; opacity: 1; pointer-events: auto; }
+html[data-category-loading-feedback] #h5-category-route-loading-host .runtime-loading-layer { animation: category-loading-feedback-in 120ms ease-out both; }
 .h5-category-route-buffer { position: absolute; inset: 0; overflow: hidden; contain: strict; opacity: 1; transform: translate3d(0,0,0); background-color: #f5f0e7; background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp"); background-position: center; background-size: cover; backface-visibility: hidden; will-change: transform; }
 .h5-category-route-buffer.is-moving { transform: translate3d(0,0,0); transition: none; }
 .h5-category-route-buffer.is-releasing { opacity: 1; transform: translate3d(-100dvw,0,0); transition: transform var(--category-route-buffer-release-duration) var(--category-route-buffer-easing); }
@@ -1112,6 +1119,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
   .h5-category-route-buffer.is-releasing { opacity: 0; transition: opacity 180ms ease; transform: none; }
   .category-page-final[data-route-entry]:not([data-route-ready="true"]) { opacity: 0; transform: none; animation: none; }
   .category-page-final[data-route-entry="reports-archive"][data-route-ready="true"], .category-page-final[data-route-entry="reports-archive-buffer"][data-route-ready="true"] { animation: category-route-continuity-fade 180ms ease both; }
+  .category-page-final[data-route-entry="reports-archive-loading"][data-route-ready="true"] { opacity: 1; transform: none; animation: none; }
   .archive-category-hotspot { opacity: 1; transform: none; transition: none; }
   .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
   .brand-guide.is-ready .brand-guide-fallback, .brand-guide.is-failed .brand-guide-fallback { visibility: visible; opacity: 1; transition: none; }

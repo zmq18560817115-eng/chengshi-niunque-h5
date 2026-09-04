@@ -38,22 +38,24 @@ export function RuntimeLoadingBuffer({
   phase = "loading",
   label = "正在准备页面内容",
   reason = "route",
+  persistent = false,
 }: {
   phase?: RuntimeLoadingPhase;
   label?: string;
   reason?: string;
+  persistent?: boolean;
 }) {
   useVisualViewportHeight();
   // The guide clone already is the route buffer. Keep the heavier poster/GIF
   // out of the DOM for this component lifetime so it cannot decode underneath
   // the handoff and compete for mobile GPU memory during the reveal.
-  const [suppressedByGuideContinuity] = useState(() => typeof document !== "undefined"
+  const [suppressedByGuideContinuity] = useState(() => !persistent && typeof document !== "undefined"
     && document.documentElement.hasAttribute("data-guide-route-entry"));
   if (suppressedByGuideContinuity) return null;
 
   return (
-    <div className={`runtime-loading-layer is-${phase}`} data-loading-reason={reason}>
-      <main className={`guide-loading-buffer is-${phase}`} aria-label="页面加载缓冲" aria-busy={phase === "loading"}>
+    <div className={`runtime-loading-layer is-${phase} ${persistent ? "is-persistent" : ""}`} data-loading-reason={reason} data-persistent={persistent || undefined}>
+      <main className={`guide-loading-buffer is-${phase} ${persistent ? "is-persistent" : ""}`} aria-label="页面加载缓冲" aria-busy={phase === "loading"}>
         <section className="guide-loading-buffer-stage" aria-live="polite">
           <Image
             className="guide-loading-buffer-poster"

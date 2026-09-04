@@ -339,7 +339,7 @@ for (const device of devices) {
     await expect(page.locator(".brand-guide-surround")).toHaveCount(0);
     await expect(page.locator(".brand-guide-window-mask")).toHaveCount(profile === "landscape" ? 0 : 1);
     await expect(page.locator(".brand-guide .motion-stage")).toHaveCount(0);
-    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0);
+    await expect(page.locator(".runtime-loading-layer:not(.is-persistent)")).toHaveCount(0);
     const frameBox = await contentFrame.boundingBox();
     expect(frameBox).not.toBeNull();
     if (!frameBox) throw new Error("guide content frame has no layout box");
@@ -466,7 +466,7 @@ test("guide handoff reuses the predecoded route buffer until homepage artwork is
   await enter.click();
   await page.waitForURL(/\/reports$/);
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
-  const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
+  const runtimeLoadingLayer = page.locator(".runtime-loading-layer:not(.is-persistent)");
   await expect(guideBuffer).toBeVisible({ timeout: 3000 });
   await expect(guideBuffer.locator(".h5-guide-route-snapshot")).toHaveCount(1);
   await expectLayeredGuideDestination(guideBuffer.locator(".h5-guide-route-destination-content"));
@@ -475,7 +475,7 @@ test("guide handoff reuses the predecoded route buffer until homepage artwork is
   await expect(guideBuffer.locator(".brand-guide-paper, .brand-guide-character")).toHaveCount(0);
   await page.waitForTimeout(1000);
   await expect(runtimeLoadingLayer).toHaveCount(0);
-  await expect(page.locator(".guide-loading-buffer-poster, .guide-loading-buffer-gif")).toHaveCount(0);
+  await expect(page.locator(".runtime-loading-layer:not(.is-persistent) .guide-loading-buffer-poster, .runtime-loading-layer:not(.is-persistent) .guide-loading-buffer-gif")).toHaveCount(0);
   await expect(guideBuffer).toHaveCount(0, { timeout: 15000 });
   await expect(page.locator(".reports-archive-final")).toBeVisible();
 });
@@ -652,7 +652,7 @@ test("cold-cache standard guide keeps the complete fallback until every live lay
   await expect(fallback).toBeVisible();
   await expect(fallback).toHaveCSS("opacity", "1");
   await expect(liveStage).toHaveCSS("opacity", "0");
-  await expect(page.locator(".brand-guide .motion-stage, .runtime-loading-layer")).toHaveCount(0);
+  await expect(page.locator(".brand-guide .motion-stage, .runtime-loading-layer:not(.is-persistent)")).toHaveCount(0);
   await page.screenshot({ path: "artifacts/design-qa/guide-cold-cache-fallback-375x812.png" });
   await expect(stage).toHaveAttribute("data-load-state", "ready", { timeout: 15000 });
   await expect(liveStage).toHaveCSS("opacity", "1");
@@ -687,7 +687,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
 
   const root = page.locator("html");
   const guideBuffer = page.locator("#h5-guide-route-buffer-host > .h5-guide-route-buffer");
-  const runtimeLoadingLayer = page.locator(".runtime-loading-layer");
+  const runtimeLoadingLayer = page.locator(".runtime-loading-layer:not(.is-persistent)");
   const archive = page.locator(".reports-archive-final");
   const fallback = page.locator(".reports-archive-reference-fallback");
   const ribbon = page.locator(".archive-unlock-tab-motion");

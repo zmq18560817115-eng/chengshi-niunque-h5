@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrandGuide } from "@/components/h5/BrandGuide";
+import { BrandGuide, guideLiveStageTransitionWatchdogMs } from "@/components/h5/BrandGuide";
 import { GuideExperience } from "@/components/h5/GuideExperience";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
@@ -97,6 +97,12 @@ function signalVisibleGuideDestinationDecoded(container: HTMLElement) {
   destinationImages.forEach((destination) => fireEvent.load(destination));
 }
 
+function signalGuideCrossfadeComplete(element: HTMLElement) {
+  const event = new Event("transitionend", { bubbles: true });
+  Object.defineProperty(event, "propertyName", { value: "opacity" });
+  fireEvent(element, event);
+}
+
 async function settleGuideRenderEffects() {
   await act(async () => {
     await Promise.resolve();
@@ -128,6 +134,8 @@ async function decodeMountedGuideImages() {
 async function unlockGuideGesture() {
   await decodeMountedGuideImages();
   await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs); });
+  const liveStage = document.querySelector<HTMLElement>(".brand-guide-live-stage, .guide-landscape-composition");
+  if (liveStage) signalGuideCrossfadeComplete(liveStage);
   await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs + 32); });
 }
 
@@ -214,25 +222,37 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".runtime-loading-layer")).not.toBeInTheDocument();
   });
 
-  it("shows immediate feedback before buffering the matching category route", () => {
+  it.each([
+    ["inspection-projects", "检测项目"],
+    ["review-assurance", "复核保障"],
+    ["production-traceability", "生产溯源"],
+  ] as const)("shows immediate feedback and releases the %s pressed state within 16–32 ms", (slug, title) => {
     vi.useFakeTimers();
-    const modules = [{ id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] }];
+    expect(archiveModuleExitDelayMs).toBeGreaterThanOrEqual(16);
+    expect(archiveModuleExitDelayMs).toBeLessThanOrEqual(32);
+    const modules = [{ id: slug, slug, title, description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
 
-    const hotspot = container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!;
+    const hotspot = container.querySelector<HTMLButtonElement>(`[data-slug="${slug}"]`)!;
     const archive = container.querySelector(".reports-archive");
     fireEvent.pointerDown(hotspot);
 
-    expect(archive).toHaveAttribute("data-pressed-slug", "review-assurance");
+    expect(archive).toHaveAttribute("data-pressed-slug", slug);
     expect(hotspot).toHaveClass("is-pressed");
 
     fireEvent.click(hotspot);
 
-    expect(document.documentElement).toHaveAttribute("data-category-route-entry", "review-assurance");
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
     expect(archive).not.toHaveClass("is-leaving");
-    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs));
+    act(() => vi.advanceTimersByTime(archiveModuleExitDelayMs - 1));
+    expect(archive).toHaveAttribute("data-pressed-slug", slug);
+    expect(hotspot).toHaveClass("is-pressed");
+
+    act(() => vi.advanceTimersByTime(1));
     expect(archive).toHaveClass("is-leaving");
-    expect(archive).toHaveAttribute("data-exit-slug", "review-assurance");
+    expect(archive).toHaveAttribute("data-exit-slug", slug);
+    expect(archive).not.toHaveAttribute("data-pressed-slug");
+    expect(hotspot).not.toHaveClass("is-pressed");
   });
 
   it("does not drop a category click while the completed guide reveal marker awaits cleanup", () => {
@@ -506,6 +526,13 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
   });
 
+  it("keeps the persistent category loading poster prepainted during guide continuity", () => {
+    document.documentElement.setAttribute("data-guide-route-entry", "active");
+    const { container } = render(<RuntimeLoadingBuffer persistent />);
+    expect(container.querySelector(".runtime-loading-layer.is-persistent")).toHaveAttribute("data-persistent", "true");
+    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
+  });
+
   it("still supports an explicit delayed loading fallback", () => {
     vi.useFakeTimers();
     const { container } = render(<DeferredRuntimeLoadingBuffer delayMs={120} />);
@@ -524,14 +551,14 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-gif")).not.toBeInTheDocument();
   });
 
-  it("keeps the static fallback until every actual standard DOM layer has decoded", async () => {
+  it("keeps the matching animation first frame until every standard DOM layer has decoded", async () => {
     const { container } = render(<BrandGuide />);
     const page = container.querySelector(".brand-guide")!;
     const finalPaper = "/design/guide/report-paper-bottom.webp";
 
     expect(page).toHaveClass("is-loading");
     expect(container.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/guide/guide-window-mask.webp");
-    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-first-frame.webp");
     await act(async () => {
       await resolvePendingImages(({ src }) => src.includes("/design/guide/") && !src.includes(finalPaper));
     });
@@ -591,6 +618,11 @@ describe("multi-page H5 interactions", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
+    expect(page).not.toHaveClass("is-animating");
+    const liveStage = container.querySelector<HTMLElement>(".brand-guide-live-stage");
+    expect(liveStage).not.toBeNull();
+    signalGuideCrossfadeComplete(liveStage as HTMLElement);
+    expect(page).toHaveClass("is-animating");
     await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs - 1); });
     expect(stage).toHaveAttribute("data-gesture-state", "locked");
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
@@ -809,18 +841,33 @@ describe("multi-page H5 interactions", () => {
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
     expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-static-foreground-v2.webp");
+    expect(container.querySelector(".brand-guide-fallback")?.getAttribute("src")).toContain("guide-first-frame.webp");
     expect(page).toHaveClass("is-loading");
     await decodeMountedGuideImages();
     expect(page).toHaveClass("is-ready");
     expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
     await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs); });
+    signalGuideCrossfadeComplete(container.querySelector(".brand-guide-live-stage") as HTMLElement);
     await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs); });
     expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "进入档案" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(guideRouteNavigationDelayMs); });
     expect(onEnter).toHaveBeenCalledOnce();
     consoleError.mockRestore();
+  });
+
+  it("uses the delayed watchdog only when the guide opacity transition event is missing", async () => {
+    vi.useFakeTimers();
+    const { container } = render(<BrandGuide />);
+    const page = container.querySelector(".brand-guide");
+    await decodeMountedGuideImages();
+
+    expect(page).toHaveClass("is-ready");
+    expect(page).not.toHaveClass("is-animating");
+    await act(async () => { await vi.advanceTimersByTimeAsync(guideLiveStageTransitionWatchdogMs - 1); });
+    expect(page).not.toHaveClass("is-animating");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(page).toHaveClass("is-animating");
   });
 
   it("keeps the static foreground fallback when a critical DOM layer fails", async () => {

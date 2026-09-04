@@ -9,6 +9,7 @@ import {
   categoryRouteEntryAttribute,
   categoryRouteLoadingFeedbackAttribute,
   categoryRouteLoadingFeedbackDelayMs,
+  categoryRouteLoadingHostId,
   categoryRouteNativeTransitionAttribute,
   categoryRouteReadyEvent,
   categoryRouteReadyTimeoutMs,
@@ -63,6 +64,23 @@ function mountArchiveSource() {
   return document.querySelector<HTMLElement>(".reports-archive-final")!;
 }
 
+function mountPersistentLoadingLayer() {
+  const host = document.createElement("div");
+  host.id = categoryRouteLoadingHostId;
+  host.setAttribute("aria-hidden", "true");
+  const layer = document.createElement("div");
+  layer.className = "runtime-loading-layer is-loading is-persistent";
+  const poster = document.createElement("img");
+  poster.className = "guide-loading-buffer-poster";
+  Object.defineProperty(poster, "complete", { configurable: true, value: true });
+  Object.defineProperty(poster, "naturalWidth", { configurable: true, value: 750 });
+  Object.defineProperty(poster, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+  layer.append(poster);
+  host.append(layer);
+  document.body.append(host);
+  return { host, layer, poster };
+}
+
 describe("category route transition continuity", () => {
   const originalStartViewTransition = Object.getOwnPropertyDescriptor(document, "startViewTransition");
 
@@ -110,7 +128,7 @@ describe("category route transition continuity", () => {
     expect(buffer).not.toBeNull();
     expect(frozenArchive).not.toBeNull();
     expect(frozenArchive).not.toBe(source);
-    expect(frozenArchive).toHaveAttribute("data-pressed-slug", "review-assurance");
+    expect(frozenArchive).not.toHaveAttribute("data-pressed-slug");
     expect(frozenArchive).toHaveAttribute("data-archive-artwork-ready", "true");
     expect(frozenArchive?.style.getPropertyValue("animation")).toBe("none");
     expect(frozenArchive?.style.getPropertyPriority("animation")).toBe("important");
@@ -205,7 +223,7 @@ describe("category route transition continuity", () => {
     expect(document.documentElement).not.toHaveAttribute(categoryRouteAttemptAttribute);
   });
 
-  it("hands a slow native route to the painted system loading page instead of freezing the archive", async () => {
+  it("keeps the prepainted loading page in control until a slow native target has painted", async () => {
     const { flushFrame } = installManualAnimationFrames();
     const finished = deferred<void>();
     let updatePromise: Promise<void> | undefined;
@@ -221,23 +239,16 @@ describe("category route transition continuity", () => {
       value: vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
     });
     document.documentElement.setAttribute(categoryRouteEntryAttribute, "inspection-projects");
+    mountPersistentLoadingLayer();
 
     navigateWithCategoryContinuity(vi.fn());
     const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
-    const layer = document.createElement("div");
-    layer.className = "runtime-loading-layer is-loading";
-    const poster = document.createElement("img");
-    poster.className = "guide-loading-buffer-poster";
-    Object.defineProperty(poster, "complete", { configurable: true, value: true });
-    Object.defineProperty(poster, "naturalWidth", { configurable: true, value: 750 });
-    Object.defineProperty(poster, "decode", { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
-    layer.append(poster);
-    document.body.append(layer);
 
     // Flush observer/decode microtasks without advancing through a positive delay.
     await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
     expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+    expect(document.getElementById(categoryRouteLoadingHostId)).toHaveAttribute("aria-hidden", "false");
     flushFrame();
     flushFrame();
     await updatePromise;
@@ -246,9 +257,19 @@ describe("category route transition continuity", () => {
     finished.resolve();
     await finished.promise;
     await Promise.resolve();
-    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
     expect(document.documentElement).not.toHaveAttribute(categoryRouteNativeTransitionAttribute);
+    expect(document.documentElement).toHaveAttribute(categoryRouteAttemptAttribute, attemptId);
+
+    announceCategoryRouteMounted({ attemptId, slug: "inspection-projects" });
+    announceCategoryRouteReady({ attemptId, slug: "inspection-projects", status: "ready" });
+    await Promise.resolve();
+    flushFrame();
+    flushFrame();
+    await Promise.resolve();
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
     expect(document.documentElement).not.toHaveAttribute(categoryRouteAttemptAttribute);
+    expect(document.getElementById(categoryRouteLoadingHostId)).toHaveAttribute("aria-hidden", "true");
   });
 
   it("removes the fallback clone behind a painted loading page when the target becomes ready", async () => {
@@ -278,6 +299,10 @@ describe("category route transition continuity", () => {
 
     announceCategoryRouteMounted({ attemptId, slug: "review-assurance" });
     announceCategoryRouteReady({ attemptId, slug: "review-assurance", status: "ready" });
+    await Promise.resolve();
+    expect(document.getElementById(categoryRouteBufferHostId)).not.toBeEmptyDOMElement();
+    flushFrame();
+    flushFrame();
     await Promise.resolve();
     expect(document.getElementById(categoryRouteBufferHostId)).toBeEmptyDOMElement();
     expect(document.documentElement).not.toHaveAttribute(categoryRouteBufferAttribute);
@@ -318,6 +343,10 @@ describe("category route transition continuity", () => {
 
     flushFrame();
     await Promise.resolve();
+    await Promise.resolve();
+    expect(document.querySelector(".h5-category-route-buffer")).toBeInTheDocument();
+    flushFrame();
+    flushFrame();
     await Promise.resolve();
     expect(document.getElementById(categoryRouteBufferHostId)).toBeEmptyDOMElement();
     expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
@@ -442,8 +471,12 @@ describe("category route transition continuity", () => {
     ready.resolve(Promise.reject(new Error("view transition skipped")));
     await ready.promise.catch(() => undefined);
     await Promise.resolve();
-    await updatePromise;
     expect(document.documentElement).not.toHaveAttribute(categoryRouteNativeTransitionAttribute);
+
+    const attemptId = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
+    announceCategoryRouteMounted({ attemptId, slug: "inspection-projects" });
+    announceCategoryRouteReady({ attemptId, slug: "inspection-projects", status: "ready" });
+    await updatePromise;
 
     finished.resolve();
     await finished.promise;

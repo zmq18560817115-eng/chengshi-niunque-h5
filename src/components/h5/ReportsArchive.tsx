@@ -91,6 +91,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const [layerArtworkFailed, setLayerArtworkFailed] = useState(false);
   const [fallbackImageMounted, setFallbackImageMounted] = useState(true);
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
+  const [navigationSlug, setNavigationSlug] = useState<string | null>(null);
   const navigating = useRef(false);
   const enteredFromGuide = useRef(false);
   const archiveCanvas = useRef<HTMLDivElement | null>(null);
@@ -262,9 +263,11 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     if (guideRouteState === "revealing") clearGuideRouteContinuity();
     navigating.current = true;
     setPressedSlug(module.slug);
+    setNavigationSlug(module.slug);
     sessionStorage.setItem("reports-scroll-y", String(window.scrollY));
     document.documentElement.setAttribute(categoryRouteEntryAttribute, module.slug);
     window.setTimeout(() => {
+      setPressedSlug(null);
       setLeaving(true);
       window.setTimeout(() => navigateWithCategoryContinuity(() => pushHierarchyRoute(router, `/reports/${module.slug}`)), archiveModuleNavigationDelayMs);
     }, archiveModuleExitDelayMs);
@@ -275,7 +278,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     setPressedSlug(slug);
   };
 
-  const exitingSlug = leaving ? pressedSlug : null;
+  const exitingSlug = leaving ? navigationSlug : null;
 
   const guideEntryStyle = {
     "--archive-guide-book-duration": `${guideArchiveEntryTiming.bookDurationMs}ms`,

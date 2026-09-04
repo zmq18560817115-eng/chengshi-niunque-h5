@@ -54,6 +54,7 @@ describe("CategoryDetail dynamic card copy", () => {
     document.documentElement.removeAttribute("data-category-route-entry");
     document.documentElement.removeAttribute("data-category-route-attempt");
     document.documentElement.removeAttribute("data-category-route-buffer");
+    document.documentElement.removeAttribute("data-category-loading-feedback");
     document.documentElement.removeAttribute("data-category-native-transition");
   });
 
@@ -120,6 +121,28 @@ describe("CategoryDetail dynamic card copy", () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 
     expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-native");
+  });
+
+  it("switches the ready target to a complete static frame when the loading page owns the handoff", async () => {
+    let resolveReadiness!: (value: { total: number; failed: string[] }) => void;
+    vi.mocked(preloadHomepageAssets).mockReturnValueOnce(new Promise((resolve) => { resolveReadiness = resolve; }));
+    document.documentElement.setAttribute("data-category-route-entry", moduleFixture.slug);
+    document.documentElement.setAttribute("data-category-route-attempt", "test-loading-entry");
+    document.documentElement.setAttribute("data-category-route-buffer", "active");
+    const onReady = vi.fn();
+    window.addEventListener("h5-category-route-ready", onReady);
+
+    const { container } = render(<CategoryDetail module={moduleFixture} />);
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-buffer");
+
+    await act(async () => {
+      document.documentElement.setAttribute("data-category-loading-feedback", "test-loading-entry");
+      resolveReadiness({ total: categoryReadinessAssets["inspection-projects"].length, failed: [] });
+    });
+    await waitFor(() => expect(onReady).toHaveBeenCalledTimes(1));
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-entry", "reports-archive-loading");
+    expect(container.querySelector(".category-page-final")).toHaveAttribute("data-route-ready", "true");
+    window.removeEventListener("h5-category-route-ready", onReady);
   });
 
   it("keeps direct category loads on their existing transition", async () => {

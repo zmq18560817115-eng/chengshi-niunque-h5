@@ -9,7 +9,7 @@ import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import { pushHierarchyRoute, readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
-import { announceCategoryRouteMounted, announceCategoryRouteReady, categoryRouteAttemptAttribute, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteNativeEntrySource, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
+import { announceCategoryRouteMounted, announceCategoryRouteReady, categoryRouteAttemptAttribute, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteLoadingEntrySource, categoryRouteLoadingFeedbackAttribute, categoryRouteNativeEntrySource, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
 
 const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
@@ -85,9 +85,12 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
     setRouteEntryAttempt({ attemptId, slug: module.slug });
     if (motionEnabled) {
       const nativeTransitionOwner = root.getAttribute(categoryRouteNativeTransitionAttribute);
-      setRouteEntrySource(nativeTransitionOwner === attemptId
-        ? categoryRouteNativeEntrySource
-        : root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
+      const loadingFeedbackOwner = root.getAttribute(categoryRouteLoadingFeedbackAttribute);
+      setRouteEntrySource(loadingFeedbackOwner === attemptId
+        ? categoryRouteLoadingEntrySource
+        : nativeTransitionOwner === attemptId
+          ? categoryRouteNativeEntrySource
+          : root.hasAttribute(categoryRouteBufferAttribute) ? categoryRouteBufferedEntrySource : categoryRouteEntrySource);
     }
   }, [module.slug, motionEnabled, preview]);
   useLayoutEffect(() => {
@@ -96,9 +99,17 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   }, [readinessReady, routeEntryAttempt]);
   useLayoutEffect(() => {
     if (!routeReady || !routeEntryAttempt) return;
+    const loadingFeedbackOwner = document.documentElement.getAttribute(categoryRouteLoadingFeedbackAttribute);
+    if (loadingFeedbackOwner === routeEntryAttempt.attemptId && routeEntrySource !== categoryRouteLoadingEntrySource) {
+      // Once the decoded loading poster owns the viewport, prepare the target
+      // as a complete static frame behind it. This makes the final two-frame
+      // handoff atomic instead of exposing the beginning of a 520ms slide.
+      setRouteEntrySource(categoryRouteLoadingEntrySource);
+      return;
+    }
     announceCategoryRouteReady({ ...routeEntryAttempt, status: readinessFailed ? "failed" : "ready" });
     setRouteEntryAttempt(null);
-  }, [readinessFailed, routeEntryAttempt, routeReady]);
+  }, [readinessFailed, routeEntryAttempt, routeEntrySource, routeReady]);
 
   if (!theme.artworkLayers) return <SwipeBackPage className="h5-shell category-page category-page-unknown" fallbackHref="/reports" preview={preview} showBackControl={false}><p>暂时无法识别该档案分类。</p></SwipeBackPage>;
 

@@ -92,7 +92,8 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("function markImageDecoded(image: HTMLImageElement");
     expect(guide).toContain("requiredReadyKeys.every((required) => readyLayers.current.has(required))");
     expect(guide).toContain('setAssetStatus("ready")');
-    expect(guide).toContain('assetUrl("guide-static-foreground-v2.webp")');
+    expect(guide).toContain('"guide-static-foreground-v2.webp"');
+    expect(guide).toContain('"guide-first-frame.webp"');
     expect(guide).not.toContain("MotionStage");
   });
 
@@ -162,7 +163,7 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("width={868} height={260}");
     expect(guide).not.toContain('assetUrl("swipe-up-hint.png")');
     const liveStage = guide.match(
-      /<div className="brand-guide-live-stage">([\s\S]*?)<\/div>}/,
+      /<div className="brand-guide-live-stage"[^>]*>([\s\S]*?)<\/div>}/,
     )?.[1] ?? "";
     expect(liveStage).toContain("<GuideLayers");
     expect(liveStage).not.toContain("GuideEntryHint");
@@ -349,7 +350,8 @@ describe("H5 motion isolation", () => {
     expect(category).toContain("data-route-entry={routeEntrySource ?? undefined}");
     expect(category).toContain("categoryRouteBufferedEntrySource");
     expect(category).toContain("categoryRouteNativeEntrySource");
-    expect(category).toContain("setRouteEntrySource(nativeTransitionOwner === attemptId");
+    expect(category).toContain("categoryRouteLoadingEntrySource");
+    expect(category).toContain("loadingFeedbackOwner === attemptId");
     expect(category).not.toContain("pendingRouteEntrySource");
     expect(category).toContain("data-route-ready={routeReady || undefined}");
     expect(category).toContain("setRouteReady(true)");
@@ -363,7 +365,7 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).not.toContain("querySelectorAll<HTMLImageElement>");
     expect(routeTransition).toContain("cloneNode(true)");
     expect(routeTransition).toContain("is-category-route-buffer-clone");
-    expect(routeTransition).not.toContain('clone.removeAttribute("data-pressed-slug")');
+    expect(routeTransition).toContain('clone.removeAttribute("data-pressed-slug")');
     expect(routeTransition).toContain("freezeCloneMotion(source, clone)");
     expect(routeTransition).toContain("payload?.attemptId === detail.attemptId && payload.slug === detail.slug");
     expect(routeTransition).toContain("bufferGeneration");
@@ -372,6 +374,7 @@ describe("H5 motion isolation", () => {
     expect(category).toContain("announceCategoryRouteMounted({ attemptId, slug: module.slug });");
     expect(css).toContain(".reports-archive-final.is-category-route-buffer-clone");
     expect(css).toContain('.category-page-final[data-route-entry="reports-archive-native"]:not(.is-leaving)');
+    expect(css).toContain('.category-page-final[data-route-entry="reports-archive-loading"]:not(.is-leaving) { opacity: 1; transform: none; animation: none; }');
     expect(css).toContain("animation: none !important;");
     expect(css).toContain("html[data-category-native-transition]::view-transition-old(root)");
     expect(css).toContain('background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp")');
@@ -424,6 +427,8 @@ describe("H5 motion isolation", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const runtimeBuffer = readFileSync("src/components/h5/RuntimeLoadingBuffer.tsx", "utf8");
     const globalLoading = readFileSync("src/app/loading.tsx", "utf8");
+    const reportsLayout = readFileSync("src/app/reports/layout.tsx", "utf8");
+    const categoryLoading = readFileSync("src/app/reports/[slug]/loading.tsx", "utf8");
     const route = readFileSync("src/app/go/page.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
 
@@ -455,6 +460,10 @@ describe("H5 motion isolation", () => {
     expect(runtimeBuffer).toContain('document.documentElement.hasAttribute("data-guide-route-entry")');
     expect(runtimeBuffer).toContain("if (suppressedByGuideContinuity) return null;");
     expect(globalLoading).toContain("<DeferredRuntimeLoadingBuffer");
+    expect(reportsLayout).toContain('id="h5-category-route-loading-host"');
+    expect(reportsLayout).toContain('aria-hidden="true"');
+    expect(reportsLayout).toContain("<RuntimeLoadingBuffer persistent");
+    expect(categoryLoading).toContain('<DeferredRuntimeLoadingBuffer label="正在打开档案分类"');
     expect(css).toContain(".runtime-loading-layer { position: fixed;");
     expect(css).toContain("z-index: 2147483600;");
     expect(css).toContain("#h5-category-route-buffer-host { position: fixed; z-index: 2147483640;");
@@ -481,7 +490,8 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("standardReadyKeys");
     expect(guide).not.toContain("compactReadyKeys");
     expect(guide).toContain("landscapeReadyKeys");
-    expect(guide).toContain('assetUrl("guide-static-foreground-v2.webp")');
+    expect(guide).toContain('"guide-static-foreground-v2.webp"');
+    expect(guide).toContain('"guide-first-frame.webp"');
     expect(guide).toContain('setAssetStatus("failed")');
     expect(guide).not.toContain("MotionStage");
     expect(guide).not.toContain("loadingFallback");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TransitionEvent as ReactTransitionEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createArchiveEntryTransitionVisual } from "./archive-entry-transition-visual";
@@ -25,6 +25,7 @@ const GUIDE_SWIPE_COMMIT_PROGRESS = 0.12;
 const GUIDE_SWIPE_FAST_VELOCITY = 0.55;
 const GUIDE_GESTURE_AXIS_LOCK_PX = 8;
 const GUIDE_GESTURE_SETTLE_MS = 240;
+export const guideLiveStageTransitionWatchdogMs = 480;
 
 type GuideGesture = {
   source: "pointer" | "touch";
@@ -57,10 +58,11 @@ function markImageDecoded(image: HTMLImageElement, key: string, onReady: (key: s
   else ready();
 }
 
-function GuideFallback({ unavailable, onError }: { unavailable: boolean; onError: () => void }) {
+function GuideFallback({ terminal, unavailable, onError }: { terminal: boolean; unavailable: boolean; onError: (name: string) => void }) {
+  const source = terminal ? "guide-static-foreground-v2.webp" : "guide-first-frame.webp";
   return <>
     {!unavailable && (
-      <Image className="brand-guide-fallback" src={assetUrl("guide-static-foreground-v2.webp")} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority fetchPriority="high" unoptimized decoding="async" onError={onError}/>
+      <Image key={source} className="brand-guide-fallback" src={assetUrl(source)} alt="诚实纽雀品牌引导" width={750} height={1625} sizes="(orientation: portrait) 100vw, 1px" priority fetchPriority="high" unoptimized decoding="async" onError={() => onError(source)}/>
     )}
       <span className="brand-guide-fallback-message" aria-hidden={!unavailable}>上滑查看完整营养信息</span>
   </>;
@@ -112,8 +114,8 @@ function GuideLandscapeCharacter({ onReady, onError }: { onReady: (key: string) 
   </div>;
 }
 
-function GuideLandscapeComposition({ onReady, onError }: { onReady: (key: string) => void; onError: (name: string) => void }) {
-  return <div className="guide-landscape-composition" aria-hidden="true">
+function GuideLandscapeComposition({ onReady, onError, onTransitionEnd }: { onReady: (key: string) => void; onError: (name: string) => void; onTransitionEnd: (event: ReactTransitionEvent<HTMLDivElement>) => void }) {
+  return <div className="guide-landscape-composition" aria-hidden="true" onTransitionEnd={onTransitionEnd}>
     <GuideLandscapeCrop name="logo" src={assetUrl("guide-foreground-top.webp")} readyKey="landscape-logo" onReady={onReady} onError={onError}/>
     <GuideLandscapeCharacter onReady={onReady} onError={onError}/>
     <GuideLandscapeCrop name="envelope" src={assetUrl("guide-foreground-top.webp")} readyKey="landscape-envelope" onReady={onReady} onError={onError}/>
@@ -212,7 +214,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
   const entering = useRef(false);
   const orientation = useRef<"portrait" | "landscape" | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const sync = () => {
       const nextOrientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
       // Mobile browser chrome repeatedly changes the visual viewport height.
@@ -255,12 +257,21 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
         animationTimer.current = window.setTimeout(() => {
           setAnimationStarted(true);
           animationTimer.current = null;
-        }, h5MotionTiming.guide.crossfadeMs);
+        // The opacity transition owns the normal handoff. This later watchdog
+        // only covers browsers that fail to dispatch transitionend.
+        }, guideLiveStageTransitionWatchdogMs);
       });
       readyFrames.current.push(secondFrame);
     });
     readyFrames.current.push(firstFrame);
   }, [motionEnabled, motionPreference, requiredReadyKeys]);
+
+  const handleLiveStageTransitionEnd = useCallback((event: ReactTransitionEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget || event.propertyName !== "opacity" || assetStatus !== "ready" || animationStarted) return;
+    if (animationTimer.current !== null) window.clearTimeout(animationTimer.current);
+    animationTimer.current = null;
+    setAnimationStarted(true);
+  }, [animationStarted, assetStatus]);
 
   const applyGuideProgress = useCallback((nextProgress: number) => {
     const root = guideRoot.current;
@@ -472,8 +483,15 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setSwipeReady(true);
     setGestureReady(true);
   }, []);
-  const handleFallbackError = useCallback(() => {
-    console.error("[BrandGuide] asset failed: guide-static-foreground-v2.webp");
+  const handleFallbackError = useCallback((name: string) => {
+    console.error(`[BrandGuide] asset failed: ${name}`);
+    if (name === "guide-first-frame.webp") {
+      setAssetStatus("failed");
+      setAnimationStarted(false);
+      setSwipeReady(true);
+      setGestureReady(true);
+      return;
+    }
     setFallbackUnavailable(true);
     setSwipeReady(true);
     setGestureReady(true);
@@ -483,7 +501,8 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setDestinationStatus("fallback");
   }, []);
   const handleDestinationReady = useCallback(() => setDestinationStatus("ready"), []);
-  const fallback = <GuideFallback unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
+  const terminalFallback = !motionEnabled || assetStatus === "failed" || assetStatus === "reduced" || assetStatus === "disabled";
+  const fallback = <GuideFallback terminal={terminalFallback} unavailable={fallbackUnavailable} onError={handleFallbackError}/>;
   const mountLivePortrait = layoutProfile !== "landscape" && layoutProfile !== "unknown" && motionEnabled && motionPreference === "allowed";
   const motionStyle = {
     "--guide-blink-start": `${h5MotionTiming.guide.blinkStartMs}ms`,
@@ -551,13 +570,13 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
           {layoutProfile !== "landscape" && <>
             <div className="brand-guide-portrait-scene">
               {fallback}
-              {mountLivePortrait && <div className="brand-guide-live-stage">
+              {mountLivePortrait && <div className="brand-guide-live-stage" onTransitionEnd={handleLiveStageTransitionEnd}>
                 <GuideLayers onReady={handleLayerReady} onError={handleLayerError}/>
               </div>}
             </div>
             {mountLivePortrait && <GuideEntryHint onReady={handleLayerReady} onError={handleLayerError}/>}
           </>}
-          {layoutProfile === "landscape" && <GuideLandscapeComposition onReady={handleLayerReady} onError={handleLayerError}/>}
+          {layoutProfile === "landscape" && <GuideLandscapeComposition onReady={handleLayerReady} onError={handleLayerError} onTransitionEnd={handleLiveStageTransitionEnd}/>}
         </div>
         {transitionError && <p className="brand-guide-transition-error" role="alert">档案预览加载失败，请再次上滑或点击重试</p>}
         <h1 className="brand-guide-accessible-copy">Honest Nutri 品牌引导</h1>

@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 let viewportUsers = 0;
 let viewportFrame: number | null = null;
+
+function syncVisualViewportHeight() {
+  const root = document.documentElement;
+  if (root.hasAttribute("data-guide-route-entry")) return;
+  const height = window.visualViewport?.height ?? window.innerHeight;
+  if (height <= 0) return;
+  const nextValue = `${Math.ceil(height)}px`;
+  if (root.style.getPropertyValue("--h5-visible-viewport-height") !== nextValue) {
+    root.style.setProperty("--h5-visible-viewport-height", nextValue);
+  }
+}
 
 export function requestVisualViewportHeightSync() {
   if (viewportFrame !== null) window.cancelAnimationFrame(viewportFrame);
   viewportFrame = window.requestAnimationFrame(() => {
     viewportFrame = null;
-    const root = document.documentElement;
-    if (root.hasAttribute("data-guide-route-entry")) return;
-    const height = window.visualViewport?.height ?? window.innerHeight;
-    if (height <= 0) return;
-    const nextValue = `${Math.ceil(height)}px`;
-    if (root.style.getPropertyValue("--h5-visible-viewport-height") !== nextValue) {
-      root.style.setProperty("--h5-visible-viewport-height", nextValue);
-    }
+    syncVisualViewportHeight();
   });
 }
 
@@ -33,10 +37,10 @@ function removeViewportListeners() {
 }
 
 export function useVisualViewportHeight() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     viewportUsers += 1;
     if (viewportUsers === 1) addViewportListeners();
-    requestVisualViewportHeightSync();
+    syncVisualViewportHeight();
     return () => {
       viewportUsers -= 1;
       if (viewportUsers <= 0) {

@@ -204,7 +204,7 @@ test("a slow category asset hands the pressed archive to the painted loading pag
   await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
 
   const root = page.locator("html");
-  const loading = page.locator(".runtime-loading-layer:not(.is-leaving)");
+  const loading = page.locator("#h5-category-route-loading-host .runtime-loading-layer.is-persistent:not(.is-leaving)");
   await expect(root).toHaveAttribute("data-category-loading-feedback", /category-.+/, { timeout: 5_000 });
   await expect(loading).toBeVisible();
   await expect(loading.locator(".guide-loading-buffer-poster")).toHaveJSProperty("complete", true);
@@ -212,7 +212,7 @@ test("a slow category asset hands the pressed archive to the painted loading pag
   releaseAsset();
   await waitForCategory(page);
   await expect(root).not.toHaveAttribute("data-category-loading-feedback", /.+/);
-  await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 5_000 });
+  await expect(page.locator(".runtime-loading-layer:not(.is-persistent)")).toHaveCount(0, { timeout: 5_000 });
 });
 
 for (const categorySlug of ["inspection-projects", "review-assurance"] as const) {
@@ -245,7 +245,7 @@ test(`a slow ${categorySlug} report route keeps immediate card feedback and hand
   try {
     await page.goto(`/reports/${categorySlug}`);
     await waitForCategory(page);
-    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.locator(".runtime-loading-layer:not(.is-persistent)")).toHaveCount(0, { timeout: 15_000 });
 
     const firstReport = page.locator('.category-card-hotspot[data-index="0"]');
     await expect(firstReport).toBeEnabled({ timeout: 15_000 });
@@ -260,7 +260,7 @@ test(`a slow ${categorySlug} report route keeps immediate card feedback and hand
     await page.mouse.up();
 
     await expect.poll(() => heldReportRequests, { timeout: 5_000 }).toBeGreaterThan(0);
-    const loading = page.locator(".runtime-loading-layer:not(.is-leaving)");
+    const loading = page.locator(".runtime-loading-layer:not(.is-leaving):not(.is-persistent)");
     const loadingPoster = loading.locator(".guide-loading-buffer-poster");
     await expect(loading).toBeVisible({ timeout: 5_000 });
     await expect.poll(() => loadingPoster.evaluate(async (image) => {
@@ -309,7 +309,7 @@ test(`a slow ${categorySlug} report route keeps immediate card feedback and hand
         const target = document.querySelector<HTMLElement>(".report-page-final");
         const targetStyle = target ? getComputedStyle(target) : null;
         probeWindow.__reportRouteHandoffSamples?.push({
-          loadingVisible: isVisible(document.querySelector(".runtime-loading-layer")),
+          loadingVisible: isVisible(document.querySelector(".runtime-loading-layer:not(.is-persistent)")),
           targetAnimation: targetStyle?.animationName ?? null,
           targetOpacity: targetStyle ? Number(targetStyle.opacity) : null,
         });
@@ -323,7 +323,7 @@ test(`a slow ${categorySlug} report route keeps immediate card feedback and hand
     const reportPage = page.locator(".report-page-final");
     await expect(reportPage).toBeVisible({ timeout: 15_000 });
     await expect(reportPage).toHaveCSS("opacity", "1");
-    await expect(page.locator(".runtime-loading-layer")).toHaveCount(0, { timeout: 5_000 });
+    await expect(page.locator(".runtime-loading-layer:not(.is-persistent)")).toHaveCount(0, { timeout: 5_000 });
     const handoffSamples = await page.evaluate(() => {
       const probeWindow = window as typeof window & {
         __reportRouteHandoffActive?: boolean;

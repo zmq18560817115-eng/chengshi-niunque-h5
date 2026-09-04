@@ -3,12 +3,14 @@ export const categoryRouteAttemptAttribute = "data-category-route-attempt";
 export const categoryRouteEntrySource = "reports-archive";
 export const categoryRouteBufferedEntrySource = "reports-archive-buffer";
 export const categoryRouteNativeEntrySource = "reports-archive-native";
+export const categoryRouteLoadingEntrySource = "reports-archive-loading";
 export const categoryRouteBufferAttribute = "data-category-route-buffer";
 export const categoryRouteNativeTransitionAttribute = "data-category-native-transition";
 export const categoryRouteLoadingFeedbackAttribute = "data-category-loading-feedback";
 export const categoryRouteReadyEvent = "h5-category-route-ready";
 export const categoryRouteMountedEvent = "h5-category-route-mounted";
 export const categoryRouteBufferHostId = "h5-category-route-buffer-host";
+export const categoryRouteLoadingHostId = "h5-category-route-loading-host";
 // Keep one short, perceptible pressed frame for touch and keyboard activation
 // before the compositor transition takes ownership of the route.
 export const archiveModuleExitDelayMs = 16;
@@ -16,7 +18,7 @@ export const archiveModuleExitDurationMs = 420;
 export const archiveModuleNavigationDelayMs = 0;
 export const categoryRouteBufferReleaseDurationMs = 520;
 export const categoryRouteReadyTimeoutMs = 3400;
-export const categoryRouteCommitTimeoutMs = 5000;
+export const categoryRouteCommitTimeoutMs = 30000;
 // Begin observing the shared loading page as soon as navigation starts. The
 // loading components keep their own short reveal threshold, so cached routes
 // still hand off directly without stacking another controller-side delay.
@@ -78,6 +80,10 @@ let bufferCleanupTimer: number | undefined;
 let bufferAnimationFrames: number[] = [];
 let activeReadyLatch: ReadyLatch | undefined;
 let activeLoadingFeedback: LoadingFeedback | undefined;
+
+function setPersistentLoadingAccessibility(visible: boolean) {
+  document.getElementById(categoryRouteLoadingHostId)?.setAttribute("aria-hidden", visible ? "false" : "true");
+}
 
 function createAttemptId() {
   attemptSequence += 1;
@@ -157,6 +163,7 @@ function createLoadingFeedback(attemptId: string) {
     // briefly expose the old clone again.
     committed = true;
     root.setAttribute(categoryRouteLoadingFeedbackAttribute, attemptId);
+    setPersistentLoadingAccessibility(true);
     // Two compositor frames guarantee that the decoded system loading poster
     // is paintable before either a fallback overlay or native snapshot uses it.
     queuePaintFrame(() => queuePaintFrame(() => {
@@ -189,7 +196,8 @@ function createLoadingFeedback(attemptId: string) {
     });
   };
   const findLoadingLayer = () => {
-    const layer = document.querySelector<HTMLElement>(".runtime-loading-layer:not(.is-leaving)");
+    const persistentLayer = document.querySelector<HTMLElement>(`#${categoryRouteLoadingHostId} .runtime-loading-layer:not(.is-leaving)`);
+    const layer = persistentLayer ?? document.querySelector<HTMLElement>(".runtime-loading-layer:not(.is-leaving):not(.is-persistent)");
     if (layer) prepareLayer(layer);
   };
 
@@ -213,6 +221,7 @@ function createLoadingFeedback(attemptId: string) {
     cancelPaintFrames();
     if (root.getAttribute(categoryRouteLoadingFeedbackAttribute) === attemptId) {
       root.removeAttribute(categoryRouteLoadingFeedbackAttribute);
+      setPersistentLoadingAccessibility(false);
     }
     if (activeLoadingFeedback?.attemptId === attemptId) activeLoadingFeedback = undefined;
   };
@@ -231,7 +240,12 @@ function clearAttemptMarkers(attemptId: string) {
   const root = document.documentElement;
   if (root.getAttribute(categoryRouteAttemptAttribute) !== attemptId) return;
   if (activeLoadingFeedback?.attemptId === attemptId) activeLoadingFeedback.cancel();
+  if (root.getAttribute(categoryRouteLoadingFeedbackAttribute) === attemptId) {
+    root.removeAttribute(categoryRouteLoadingFeedbackAttribute);
+    setPersistentLoadingAccessibility(false);
+  }
   root.removeAttribute(categoryRouteAttemptAttribute);
+  root.removeAttribute(categoryRouteEntryAttribute);
   if (root.getAttribute(categoryRouteNativeTransitionAttribute) === attemptId) {
     root.removeAttribute(categoryRouteNativeTransitionAttribute);
   }
@@ -266,10 +280,21 @@ function disposeCategoryRouteAttempt(attemptId: string) {
   bufferGeneration += 1;
   document.getElementById(categoryRouteBufferHostId)?.replaceChildren();
   root.removeAttribute(categoryRouteBufferAttribute);
+  if (root.getAttribute(categoryRouteLoadingFeedbackAttribute) === attemptId) {
+    root.removeAttribute(categoryRouteLoadingFeedbackAttribute);
+    setPersistentLoadingAccessibility(false);
+  }
   root.removeAttribute(categoryRouteAttemptAttribute);
+  root.removeAttribute(categoryRouteEntryAttribute);
   if (root.getAttribute(categoryRouteNativeTransitionAttribute) === attemptId) {
     root.removeAttribute(categoryRouteNativeTransitionAttribute);
   }
+}
+
+function disposeCategoryRouteAttemptAfterPaint(attemptId: string) {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => disposeCategoryRouteAttempt(attemptId));
+  });
 }
 
 function createReadyLatch(detail: Pick<CategoryRouteReadyDetail, "attemptId" | "slug">) {
@@ -338,6 +363,8 @@ export function prepareCategoryRouteContinuity(attemptId = createAttemptId()) {
   clone.classList.add("is-category-route-buffer-clone");
   clone.removeAttribute("aria-busy");
   clone.removeAttribute("data-exit-slug");
+  clone.removeAttribute("data-pressed-slug");
+  clone.querySelectorAll(".is-pressed, .archive-module-pressed-layer").forEach((node) => node.classList.remove("is-pressed", "archive-module-pressed-layer"));
   freezeCloneMotion(source, clone);
   clone.querySelector(".reports-archive-hotspots")?.remove();
   clone.querySelectorAll(".archive-module-exit-layer").forEach((node) => node.classList.remove("archive-module-exit-layer"));
@@ -424,6 +451,7 @@ export function navigateWithCategoryContinuity(navigate: () => void) {
   if (startViewTransition && !reducedMotion) {
     const latch = createReadyLatch({ attemptId, slug });
     const nativeLoadingFeedback = loadingFeedback;
+    let handoffDestination: "ready" | "loading" | null = null;
     const handoffFrame = Promise.race([
       latch.promise.then(() => "ready" as const),
       nativeLoadingFeedback.promise.then(() => "loading" as const),
@@ -448,35 +476,52 @@ export function navigateWithCategoryContinuity(navigate: () => void) {
         // Fast routes still hand directly to the complete target. On a slow
         // route, capture the already decoded and painted loading page instead
         // of leaving the pressed homepage snapshot apparently frozen.
-        const destination = await handoffFrame;
-        if (destination === "ready") nativeLoadingFeedback.cancel();
+        handoffDestination = await handoffFrame;
+        if (handoffDestination === "ready") nativeLoadingFeedback.cancel();
       });
       if (!transition?.finished || typeof transition.finished.then !== "function") throw new Error("invalid view transition");
       void transition.ready?.catch(() => {
         // A skipped/rejected native transition must not keep suppressing the
-        // target readiness loader or force undecoded artwork visible.
-        latch.settle();
-        loadingFeedback.cancel();
+        // target readiness loader. The persistent loading frame remains in
+        // control until the target dispatches its painted readiness signal.
         if (root.getAttribute(categoryRouteNativeTransitionAttribute) === attemptId) {
           root.removeAttribute(categoryRouteNativeTransitionAttribute);
         }
       });
       const finalize = () => {
+        if (root.getAttribute(categoryRouteNativeTransitionAttribute) === attemptId) {
+          root.removeAttribute(categoryRouteNativeTransitionAttribute);
+        }
+        if (handoffDestination === "loading" || nativeLoadingFeedback.wasCommitted()) {
+          void latch.promise.then(() => {
+            if (nativeLoadingFeedback.wasPainted()) disposeCategoryRouteAttemptAfterPaint(attemptId);
+            else void nativeLoadingFeedback.promise.then(() => disposeCategoryRouteAttemptAfterPaint(attemptId));
+          });
+          return;
+        }
         latch.settle();
         clearAttemptMarkers(attemptId);
       };
       void transition.finished.then(finalize, finalize);
       return;
     } catch {
-      latch.settle();
-      loadingFeedback.cancel();
       if (root.getAttribute(categoryRouteNativeTransitionAttribute) === attemptId) root.removeAttribute(categoryRouteNativeTransitionAttribute);
       // A non-conforming implementation may throw after invoking the update.
       // Never navigate twice or attempt to clone an already unmounted homepage.
       if (navigated) {
-        clearAttemptMarkers(attemptId);
+        void latch.promise.then(() => {
+          if (loadingFeedback.wasCommitted()) {
+            if (loadingFeedback.wasPainted()) disposeCategoryRouteAttemptAfterPaint(attemptId);
+            else void loadingFeedback.promise.then(() => disposeCategoryRouteAttemptAfterPaint(attemptId));
+          } else {
+            loadingFeedback.cancel();
+            clearAttemptMarkers(attemptId);
+          }
+        });
         return;
       }
+      latch.settle();
+      loadingFeedback.cancel();
       loadingFeedback = createLoadingFeedback(attemptId);
     }
   }
@@ -488,8 +533,8 @@ export function navigateWithCategoryContinuity(navigate: () => void) {
       // The painted loading page already owns every visible pixel. Remove the
       // old-page clone behind it in one operation so it cannot reappear while
       // the target's readiness layer fades away.
-      if (loadingFeedback.wasPainted()) disposeCategoryRouteAttempt(attemptId);
-      else void loadingFeedback.promise.then(() => disposeCategoryRouteAttempt(attemptId));
+      if (loadingFeedback.wasPainted()) disposeCategoryRouteAttemptAfterPaint(attemptId);
+      else void loadingFeedback.promise.then(() => disposeCategoryRouteAttemptAfterPaint(attemptId));
       return;
     }
     loadingFeedback.cancel();
