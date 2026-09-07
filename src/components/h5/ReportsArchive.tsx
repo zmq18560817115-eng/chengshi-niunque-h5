@@ -22,6 +22,10 @@ import {
   guideRouteEntryAttribute,
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
+import { ArchiveBatchDetails } from "./ArchiveBatchDetails";
+import { archiveFallbackSource, batchArtworkSource } from "./archive-batch-details";
+import { defaultLatestBatch, formatInspectionDate } from "@/config/h5-latest-batch";
+import { designAssets } from "@/config/design-assets.generated";
 import { pushHierarchyRoute } from "@/components/h5/hierarchy-navigation";
 
 const reportsReadinessRequests = [
@@ -73,9 +77,31 @@ function waitForDecodedImage(image: HTMLImageElement, timeoutMs = 12000) {
 }
 
 export function ReportsArchive(props: ReportsArchiveProps) {
-  if (props.preview) return <ReportsArchiveReady {...props}/>;
-  return <AdaptiveReadinessGate requests={reportsReadinessRequests} label="正在准备营养档案首页" reason="reports-assets" revealDelayMs={160} settleSelector=".reports-archive-final" settleFrames={3} failOpen>
-    <ReportsArchiveReady {...props}/>
+  const latestBatch = props.config?.latestBatch ?? defaultLatestBatch;
+  const [displayBatch, setDisplayBatch] = useState(latestBatch);
+  useEffect(() => {
+    if (displayBatch === latestBatch) return;
+    const batchSource = (value: typeof latestBatch) => batchArtworkSource(designAssets.archiveBatch[0].src, value);
+    if (batchSource(displayBatch) === batchSource(latestBatch)) {
+      setDisplayBatch(latestBatch);
+      return;
+    }
+    // Keep the last complete batch visible until both replacement images are
+    // decoded, so a live publication cannot overlay new text on old digits.
+    let cancelled = false;
+    const pending = [batchSource(latestBatch), archiveFallbackSource(latestBatch)].map((src) => {
+      const image = new window.Image();
+      image.src = src;
+      return waitForDecodedImage(image);
+    });
+    void Promise.all(pending).then(() => { if (!cancelled) setDisplayBatch(latestBatch); });
+    return () => { cancelled = true; };
+  }, [displayBatch, latestBatch]);
+  const requests = useMemo(() => reportsReadinessRequests.map((request) => ({ ...request, src: request.src === designAssets.archiveBatch[0].src ? batchArtworkSource(request.src, displayBatch) : request.src })), [displayBatch]);
+  const displayProps = { ...props, config: { ...(props.config ?? defaultH5SiteConfig), latestBatch: displayBatch } };
+  if (props.preview) return <ReportsArchiveReady {...displayProps}/>;
+  return <AdaptiveReadinessGate requests={requests} label="正在准备营养档案首页" reason="reports-assets" revealDelayMs={160} settleSelector=".reports-archive-final" settleFrames={3} failOpen>
+    <ReportsArchiveReady {...displayProps}/>
   </AdaptiveReadinessGate>;
 }
 
@@ -287,12 +313,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Stationary backing and transparent original parts share one canvas;
           character and cue animation never moves an opaque page crop. */}
-      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
+      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} latestBatch={config.latestBatch} />
+      <p className="sr-only">适用批次号：正装 {config.latestBatch.regularBatch}，试用装 {config.latestBatch.trialBatch}；检测日期：{formatInspectionDate(config.latestBatch.inspectionDate)}</p>
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />}
       <div className="reports-archive-reference-fallback" data-fallback-image={fallbackImageMounted ? "mounted" : "released"}>
-        {fallbackImageMounted ? <Image className="reports-archive-reference-fallback-image" src="/design/2026-09-07/runtime/archive-reference.webp" alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /> : null}
+        {fallbackImageMounted ? <><Image className="reports-archive-reference-fallback-image" src={archiveFallbackSource(config.latestBatch)} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /><ArchiveBatchDetails value={config.latestBatch}/></> : null}
       </div>
       {artworkFailed ? <div className="reports-archive-artwork-error" role="alert">
         <span>部分档案素材加载失败，已保留预览。</span>

@@ -1,4 +1,5 @@
 import { createArchiveEntryTransitionVisual } from "@/components/h5/archive-entry-transition-visual";
+import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
 import { requestVisualViewportHeightSync } from "@/components/h5/useVisualViewportHeight";
 
 export const guideRouteEntryAttribute = "data-guide-route-entry";
@@ -71,6 +72,7 @@ let bufferStageReadyAt = 0;
 let primeGeneration = 0;
 
 type PrimedGuideRouteBuffer = {
+  batchKey: string;
   buffer: HTMLDivElement;
   destinationImages: HTMLImageElement[];
   destinationFallback: boolean;
@@ -80,6 +82,7 @@ type PrimedGuideRouteBuffer = {
 };
 
 type GuideRoutePrimeRequest = {
+  batchKey: string;
   destinationFallback: boolean;
   profile: ResolvedGuideRouteProfile;
   promise: Promise<boolean>;
@@ -152,10 +155,10 @@ function createGuideSnapshot(profile: ResolvedGuideRouteProfile) {
   return snapshot;
 }
 
-function createGuideRouteBuffer(profile: ResolvedGuideRouteProfile, destinationFallback: boolean) {
+function createGuideRouteBuffer(profile: ResolvedGuideRouteProfile, destinationFallback: boolean, latestBatch: LatestBatch) {
   const orientation = guideRouteOrientation(profile);
   const snapshot = createGuideSnapshot(profile);
-  const destination = createArchiveEntryTransitionVisual(createTransitionImage);
+  const destination = createArchiveEntryTransitionVisual(createTransitionImage, latestBatch);
 
   const guidePanel = document.createElement("div");
   guidePanel.className = "h5-guide-route-panel h5-guide-route-guide-panel";
@@ -210,14 +213,16 @@ function waitForTransitionImage(image: HTMLImageElement, timeoutMs = guideRouteA
   });
 }
 
-export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile, destinationFallback: boolean): Promise<boolean> {
+export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile, destinationFallback: boolean, latestBatch: LatestBatch = defaultLatestBatch): Promise<boolean> {
   const host = document.getElementById(guideRouteBufferHostId);
   if (!host) return false;
   const profile = resolveGuideRouteProfile(profileInput);
   const orientation = guideRouteOrientation(profile);
+  const batchKey = JSON.stringify(latestBatch);
 
   const current = primedGuideRouteBuffer;
   if (current
+    && current.batchKey === batchKey
     && current.ready
     && current.profile === profile
     && current.destinationFallback === destinationFallback
@@ -226,6 +231,7 @@ export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile,
 
   const inFlight = guideRoutePrimeRequest;
   if (inFlight
+    && inFlight.batchKey === batchKey
     && inFlight.profile === profile
     && inFlight.destinationFallback === destinationFallback) return inFlight.promise;
 
@@ -236,8 +242,8 @@ export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile,
   bufferCommitReadyAt = 0;
   bufferStageReadyAt = 0;
 
-  const { buffer, destinationImages } = createGuideRouteBuffer(profile, destinationFallback);
-  const next: PrimedGuideRouteBuffer = { buffer, destinationImages, destinationFallback, orientation, profile, ready: false };
+  const { buffer, destinationImages } = createGuideRouteBuffer(profile, destinationFallback, latestBatch);
+  const next: PrimedGuideRouteBuffer = { batchKey, buffer, destinationImages, destinationFallback, orientation, profile, ready: false };
   primedGuideRouteBuffer = next;
   host.replaceChildren(buffer);
 
@@ -255,7 +261,7 @@ export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile,
   }).finally(() => {
     if (guideRoutePrimeRequest?.promise === promise) guideRoutePrimeRequest = null;
   });
-  guideRoutePrimeRequest = { destinationFallback, profile, promise };
+  guideRoutePrimeRequest = { batchKey, destinationFallback, profile, promise };
   return promise;
 }
 
@@ -267,7 +273,7 @@ function currentGuideRouteProfile(): ResolvedGuideRouteProfile {
   return window.innerWidth > window.innerHeight ? "landscape" : "portrait-standard";
 }
 
-export async function prepareGuideRouteContinuity(initialProgress = 0, destinationFallback = false): Promise<boolean> {
+export async function prepareGuideRouteContinuity(initialProgress = 0, destinationFallback = false, latestBatch: LatestBatch = defaultLatestBatch): Promise<boolean> {
   const root = document.documentElement;
   const host = document.getElementById(guideRouteBufferHostId);
   const source = document.querySelector<HTMLElement>(".brand-guide");
@@ -275,7 +281,7 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   if (!host || !source || !sourceStage) return false;
 
   const profile = currentGuideRouteProfile();
-  const primed = await primeGuideRouteContinuity(profile, destinationFallback);
+  const primed = await primeGuideRouteContinuity(profile, destinationFallback, latestBatch);
   const preparedBuffer = primedGuideRouteBuffer;
   if (!primed
     || !preparedBuffer

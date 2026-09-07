@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { AdminAuthService } from "@/server/services/admin-auth-service";
 import { AdminContentService } from "@/server/services/admin-content-service";
+import { LatestBatchService } from "@/server/services/latest-batch-service";
+import type { LatestBatch } from "@/config/h5-latest-batch";
 import { getObjectStorage } from "@/server/storage";
 import { validateReportFile } from "@/server/upload/report-file";
 import { MAX_REPORT_IMAGE_PAGES, MAX_REPORT_TOTAL_BYTES } from "@/server/report-image-policy";
@@ -13,6 +15,20 @@ import { requireCurrentAdmin } from "@/server/auth/request-session";
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/server/auth/token";
 
 export type LoginState = { error?: string };
+export type LatestBatchState = { error?: string; saved?: boolean; value?: LatestBatch };
+
+export async function publishLatestBatchAction(_state: LatestBatchState, formData: FormData): Promise<LatestBatchState> {
+  const admin = await requireCurrentAdmin();
+  try {
+    const value = await new LatestBatchService().publish(Object.fromEntries(formData.entries()), admin.id);
+    revalidateContentPaths();
+    revalidatePath("/admin/site");
+    revalidatePath("/go");
+    return { saved: true, value };
+  } catch (error) {
+    return { error: adminError(error), value: _state.value };
+  }
+}
 
 export async function loginAction(_state: LoginState, formData: FormData): Promise<LoginState> {
   const account = String(formData.get("account") ?? "");

@@ -7,6 +7,10 @@ const { redirect, router } = vi.hoisted(() => ({
   router: { push: vi.fn(), prefetch: vi.fn() },
 }));
 vi.mock("next/navigation", () => ({ redirect, useRouter: () => router }));
+vi.mock("@/server/services/public-content-service", () => ({
+  PublicContentService: class { getContent() { return Promise.resolve({ version: "test", settings: [], modules: [] }); } },
+  publicSiteConfig: () => ({ latestBatch: { regularBatch: "GD00046087", trialBatch: "GD00046086", inspectionDate: "2026-08" } }),
+}));
 
 describe("brand guide", () => {
   it("redirects the root entry to the canonical /go route", () => {
@@ -18,8 +22,8 @@ describe("brand guide", () => {
     expect(goRouteRenderingMode).toBe("force-dynamic");
   });
 
-  it("renders the guide immediately instead of fixing the loading buffer before it", () => {
-    render(<GoPage/>);
+  it("renders the guide with published batch data and without an extra loading buffer", async () => {
+    render(await GoPage());
     expect(screen.queryByRole("main", { name: "页面加载缓冲" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Honest Nutri 品牌引导" })).toBeInTheDocument();
   });

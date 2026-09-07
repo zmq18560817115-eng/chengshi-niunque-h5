@@ -2,6 +2,9 @@ import { designAssets } from "@/config/design-assets.generated";
 import Image from "next/image";
 import { memo, type CSSProperties } from "react";
 import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUnlockTabMotion";
+import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
+import { ArchiveBatchDetails } from "./ArchiveBatchDetails";
+import { batchArtworkSource } from "./archive-batch-details";
 import {
   archiveEntryMasterWidth,
   archiveEntryMasterHeight,
@@ -53,14 +56,15 @@ const deepDeferredParts = new Set(["module-2-review-folder", "module-2-productio
 // 按压高亮改由 CSS 依据 <main data-pressed-slug> + 图层 data-archive-module 驱动
 // (见 globals.css),这样点按只更新父级一个属性,无需重渲染这棵庞大的贴图树。
 // 路由退场由完整首页缓冲层统一承接，不再单独抽走大面积文件夹图层。
-export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mountDeferred = true, mountDeepDeferred = true }: { preview?: boolean; mountDeferred?: boolean; mountDeepDeferred?: boolean }) {
+export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mountDeferred = true, mountDeepDeferred = true, latestBatch = defaultLatestBatch }: { preview?: boolean; mountDeferred?: boolean; mountDeepDeferred?: boolean; latestBatch?: LatestBatch }) {
   const renderLayer = (layer: ArtworkLayer) => {
     const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
+    const src = guideEntryBatchParts.has(layer.id) ? batchArtworkSource(layer.src, latestBatch) : layer.src;
     return (
       <Image
-        key={layer.id}
+        key={`${layer.id}:${src}`}
         className="reports-archive-source-layer"
-        src={layer.src}
+        src={src}
         alt=""
         width={layer.width}
         height={layer.height}
@@ -97,6 +101,7 @@ export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mo
       <div className="reports-archive-entry-group reports-archive-entry-batch" data-guide-entry-group="latest-batch">
         <div className="reports-archive-entry-coordinate-layer">
           {batchLayers.map(renderLayer)}
+          <ArchiveBatchDetails value={latestBatch}/>
         </div>
       </div>
     </div>

@@ -173,7 +173,9 @@ describe("H5 motion isolation", () => {
       /<div className="brand-guide-portrait-scene">[\s\S]*?<\/div>\s*{mountLivePortrait && <GuideEntryHint/,
     );
     expect(css).toContain("@keyframes guide-entry-hint-float");
-    expect(css).toContain('.brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint');
+    expect(css).toContain('.brand-guide.is-animating .brand-guide-entry-hint');
+    expect(css).not.toContain('.brand-guide-stage[data-swipe-state="locked"] .brand-guide-entry-hint');
+    expect(css).not.toContain('.brand-guide.is-loading .brand-guide-entry-hint');
   });
 
   it.each([
@@ -195,7 +197,7 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("starts the light guide-hint loop only after entry unlocks", () => {
+  it("keeps entry unlock timing while the guide hint accompanies the animation", () => {
     expect(h5MotionTiming.guide.swipeReadyMs).toBe(
       h5MotionTiming.guide.paperStartMs + 220 + h5MotionTiming.guide.paperDurationMs,
     );
@@ -243,7 +245,7 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("@keyframes guide-route-layer-reveal");
     expect(css).toContain("#h5-guide-route-buffer-host");
     expect(layout).toContain('id="h5-guide-route-buffer-host"');
-    expect(guide).toContain('const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");');
+    expect(guide).toContain('const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback", latestBatch);');
     expect(guide).toContain("if (!prepared)");
     expect(guide).toContain("setTransitionError(true)");
     expect(guide).toContain("navigateWithGuideContinuity(() => replaceHierarchyRoute");
@@ -277,7 +279,7 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain('createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot")');
     expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/2026-09-07/guide/guide-static-foreground-v2.webp"');
     expect(routeTransition).not.toContain("archive-transition-preview.webp");
-    expect(routeTransition).toContain("createArchiveEntryTransitionVisual(createTransitionImage)");
+    expect(routeTransition).toContain("createArchiveEntryTransitionVisual(createTransitionImage, latestBatch)");
     expect(routeTransition).not.toContain('dataset.guideDestinationGroup = "archive-book"');
     expect(routeTransition).not.toContain('dataset.guideDestinationGroup = "latest-batch"');
     expect(routeTransition).toContain('export async function primeGuideRouteContinuity(profileInput: GuideRouteProfile');
@@ -287,7 +289,7 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain('track.className = "h5-guide-route-track"');
     expect(routeTransition).toContain("Promise.all(requiredImages.map((image) => waitForTransitionImage(image)))");
     expect(routeTransition).toContain("const requiredImages = destinationFallback ? images.filter((image) => !destinationImages.includes(image)) : images;");
-    expect(routeTransition).toContain("const primed = await primeGuideRouteContinuity(profile, destinationFallback);");
+    expect(routeTransition).toContain("const primed = await primeGuideRouteContinuity(profile, destinationFallback, latestBatch);");
     expect(routeTransition).toContain("host.replaceChildren(buffer)");
     expect(routeTransition).toContain("primeGeneration += 1;");
     expect(routeTransition).toContain("void buffer.offsetWidth;");
@@ -460,13 +462,13 @@ describe("H5 motion isolation", () => {
     expect(route).toContain("<GuideExperience/>");
     expect(experience).not.toContain('fetch("/api/public/content"');
     expect(experience).toContain('router.prefetch("/reports")');
-    expect(experience).toContain("return <BrandGuide/>");
+    expect(experience).toContain("return <BrandGuide latestBatch={latestBatch}/>");
     expect(experience).not.toContain("AdaptiveReadinessGate");
     expect(experience).not.toContain("preloadHomepageAssets");
     expect(experience).not.toContain("homepageCriticalWarmRequests");
     expect(guide).toContain("markImageDecoded(event.currentTarget");
     expect(guide).toContain("requiredReadyKeys.every((required) => readyLayers.current.has(required))");
-    expect(guide).toContain("void primeGuideRouteContinuity(layoutProfile, destinationStatus === \"fallback\")");
+    expect(guide).toContain("void primeGuideRouteContinuity(layoutProfile, destinationStatus === \"fallback\", latestBatch)");
     expect(guide).toContain("const transitionGestureReady = gestureReady && destinationUsable && continuityReady;");
     expect(reports).not.toContain("reportsDeferredWarmRequests");
     expect(reports).not.toContain("categoryRouteWarmRequests");
@@ -571,7 +573,7 @@ describe("H5 motion isolation", () => {
   it("keeps the new reference fallback and deferred source regions on the same master", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
-    expect(reports).toContain('src="/design/2026-09-07/runtime/archive-reference.webp"');
+    expect(reports).toContain('src={archiveFallbackSource(config.latestBatch)}');
     expect(artwork).toContain('data-artwork-source="layered-originals"');
     expect(artwork).toContain("mountDeepDeferred = true");
     expect(artwork).toContain('(mountDeepDeferred && deepDeferredParts.has(layer.id))');

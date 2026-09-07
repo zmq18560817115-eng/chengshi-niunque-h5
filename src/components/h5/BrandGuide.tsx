@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createArchiveEntryTransitionVisual } from "./archive-entry-transition-visual";
+import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
 import { replaceHierarchyRoute } from "./hierarchy-navigation";
 import { H5_MOTION_ENABLED, h5MotionModules, h5MotionTiming } from "./motion/motion-config";
 import {
@@ -123,13 +124,13 @@ function GuideLandscapeComposition({ onReady, onError, onTransitionEnd }: { onRe
   </div>;
 }
 
-function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; onError: () => void }) {
+function GuideDestinationPreview({ onReady, onError, latestBatch }: { onReady: () => void; onError: () => void; latestBatch: LatestBatch }) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const destination = createArchiveEntryTransitionVisual();
+    const destination = createArchiveEntryTransitionVisual(undefined, latestBatch);
     let cancelled = false;
     host.replaceChildren(destination.visual);
 
@@ -172,14 +173,14 @@ function GuideDestinationPreview({ onReady, onError }: { onReady: () => void; on
       cancelled = true;
       host.replaceChildren();
     };
-  }, [onError, onReady]);
+  }, [latestBatch, onError, onReady]);
 
   return <section className="brand-guide-destination-preview" aria-hidden="true">
     <div ref={hostRef} className="brand-guide-destination-content" />
   </section>;
 }
 
-export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; onEnter?: () => void }) {
+export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLatestBatch }: { preview?: boolean; onEnter?: () => void; latestBatch?: LatestBatch }) {
   const router = useRouter();
   const motionEnabled = H5_MOTION_ENABLED && h5MotionModules.guide && !preview;
   const [leaving, setLeaving] = useState(false);
@@ -233,7 +234,9 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     };
   }, []);
 
-  useEffect(() => {
+  // Reset before cached image decode callbacks can report readiness. WebKit
+  // can deliver those callbacks before a passive effect would run.
+  useLayoutEffect(() => {
     readyLayers.current.clear();
     readyFrames.current.forEach((frame) => window.cancelAnimationFrame(frame));
     readyFrames.current = [];
@@ -341,11 +344,11 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     if (preview || layoutProfile === "unknown" || !destinationUsable) return;
     let cancelled = false;
     setContinuityReady(false);
-    void primeGuideRouteContinuity(layoutProfile, destinationStatus === "fallback").then((ready) => {
+    void primeGuideRouteContinuity(layoutProfile, destinationStatus === "fallback", latestBatch).then((ready) => {
       if (!cancelled) setContinuityReady(ready);
     });
     return () => { cancelled = true; };
-  }, [destinationStatus, destinationUsable, layoutProfile, preview]);
+  }, [destinationStatus, destinationUsable, latestBatch, layoutProfile, preview]);
 
   useEffect(() => {
     if (!animationStarted) return;
@@ -366,7 +369,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
     setTransitionError(false);
     const continueToArchive = async () => {
       if (!onEnter) {
-        const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback");
+        const prepared = await prepareGuideRouteContinuity(startProgress, destinationStatus === "fallback", latestBatch);
         if (!prepared) {
           entering.current = false;
           setDestinationStatus("fallback");
@@ -383,7 +386,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
       }, reducedMotion ? 0 : guideRouteNavigationDelayMs);
     };
     void continueToArchive();
-  }, [destinationStatus, flushGuideProgress, leaving, onEnter, preview, router, transitionGestureReady, transitionSwipeReady]);
+  }, [destinationStatus, flushGuideProgress, latestBatch, leaving, onEnter, preview, router, transitionGestureReady, transitionSwipeReady]);
 
   const settleGuide = useCallback(() => {
     const root = guideRoot.current;
@@ -583,7 +586,7 @@ export function BrandGuide({ preview = false, onEnter }: { preview?: boolean; on
         <small className="brand-guide-accessible-copy">{preview ? "后台预览" : "向上滑动，或点击下方提示进入档案"}</small>
         <button className="brand-guide-enter-action" type="button" onClick={() => enter("control", 0)} disabled={leaving || preview || !transitionSwipeReady}>进入档案</button>
       </section>
-      <GuideDestinationPreview onReady={handleDestinationReady} onError={handleDestinationError}/>
+      <GuideDestinationPreview onReady={handleDestinationReady} onError={handleDestinationError} latestBatch={latestBatch}/>
     </div>
   </main>;
 }

@@ -6,7 +6,8 @@ import {
 } from "@/server/repositories/public-content-repository";
 import { isProductionPublicRecord } from "@/server/public-report-policy";
 import { hasMatchingReportImageExtension, isStaticReportImageMimeType } from "@/server/report-image-policy";
-import { defaultH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
+import { resolveH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
+import { latestBatchSettingKey } from "@/config/h5-latest-batch";
 
 export type PublicAsset = {
   id: string;
@@ -41,9 +42,8 @@ export type PublicContent = {
   settings: Array<{ key: string; name: string; value: unknown }>;
 };
 
-export function publicSiteConfig(_content: PublicContent): H5SiteConfig {
-  void _content;
-  return defaultH5SiteConfig;
+export function publicSiteConfig(content: PublicContent): H5SiteConfig {
+  return resolveH5SiteConfig(content.settings.find((setting) => setting.key === latestBatchSettingKey)?.value);
 }
 
 type PublicAssetRecord = PublicModuleRecord["cards"][number]["assets"][number];

@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { designAssets } from "@/config/design-assets.generated";
+import { archiveTitleGroups } from "@/config/h5-archive-modules";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 
 export const archiveTitleBounceDurationMs = 1217;
-const titleGroups = designAssets.archiveTitles;
+const titleGroups = archiveTitleGroups;
 export const archiveSectionTitleWarmAssets = titleGroups.flatMap((group) => [group.cue.src, ...group.parts.map((part) => part.src)]);
 const position = (part: { x: number; y: number; width: number; height: number }): CSSProperties => ({ left: `${part.x / designAssets.archiveWidth * 100}%`, top: `${part.y / designAssets.archiveHeight * 100}%`, width: `${part.width / designAssets.archiveWidth * 100}%`, height: `${part.height / designAssets.archiveHeight * 100}%` });
 

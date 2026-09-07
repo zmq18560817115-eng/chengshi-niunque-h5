@@ -1,4 +1,6 @@
 import { designAssets } from "@/config/design-assets.generated";
+import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
+import { batchArtworkSource, createBatchDetails } from "./archive-batch-details";
 
 export const archiveEntryMasterWidth = designAssets.archiveWidth / 2;
 export const archiveEntryMasterHeight = designAssets.archiveHeight / 2;
@@ -78,7 +80,7 @@ function createLayerImage(item: ArchiveEntryLayer, createImage: TransitionImageF
   return image;
 }
 
-export function createArchiveEntryTransitionVisual(createImage: TransitionImageFactory = defaultImageFactory) {
+export function createArchiveEntryTransitionVisual(createImage: TransitionImageFactory = defaultImageFactory, latestBatch: LatestBatch = defaultLatestBatch) {
   const visual = document.createElement("div");
   visual.className = "h5-guide-archive-entry-visual";
   visual.dataset.artworkSource = "layered-originals";
@@ -111,7 +113,9 @@ export function createArchiveEntryTransitionVisual(createImage: TransitionImageF
   const batch = document.createElement("div");
   batch.className = "h5-guide-archive-entry-group is-batch";
   batch.dataset.guideDestinationGroup = "latest-batch";
-  for (const item of archiveEntryBatchLayers) batch.append(createLayerImage(item, createImage));
+  for (const item of archiveEntryBatchLayers) batch.append(createLayerImage({ ...item, src: batchArtworkSource(item.src, latestBatch) }, createImage));
+  const details = createBatchDetails(latestBatch);
+  if (details) batch.append(details);
 
   canvas.append(paper, book, batch);
   visual.append(canvas);

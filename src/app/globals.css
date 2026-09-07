@@ -50,9 +50,12 @@
   --category-route-entry-distance: 8dvw;
   --category-page-master-ratio: 0.461574;
   --category-content-bottom-space: 40;
+  --archive-batch-value-color: #704621;
+  --archive-batch-value-font: Arial, "Microsoft YaHei", sans-serif;
   --archive-title-bounce-duration: 1217ms;
   --archive-title-character-step: 120ms;
   --archive-click-cue-duration: 1800ms;
+  --archive-click-cue-lift: -24%;
   --archive-fish-duration: var(--archive-click-cue-duration);
   --archive-master-height: 5391.5;
   --archive-title-sequence-duration: 3651ms;
@@ -345,8 +348,7 @@ button, a { font: inherit; }
 .brand-guide.is-animating .brand-guide-character-closed { will-change: opacity; }
 .brand-guide-foreground-top { z-index: 35; }
 .brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom); display: block; width: var(--guide-entry-hint-width); height: auto; translate: -50% 0; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translate3d(0,0,0); }
-.brand-guide-stage[data-swipe-state="locked"] .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
-.brand-guide-stage[data-swipe-state="ready"] .brand-guide-entry-hint { animation: guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out infinite; will-change: transform; }
+.brand-guide.is-animating .brand-guide-entry-hint { animation: guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out infinite; will-change: transform; }
 .brand-guide-fallback { z-index: 1; visibility: visible; opacity: 1; transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
@@ -357,7 +359,6 @@ button, a { font: inherit; }
 .brand-guide.has-no-fallback .brand-guide-fallback { display: none; }
 .brand-guide.has-no-fallback .brand-guide-fallback-message { display: block; }
 .brand-guide.is-loading .brand-guide-fallback { visibility: visible; opacity: 1; }
-.brand-guide.is-loading .brand-guide-entry-hint { visibility: hidden; opacity: 0; }
 .brand-guide:not(.is-animating) .brand-guide-paper, .brand-guide:not(.is-animating) .brand-guide-character-closed { animation-play-state: paused; }
 .brand-guide.is-motion-disabled .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
 .brand-guide.is-motion-disabled .brand-guide-fallback { visibility: visible; opacity: 1; }
@@ -517,6 +518,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-reference-f
 .reports-archive-entry-coordinate-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .reports-archive-entry-book { z-index: 10; }
 .reports-archive-entry-batch { z-index: 11; }
+.archive-batch-values { position: absolute; inset: 0; z-index: 50; display: block; width: 100%; height: 100%; pointer-events: none; overflow: hidden; fill: var(--archive-batch-value-color); font-family: var(--archive-batch-value-font); font-size: 58px; font-weight: 400; }
 /* The route buffer owns the staged guide-to-archive motion. The decoded live
    groups remain at their final geometry underneath it, preventing a second
    animation or a blank frame while the buffer crossfades away. */
@@ -1237,7 +1239,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 }
 @keyframes archive-source-click-bounce {
   0%, 100% { transform: translate3d(0,0,0); }
-  50% { transform: translate3d(0,-9%,0); }
+  50% { transform: translate3d(0,var(--archive-click-cue-lift),0); }
 }
 .category-card-hotspot .category-card-source-art { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; clip-path: none; white-space: normal; pointer-events: none; }
 .category-card-source-part { position: absolute; display: block; max-width: none; object-fit: fill; }

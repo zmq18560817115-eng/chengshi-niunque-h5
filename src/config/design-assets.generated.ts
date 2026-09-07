@@ -9213,5 +9213,7 @@ export const designAssets = {
     "y": 7974,
     "width": 2000,
     "height": 2809
-  }
+  },
+  "archiveBatchEditable": "/design/2026-09-07/runtime/archive-batch-editable.webp",
+  "archiveFallbackEditable": "/design/2026-09-07/runtime/archive-reference-editable.webp"
 } as const;
