@@ -1,0 +1,21 @@
+/* Original GIF fish poses; one out-and-back uses the shared click-cue rhythm. */
+.archive-fish-motion-gif[data-fish-index="1"] { animation: source-fish-1 var(--archive-fish-duration) ease-in-out infinite; }
+@keyframes source-fish-1 {
+  0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+  50% { transform: translate3d(0.1901%,5.3367%,0) rotate(-24.6752deg); }
+}
+.archive-fish-motion-gif[data-fish-index="2"] { animation: source-fish-2 var(--archive-fish-duration) ease-in-out infinite; }
+@keyframes source-fish-2 {
+  0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+  50% { transform: translate3d(-0.0491%,-4.8971%,0) rotate(15.3548deg); }
+}
+.archive-fish-motion-gif[data-fish-index="3"] { animation: source-fish-3 var(--archive-fish-duration) ease-in-out infinite; }
+@keyframes source-fish-3 {
+  0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+  50% { transform: translate3d(-0.2517%,2.9935%,0) rotate(-25.6883deg); }
+}
+.archive-fish-motion-gif[data-fish-index="4"] { animation: source-fish-4 var(--archive-fish-duration) ease-in-out infinite; }
+@keyframes source-fish-4 {
+  0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+  50% { transform: translate3d(0.2587%,-1.0544%,0) rotate(25.6883deg); }
+}

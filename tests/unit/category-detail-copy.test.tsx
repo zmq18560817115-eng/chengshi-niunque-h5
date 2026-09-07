@@ -63,15 +63,15 @@ describe("CategoryDetail dynamic card copy", () => {
 
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
     expect(screen.getByText("DHA、ARA与安全检测说明。")).toBeInTheDocument();
-    expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
+    expect(screen.getByText("油脂新鲜度")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-status]")).toHaveLength(0);
     expect(container.querySelectorAll(".category-card-status-text-art")).toHaveLength(0);
-    expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-folder-layer.runtime.webp"));
-    expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(6);
+    expect(container.querySelector('[data-category-layer="folder"]')).toHaveAttribute("src", expect.stringContaining("runtime/inspection-83.webp"));
+    expect(container.querySelectorAll(".category-page-artwork-layer")).toHaveLength(4);
     expect(container.querySelector(".category-page-viewport")).toHaveAttribute("data-artwork-source", "layered-components");
     expect(container.innerHTML).not.toContain("inspection-source.jpg");
     expect(container.querySelectorAll(".category-card-backplate")).toHaveLength(3);
-    expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("category-runtime/inspection-card-1.runtime.webp"));
+    expect(container.querySelector('.category-card-backplate[data-index="0"]')).toHaveAttribute("src", expect.stringContaining("runtime/inspection-84.webp"));
     expect(container.querySelector(".category-inspection-batch-bubble")).not.toBeInTheDocument();
     expect(container.querySelector(".category-page-final")).not.toHaveClass("h5-page-transition", "is-leaving");
   });
@@ -236,9 +236,9 @@ describe("CategoryDetail dynamic card copy", () => {
     const firstCard = container.querySelector<HTMLElement>('.category-card-hotspot[data-index="0"]');
 
     expect(firstCard?.style.getPropertyValue("--category-card-x")).toBe("60");
-    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("526.5");
-    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("65");
-    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("80");
+    expect(firstCard?.style.getPropertyValue("--category-card-y")).toBe("426.5");
+    expect(firstCard?.style.getPropertyValue("--category-copy-x")).toBe("68");
+    expect(firstCard?.style.getPropertyValue("--category-copy-y")).toBe("50.5");
     expect(firstCard?.style.getPropertyValue("--category-copy-width")).toBe("742");
   });
 
@@ -249,24 +249,15 @@ describe("CategoryDetail dynamic card copy", () => {
     };
     render(<CategoryDetail module={legacyModule} preview />);
     expect(screen.getByText("核心营养含量")).toBeInTheDocument();
-    expect(screen.getAllByText("查看2份报告")).not.toHaveLength(0);
+    expect(screen.getByText("油脂新鲜度")).toBeInTheDocument();
     expect(screen.queryByText("第1项资料")).not.toBeInTheDocument();
   });
 
-  it("retains the production fish decoration without publishing a fixed conclusion", () => {
+  it("uses the new production control artwork without retired per-card fish badges", () => {
     const { container } = render(<CategoryDetail module={traceabilityModuleFixture} preview />);
-    const decorations = [...container.querySelectorAll<HTMLElement>(".category-card-decoration")];
-
-    expect(decorations).toHaveLength(2);
-    expect(decorations.map((decoration) => decoration.textContent)).toEqual(["", ""]);
-    expect(decorations.every((decoration) => decoration.dataset.status === undefined)).toBe(true);
-    expect(decorations.map((decoration) => decoration.querySelectorAll("img").length)).toEqual([1, 1]);
-    expect(decorations.every((decoration) => decoration.querySelector(".category-card-status-art")?.getAttribute("src")?.startsWith("/design/final-v1/category-runtime/"))).toBe(true);
-    expect(decorations.every((decoration) => decoration.getAttribute("aria-hidden") === "true")).toBe(true);
-    expect(decorations.every((decoration) => decoration.closest(".category-card-hotspot"))).toBe(true);
+    expect(container.querySelectorAll(".category-card-decoration")).toHaveLength(0);
+    expect(container.querySelectorAll('[data-card-part^="control-"]')).toHaveLength(8);
     expect(container.querySelector(".category-card-status-text-art")).not.toBeInTheDocument();
-    expect(container.innerHTML).not.toContain("已核验");
-    expect(container.innerHTML).not.toContain("已核对");
   });
 
   it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {

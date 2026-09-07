@@ -2,7 +2,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const viewports = [[320,568],[360,800],[375,812],[390,844],[393,852],[414,896],[430,932]];
+const viewports = [[320,568],[360,800],[375,812],[390,844],[393,852],[412,892],[414,896],[428,926],[430,932]];
 const routes = [
   ["guide", "/"],
   ["archive", "/reports"],

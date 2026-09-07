@@ -40,7 +40,7 @@ type GuideGesture = {
 
 const clampProgress = (value: number) => Math.min(1, Math.max(0, value));
 
-const assetUrl = (name: string) => `/design/guide/${name}`;
+const assetUrl = (name: string) => `/design/2026-09-07/guide/${name}`;
 const standardLayerNames = [
   "guide-character-open.webp", "guide-character-closed.webp", "guide-window-mask.webp", "guide-arch.webp",
   "report-paper-top.webp", "report-paper-left.webp", "report-paper-right.webp", "report-paper-bottom.webp",

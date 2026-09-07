@@ -5,7 +5,7 @@ import path from "node:path";
 const output = path.resolve("test-results/archive-module-1");
 await fs.mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
-const viewports = [[320,568],[360,800],[375,667],[375,812],[390,844],[393,852],[414,896],[430,932]];
+const viewports = [[320,568],[360,800],[375,667],[375,812],[390,844],[393,852],[412,892],[414,896],[428,926],[430,932]];
 const results = [];
 
 for (const [width, height] of viewports) {

@@ -56,7 +56,7 @@ test("guide is replaced while category and report follow the platform Back hiera
   expect(await historyLength(page)).toBe(guideLength);
   await waitForArchive(page);
 
-  const inspection = page.locator('.archive-inspection-mascot-hotspot[data-mascot-slug="inspection-projects"]');
+  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
   await expect(inspection).toBeEnabled({ timeout: 15_000 });
   await inspection.click();
   await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
@@ -233,7 +233,7 @@ test("a slow category asset hands the pressed archive to the painted loading pag
   await page.goto("/reports");
   await waitForArchive(page);
 
-  const inspection = page.locator('.archive-inspection-mascot-hotspot[data-mascot-slug="inspection-projects"]');
+  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
   await expect(inspection).toBeEnabled({ timeout: 15_000 });
   await inspection.evaluate((element) => (element as HTMLButtonElement).click());
   await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
@@ -388,7 +388,7 @@ test("returning from a report restores the category reading position", async ({ 
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/reports");
   await waitForArchive(page);
-  const inspection = page.locator('.archive-inspection-mascot-hotspot[data-mascot-slug="inspection-projects"]');
+  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
   await expect(inspection).toBeEnabled({ timeout: 15_000 });
   await inspection.click();
   await expect(page).toHaveURL(/\/reports\/inspection-projects$/);

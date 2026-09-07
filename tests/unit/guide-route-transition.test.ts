@@ -73,26 +73,19 @@ describe("guide route transition priming", () => {
     expect(destinationBook).not.toBeNull();
     expect(destinationBatch).not.toBeNull();
     expect([...destinationBook!.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
-      "module-1-folder-back",
-      "module-1-folder-front",
-      "module-1-logo",
-      "module-1-title",
-      "module-1-badge",
+      "module-1-book-0",
     ]);
     expect([...destinationBatch!.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
-      "module-1-batch-coil",
-      "module-1-batch",
-      "module-1-passed-panel",
-      "module-1-passed-copy",
+      "module-1-batch-0",
     ]);
     const ribbon = destinationBook!.querySelector<HTMLElement>(".h5-guide-archive-entry-ribbon-clip");
     expect(ribbon).not.toBeNull();
-    expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
-    expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
+    expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "fixed");
+    expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
     expect(ribbon!.querySelectorAll(".h5-guide-archive-entry-ribbon")).toHaveLength(1);
     const imageSources = [...primed.querySelectorAll("img")].map((image) => image.getAttribute("src") ?? "");
     expect(imageSources[0]).toBe(guideRouteSnapshotSrc);
-    expect(imageSources).not.toContain("/design/guide/archive-transition-preview.webp");
+    expect(imageSources).not.toContain("/design/2026-09-07/guide/archive-transition-preview.webp");
     expect(primed).toHaveClass("is-preparing");
     expect(primed.dataset.guideProfile).toBe("portrait-standard");
     expect(decodedSources).toEqual(imageSources);
@@ -124,9 +117,9 @@ describe("guide route transition priming", () => {
     expect(buffer.querySelector(".h5-guide-route-snapshot")).toHaveClass("is-landscape");
     expect(buffer.querySelector(".h5-guide-route-portrait-snapshot")).toBeNull();
     expect([...buffer.querySelectorAll(".guide-landscape-character img")].map((image) => image.getAttribute("src"))).toEqual([
-      "/design/guide/guide-arch.webp",
-      "/design/guide/guide-character-open.webp",
-      "/design/guide/guide-foreground-top.webp",
+      "/design/2026-09-07/guide/guide-arch.webp",
+      "/design/2026-09-07/guide/guide-character-open.webp",
+      "/design/2026-09-07/guide/guide-foreground-top.webp",
     ]);
     expect(buffer.querySelector(".guide-landscape-logo")).not.toBeNull();
     expect(buffer.querySelector(".guide-landscape-envelope")).not.toBeNull();

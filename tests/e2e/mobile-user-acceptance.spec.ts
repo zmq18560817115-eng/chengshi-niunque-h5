@@ -9,7 +9,9 @@ const devices = [
   { name: "iphone-12-13-14", width: 390, height: 844 },
   { name: "embedded-browser-short", width: 393, height: 797 },
   { name: "iphone-14-15-pro", width: 393, height: 852 },
+  { name: "android-mainstream-412", width: 412, height: 892 },
   { name: "iphone-plus-pro-max", width: 414, height: 896 },
+  { name: "iphone-plus-428", width: 428, height: 926 },
   { name: "large-android-pro-max", width: 430, height: 932 },
   { name: "iphone-17-pro-max", width: 440, height: 956 },
   { name: "iphone-17-pro-max-embedded-short", width: 440, height: 820 },
@@ -312,8 +314,20 @@ async function stopGuideEntryTimelineProbe(page: Page) {
   });
 }
 
-const isPartialRibbonClip = (clip: string) => clip !== "none"
-  && !/^inset\((?:0(?:px|%)?(?:\s+|$)){1,4}\)$/i.test(clip);
+const isCompleteRibbonClip = (clip: string) => clip === "none"
+  || /^inset\(0(?:px|%)?(?:\s+0(?:px|%)?){0,3}\)$/i.test(clip);
+
+test("document emits one accessible mobile viewport declaration", async ({ page }) => {
+  await page.goto("/go");
+  const viewportMeta = page.locator('meta[name="viewport"]');
+  await expect(viewportMeta).toHaveCount(1);
+  const content = await viewportMeta.getAttribute("content");
+  expect(content).toContain("width=device-width");
+  expect(content).toContain("initial-scale=1");
+  expect(content).toContain("viewport-fit=cover");
+  expect(content).not.toContain("user-scalable=no");
+  expect(content).not.toContain("maximum-scale=1");
+});
 
 for (const device of devices) {
   test(`${device.name} completes guide to archive at ${device.width}x${device.height}`, async ({ page }) => {
@@ -725,8 +739,8 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   await expect(fallback).toBeHidden();
   await expect(ribbon).toHaveCount(1);
   await expect(ribbon.locator(".archive-unlock-tab-image")).toHaveCount(1);
-  await expect(ribbon).toHaveAttribute("data-unlock-state", "idle");
-  await expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
+  await expect(ribbon).toHaveAttribute("data-unlock-state", "fixed");
+  await expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
   await page.screenshot({ path: "artifacts/design-qa/guide-to-archive-revealing-375x812.png" });
 
   await expect(root).not.toHaveAttribute("data-guide-route-entry", /.+/, { timeout: 5000 });
@@ -758,9 +772,9 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   expect(entrySamples.filter((sample) => sample.routeState && sample.fallbackVisible)).toEqual([]);
   expect(entrySamples.flatMap((sample) => sample.ribbons).length).toBeGreaterThan(8);
   expect(entrySamples.flatMap((sample) => sample.ribbons).every((sample) => sample.images === 1
-    && sample.state === "idle"
-    && sample.progress === 0
-    && isPartialRibbonClip(sample.clip))).toBe(true);
+    && sample.state === "fixed"
+    && sample.progress === 1
+    && isCompleteRibbonClip(sample.clip))).toBe(true);
   const firstRelease = stagedSamples.findIndex((sample) => sample.bufferReleasing);
   expect(firstRelease).toBeGreaterThan(0);
   // Once `is-releasing` is sampled, effectiveOpacity also includes the
@@ -775,14 +789,14 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   });
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await expect.poll(async () => Number(await ribbon.getAttribute("data-unlock-progress"))).toBeGreaterThan(0);
-  await expect(ribbon).toHaveAttribute("data-unlock-state", /^(revealing|revealed)$/);
+  await expect(ribbon).toHaveAttribute("data-unlock-state", "fixed");
   const firstRevealProgress = Number(await ribbon.getAttribute("data-unlock-progress"));
   await page.evaluate(() => {
     window.dispatchEvent(new WheelEvent("wheel", { deltaY: 240 }));
     window.scrollTo(0, 480);
   });
   await expect.poll(async () => Number(await ribbon.getAttribute("data-unlock-progress"))).toBeGreaterThanOrEqual(firstRevealProgress);
-  await expect(ribbon).toHaveAttribute("data-unlock-state", "revealed");
+  await expect(ribbon).toHaveAttribute("data-unlock-state", "fixed");
   await expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
   await page.screenshot({ path: "artifacts/design-qa/archive-after-guide-375x812.png" });
 });

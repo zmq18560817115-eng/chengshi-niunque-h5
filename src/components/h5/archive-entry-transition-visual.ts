@@ -1,8 +1,8 @@
-export const archiveEntryMasterWidth = 1000;
-export const archiveEntryMasterHeight = 5557;
-export const archiveEntryViewportOffset = 216;
+import { designAssets } from "@/config/design-assets.generated";
 
-const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers";
+export const archiveEntryMasterWidth = designAssets.archiveWidth / 2;
+export const archiveEntryMasterHeight = designAssets.archiveHeight / 2;
+export const archiveEntryViewportOffset = 0;
 
 export type ArchiveEntryLayer = {
   id: string;
@@ -14,58 +14,31 @@ export type ArchiveEntryLayer = {
   stack: number;
 };
 
-const layer = (
-  id: string,
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-  stack: number,
-): ArchiveEntryLayer => ({
-  id,
-  src: `${archiveRuntimeRoot}/${id}.runtime.webp`,
-  left,
-  top,
-  width,
-  height,
-  stack,
-});
+type SourcePart = { src: string; x: number; y: number; width: number; height: number };
+const layer = (part: SourcePart, id: string, stack: number): ArchiveEntryLayer => ({ id, src: part.src, left: part.x / 2, top: part.y / 2, width: part.width / 2, height: part.height / 2, stack });
 
-// These positions are the approved module-one source bboxes on the 1000 x 5557
-// archive master. The transition uses the same lossless runtime layers as the
-// live archive instead of a flattened screenshot of its completed state.
-export const archiveEntryBookLayers = [
-  layer("module-1-folder-back", -288, 276, 1338, 1752, 10),
-  layer("module-1-folder-front", -212, 262, 1160, 1676, 30),
-  layer("module-1-logo", 69, 389, 260, 91, 40),
-  layer("module-1-title", 41, 505, 632, 403, 40),
-  layer("module-1-badge", 121, 591, 962, 1158, 40),
-] as const;
-
-export const archiveEntryBatchLayers = [
-  layer("module-1-batch-coil", 22, 1582, 465, 100, 40),
-  layer("module-1-batch", 57, 1602, 402, 158, 40),
-  layer("module-1-passed-panel", -120, 1581, 904, 453, 40),
-  layer("module-1-passed-copy", 63, 1821, 628, 113, 40),
-] as const;
+// Live rendering and the route handoff share one continuous backing and
+// transparent lettering so staged entry never exposes rectangular seams.
+export const archiveEntryBookLayers = designAssets.archiveBook.map((part, index) => layer(part, `module-1-book-${index}`, 10));
+export const archiveEntryBatchLayers = designAssets.archiveBatch.map((part, index) => layer(part, `module-1-batch-${index}`, 40));
 
 export const archiveEntryPaperLayer: ArchiveEntryLayer = {
   id: "archive-paper-texture",
-  src: `${archiveRuntimeRoot}/archive-paper-texture.runtime.webp`,
-  left: -11,
+  src: designAssets.archivePaper,
+  left: 0,
   top: 0,
-  width: 1022,
-  height: 7093,
+  width: archiveEntryMasterWidth,
+  height: archiveEntryMasterHeight,
   stack: 0,
 };
 
 export const archiveEntryRibbon = {
-  src: "/design/final-v1/archive-unlock-ribbon.webp",
-  left: 833.5,
-  top: 1817,
-  width: 96.5,
-  height: 337,
-  initialVisibleHeight: 43,
+  src: designAssets.archiveRibbon.src,
+  left: designAssets.archiveRibbon.x / 2,
+  top: designAssets.archiveRibbon.y / 2,
+  width: designAssets.archiveRibbon.width / 2,
+  height: designAssets.archiveRibbon.height / 2,
+  initialVisibleHeight: designAssets.archiveRibbon.height / 2,
 } as const;
 
 export const archiveEntryTransitionSources = [
@@ -124,8 +97,8 @@ export function createArchiveEntryTransitionVisual(createImage: TransitionImageF
 
   const ribbonClip = document.createElement("div");
   ribbonClip.className = "h5-guide-archive-entry-ribbon-clip";
-  ribbonClip.dataset.guideDestinationRibbon = "idle";
-  ribbonClip.dataset.unlockProgress = "0.000";
+  ribbonClip.dataset.guideDestinationRibbon = "fixed";
+  ribbonClip.dataset.unlockProgress = "1.000";
   ribbonClip.style.setProperty(
     "--archive-entry-ribbon-hidden-bottom",
     `${(archiveEntryRibbon.height - archiveEntryRibbon.initialVisibleHeight) / archiveEntryRibbon.height * 100}%`,

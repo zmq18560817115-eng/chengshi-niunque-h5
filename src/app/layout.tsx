@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import "./design-motion.generated.css";
 import "./globals.css";
 import "./guide-adaptation.vw.css";
 import { H5HierarchyTracker } from "@/components/h5/H5HierarchyTracker";
@@ -6,7 +7,7 @@ import { H5HierarchyTracker } from "@/components/h5/H5HierarchyTracker";
 export const metadata: Metadata = {
   title: "诚实纽雀｜首页检测报告",
   description: "诚实纽雀检测与溯源信息",
-  icons: { icon: "/design/final-v1/archive/module-1/archive-logo.webp" },
+  icons: { icon: "/design/2026-09-07/runtime/brand-logo.webp" },
 };
 
 export const viewport: Viewport = {

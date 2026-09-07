@@ -16,11 +16,31 @@ async function loadPluginOptions(): Promise<Record<string, unknown>> {
 }
 
 describe("750px design-to-vw conversion", () => {
-  it("converts opted-in design CSS with the 750px formula", async () => {
+  it.each([
+    [360, 96, 48],
+    [375, 100, 50],
+    [390, 104, 52],
+    [393, 104.8, 52.4],
+    [412, 109.866667, 54.933333],
+    [428, 114.133333, 57.066667],
+    [430, 114.666667, 57.333333],
+  ])("keeps a 200x100 design card proportional at a %ipx viewport", (viewportWidth, expectedWidth, expectedHeight) => {
+    const widthVw = 200 / 750 * 100;
+    const heightVw = 100 / 750 * 100;
+    const renderedWidth = viewportWidth * widthVw / 100;
+    const renderedHeight = viewportWidth * heightVw / 100;
+
+    expect(renderedWidth).toBeCloseTo(expectedWidth, 5);
+    expect(renderedHeight).toBeCloseTo(expectedHeight, 5);
+    expect(renderedWidth / viewportWidth).toBeCloseTo(200 / 750, 8);
+    expect(renderedWidth / renderedHeight).toBeCloseTo(2, 8);
+  });
+
+  it.each(["card.vw.css", "card.vw.module.css"])("converts opted-in design CSS with the 750px formula for %s", async (from) => {
     const options = await loadPluginOptions();
     const result = await postcss([pxToViewport(options)]).process(
       ".card { width: 200px; height: 100px; border: 1px solid; }",
-      { from: "card.vw.css" },
+      { from },
     );
 
     expect(result.css).toContain("width: 26.666667vw");

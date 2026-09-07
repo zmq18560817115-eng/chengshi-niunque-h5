@@ -25,7 +25,7 @@ const legacySeedDescriptions = new Set([
 ]);
 
 function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback: CategoryCardFallback) {
-  const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim());
+  const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim()) || (card.id.startsWith("seed-card-") && fallback.legacyTitles.includes(card.title));
   const description = card?.description?.trim();
   const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);
   const reportCount = card?.assets.length ?? 0;
@@ -169,7 +169,21 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
         const cardId = card?.id ?? placeholderCardId(index);
         const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
         const label = `${title}，${buttonText}`;
-        const copy = <><span className="category-card-copy" aria-hidden="true"><strong>{title}</strong><small>{description}</small><b>{buttonText}</b></span>{fallback.statusBaseArtwork ? <span className="category-card-status category-card-decoration" aria-hidden="true"><Image className="category-card-status-art" src={fallback.statusBaseArtwork.src} alt="" width={fallback.statusBaseArtwork.width} height={fallback.statusBaseArtwork.height} unoptimized /></span> : null}<span className="sr-only">{label}</span></>;
+        const useTitleArtwork = title === fallback.title;
+        const useDescriptionArtwork = description === fallback.description;
+        const partImage = (part: typeof fallback.titleArtwork, role: string) => <Image key={`${role}-${part.src}`} className="category-card-source-part" data-card-part={role} src={part.src} alt="" width={part.width} height={part.height} unoptimized style={{ left: `${(part.x / 2 - layout.x) / layout.width * 100}%`, top: `${(part.y / 2 - layout.y) / layout.height * 100}%`, width: `${part.width / 2 / layout.width * 100}%`, height: `${part.height / 2 / layout.height * 100}%` }} />;
+        const copy = <>
+          <span className="category-card-source-art" aria-hidden="true">
+            {useTitleArtwork && partImage(fallback.titleArtwork, "title")}
+            {useDescriptionArtwork && fallback.descriptionArtwork && partImage(fallback.descriptionArtwork, "description")}
+            {fallback.controls.map((part, partIndex) => partImage(part, `control-${partIndex}`))}
+          </span>
+          <span className="category-card-copy" aria-hidden="true">
+            <strong className={useTitleArtwork ? "is-source-copy" : undefined}>{title}</strong>
+            <small className={useDescriptionArtwork ? "is-source-copy" : undefined}>{description}</small>
+          </span>
+          <span className="sr-only">{label}</span>
+        </>;
         const style = {
           "--category-card-x": layout.x,
           "--category-card-y": layout.y,

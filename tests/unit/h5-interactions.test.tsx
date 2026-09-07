@@ -1,3 +1,4 @@
+import { archiveClickCueLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrandGuide, guideLiveStageTransitionWatchdogMs } from "@/components/h5/BrandGuide";
 import { GuideExperience } from "@/components/h5/GuideExperience";
@@ -86,7 +87,7 @@ async function resolveAllPendingImages(predicate: (image: PendingImage) => boole
   }
 }
 
-const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/guide/");
+const isGuideReadinessAsset = ({ src }: PendingImage) => src.includes("/design/2026-09-07/guide/");
 const guideEntryTransitionSourceSet = new Set<string>(archiveEntryTransitionSources);
 const isGuideRoutePrimeAsset = (image: PendingImage) => isGuideReadinessAsset(image)
   || guideEntryTransitionSourceSet.has(image.src);
@@ -202,10 +203,11 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ReportsArchive modules={modules}/>);
     const links = [...container.querySelectorAll<HTMLButtonElement>(".archive-category-hotspot")];
     expect(links.map((link) => link.dataset.slug)).toEqual(["inspection-projects", "review-assurance", "production-traceability"]);
-    expect(links.map((link) => link.style.top)).toEqual(["49.406154%", "56.253374%", "62.668706%"]);
-    expect(links.map((link) => link.style.height)).toEqual(["6.84722%", "6.415332%", "16.051827%"]);
-    expect(links.map((link) => link.style.left)).toEqual(["0%", "0%", "0%"]);
-    expect(links.map((link) => link.style.width)).toEqual(["100%", "100%", "100%"]);
+    for (const link of links) {
+      const layout = getArchiveModuleLayout(link.dataset.slug!)!;
+      expect(link).toHaveStyle({ top: layout.top, height: layout.height, clipPath: layout.clipPath });
+      expect(link.style.clipPath).toMatch(/^polygon/);
+    }
     expect(links.every((link) => link.style.transform === "")).toBe(true);
   });
 
@@ -253,7 +255,7 @@ describe("multi-page H5 interactions", () => {
     vi.useFakeTimers();
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
-    const hotspot = container.querySelector<HTMLButtonElement>('[data-mascot-slug="inspection-projects"]')!;
+    const hotspot = container.querySelector<HTMLButtonElement>('[data-slug="inspection-projects"]')!;
     const archive = container.querySelector(".reports-archive");
     document.documentElement.setAttribute(guideRouteEntryAttribute, "revealing");
 
@@ -274,29 +276,15 @@ describe("multi-page H5 interactions", () => {
     const cue = screen.getByRole("button", { name: "点击进入检测项目" });
     const production = container.querySelector<HTMLButtonElement>('[data-slug="production-traceability"]')!;
     expect(cue).toHaveAttribute("data-cue-slug", "inspection-projects");
-    expect(cue).toHaveStyle({ left: "53.3%", top: "45.80691%", width: "42%", height: "3.707036%" });
-    expect(production).toHaveStyle({ top: "62.668706%", height: "16.051827%" });
+    expect(cue).toHaveStyle({ left: archiveClickCueLayout.left, top: archiveClickCueLayout.top, width: archiveClickCueLayout.width, height: archiveClickCueLayout.height });
+    expect(production).toHaveStyle({ top: getArchiveModuleLayout("production-traceability")!.top, height: getArchiveModuleLayout("production-traceability")!.height });
   });
 
-  it("keeps the inspection mascot mapped to green while preserving the yellow folder boundary", () => {
-    vi.useFakeTimers();
-    const modules = [
-      { id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] },
-      { id: "review", slug: "review-assurance", title: "复核保障", description: null, cards: [] },
-    ];
+  it("uses folder contours without a rectangular mascot override", () => {
+    const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
     const { container } = render(<ReportsArchive modules={modules}/>);
-    const mascot = screen.getByRole("button", { name: "检测项目人物，点击进入检测项目" });
-    const review = container.querySelector<HTMLButtonElement>('[data-slug="review-assurance"]')!;
-
-    expect(mascot).toHaveAttribute("data-mascot-slug", "inspection-projects");
-    expect(mascot).toHaveClass("archive-inspection-mascot-hotspot");
-    expect(mascot).toHaveStyle({ left: "41%", top: "52.843261%", width: "27%", height: "5.758503%" });
-    expect(review).toHaveStyle({ top: "56.253374%" });
-    fireEvent.pointerDown(mascot);
-    expect(container.querySelector(".reports-archive")).toHaveAttribute("data-pressed-slug", "inspection-projects");
-    expect(mascot).toHaveClass("is-pressed");
-    fireEvent.click(mascot);
-    expect(document.documentElement).toHaveAttribute("data-category-route-entry", "inspection-projects");
+    expect(container.querySelector("[data-mascot-slug]")).not.toBeInTheDocument();
+    expect(container.querySelector('[data-slug="inspection-projects"]')).toHaveStyle({ clipPath: getArchiveModuleLayout("inspection-projects")!.clipPath });
   });
 
   it("assembles the archive from original layers and preserves navigation hotspots", () => {
@@ -305,7 +293,7 @@ describe("multi-page H5 interactions", () => {
     const artwork = container.querySelector<HTMLElement>("[data-artwork-source='layered-originals']");
     expect(container.querySelector(".reports-archive-canvas")).toContainElement(artwork);
     expect(artwork).toHaveClass("reports-archive-art", "reports-archive-source-art");
-    expect(container.querySelector('[src*="archive-reference-public.webp"]')).toHaveClass("reports-archive-reference-fallback-image");
+    expect(container.querySelector('[src*="archive-reference.webp"]')).toHaveClass("reports-archive-reference-fallback-image");
     expect(container.querySelector(".reports-archive-reference-fallback")).toHaveAttribute("data-fallback-image", "mounted");
     expect(container.querySelectorAll(".reports-archive-source-layer").length).toBeGreaterThan(0);
     const entryGroups = [...container.querySelectorAll<HTMLElement>("[data-guide-entry-group]")];
@@ -314,30 +302,14 @@ describe("multi-page H5 interactions", () => {
     const batchGroup = entryGroups[1]!;
     expect(bookGroup).toContainElement(container.querySelector(".archive-unlock-tab-motion"));
     expect([...bookGroup.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
-      "module-1-folder-back",
-      "module-1-folder-front",
-      "module-1-logo",
-      "module-1-title",
-      "module-1-badge",
+      "module-1-book-0",
     ]);
     expect([...batchGroup.querySelectorAll<HTMLElement>("[data-source-part]")].map((layer) => layer.dataset.sourcePart)).toEqual([
-      "module-1-batch-coil",
-      "module-1-batch",
-      "module-1-passed-panel",
-      "module-1-passed-copy",
+      "module-1-batch-0",
     ]);
-    const passedCopy = batchGroup.querySelector<HTMLElement>('[data-source-part="module-1-passed-copy"]');
-    expect(passedCopy).toHaveAttribute("src", "/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp");
-    expect(passedCopy).toHaveAttribute("width", "628");
-    expect(passedCopy).toHaveAttribute("height", "113");
-    expect(passedCopy).toHaveAttribute("data-guide-entry-stage", "3");
-    expect(passedCopy).toHaveStyle({
-      left: "6.3%",
-      top: "32.76947993521684%",
-      width: "62.8%",
-      height: "2.0334712974626594%",
-      zIndex: "40",
-    });
+    const batch = batchGroup.querySelector<HTMLElement>('[data-source-part="module-1-batch-0"]');
+    expect(batch).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-lettering.webp");
+    expect(batch).toHaveAttribute("data-guide-entry-stage", "3");
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();
   });
@@ -346,7 +318,7 @@ describe("multi-page H5 interactions", () => {
     const { container } = render(<ArchiveArtwork/>);
     const sourceParts = [...container.querySelectorAll<HTMLElement>("[data-source-part]")]
       .map((layer) => layer.dataset.sourcePart);
-    expect(sourceParts).toEqual(expect.arrayContaining(["module-2-resource-10", "module-2-resource-20"]));
+    expect(sourceParts).toEqual(expect.arrayContaining(["module-2-heading", "module-2-inspection-folder", "module-2-review-folder", "module-2-production-folder"]));
     expect(sourceParts).not.toContain("module-1-swipe");
     for (const resource of ["04", "05", "06", "07"]) {
       expect(sourceParts).not.toContain(`module-2-resource-${resource}`);
@@ -377,23 +349,23 @@ describe("multi-page H5 interactions", () => {
       <ArchiveSectionTitleMotion/>
     </>);
     expect(container.querySelector("[data-motion-module='archiveStoryCopy']")).toBeInTheDocument();
-    expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(4);
+    expect(container.querySelectorAll(".archive-story-copy-line")).toHaveLength(7);
     expect(container.querySelector("[data-motion-module='archiveFishFloat']")).toBeInTheDocument();
     expect(container.querySelector("[data-motion-module='archiveSectionTitle']")).toBeInTheDocument();
     expect(container.querySelector(".archive-section-click-cue")).toBeInTheDocument();
-    expect([...container.querySelectorAll<HTMLElement>(".archive-section-title-group")].map((group) => group.dataset.titleGroup)).toEqual([
+    expect([...container.querySelectorAll<HTMLElement>("[data-title-group]")].map((group) => group.dataset.titleGroup)).toEqual([
       "inspection-projects",
       "review-assurance",
       "production-traceability",
     ]);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
-    expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
+    expect(container.querySelectorAll(".archive-section-title-character")).toHaveLength(15);
+    expect(container.querySelectorAll(".archive-section-click-cue")).toHaveLength(3);
     expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fixed");
   });
 
-  it("advances the tight unlock ribbon from trusted scroll without per-frame image duplication", () => {
+  it("keeps the complete ribbon anchored while scrolling without image duplication", () => {
     const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
     let scrollY = 0;
     Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
@@ -404,14 +376,14 @@ describe("multi-page H5 interactions", () => {
       fireEvent.wheel(window);
       scrollY = 60;
       fireEvent.scroll(window);
-      expect(ribbon).toHaveAttribute("data-unlock-state", "revealing");
-      expect(ribbon).toHaveAttribute("data-unlock-progress", "0.333");
+      expect(ribbon).toHaveAttribute("data-unlock-state", "fixed");
+      expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
       expect(container.querySelectorAll(".archive-unlock-tab-image")).toHaveLength(1);
       expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
 
       scrollY = 180;
       fireEvent.scroll(window);
-      expect(ribbon).toHaveAttribute("data-unlock-state", "revealed");
+      expect(ribbon).toHaveAttribute("data-unlock-state", "fixed");
       expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
     } finally {
       if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
@@ -440,7 +412,7 @@ describe("multi-page H5 interactions", () => {
     expect(sequence).toHaveAttribute("data-title-sequence-running", "true");
     expect(sequence).toHaveAttribute("data-title-sequence-mode", "css-compositor-loop");
     expect([...container.querySelectorAll("[data-title-sequence-order]")].map((group) => group.getAttribute("data-title-sequence-order"))).toEqual(["1", "2", "3"]);
-    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
+    expect(container.querySelectorAll(".archive-section-title-character")).toHaveLength(15);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
   });
 
@@ -455,15 +427,15 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".archive-fish-float")).toBeInTheDocument();
     expect(container.querySelector(".archive-fish-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-fish-motion-gif")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".archive-section-title-group")).toHaveLength(3);
+    expect(container.querySelectorAll("[data-title-group]")).toHaveLength(3);
     expect(container.querySelector(".archive-section-title-gif")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-section-title-clean-patch")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".archive-section-title-poster")).toHaveLength(3);
-    expect(container.querySelectorAll(".archive-section-number-part")).toHaveLength(6);
+    expect(container.querySelectorAll(".archive-section-title-character")).toHaveLength(15);
+    expect(container.querySelectorAll(".archive-section-click-cue")).toHaveLength(3);
     expect(container.querySelector(".archive-story-copy-clean-patch")).not.toBeInTheDocument();
     expect(container.querySelector(".archive-result-color")).not.toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "idle");
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-progress", "0.000");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fixed");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-progress", "1.000");
   });
 
   it("stays on the guide after five seconds and only enters once from the hint action", async () => {
@@ -488,9 +460,9 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide")).toBeInTheDocument();
     await decodeMountedGuideImages();
     expect(pendingImages.every(isGuideRoutePrimeAsset)).toBe(true);
-    expect(pendingImages.some(({ src }) => src.includes("archive-paper-texture.runtime.webp"))).toBe(true);
+    expect(pendingImages.some(({ src }) => src.includes("archive-paper.webp"))).toBe(true);
     expect(pendingImages.some(({ src }) => src.includes("section-title-inspection-poster.webp"))).toBe(false);
-    expect(pendingImages.some(({ src }) => src.includes("archive-reference-public.webp"))).toBe(false);
+    expect(pendingImages.some(({ src }) => src.includes("archive-reference.webp"))).toBe(false);
     expect(container.querySelector('[data-guide-destination-group="archive-book"]')).toBeInTheDocument();
     expect(container.querySelector('[data-guide-destination-group="latest-batch"]')).toBeInTheDocument();
     expect(container.querySelector('[src*="archive-transition-preview.webp"]')).not.toBeInTheDocument();
@@ -548,13 +520,13 @@ describe("multi-page H5 interactions", () => {
   it("keeps the matching animation first frame until every standard DOM layer has decoded", async () => {
     const { container } = render(<BrandGuide />);
     const page = container.querySelector(".brand-guide")!;
-    const finalPaper = "/design/guide/report-paper-bottom.webp";
+    const finalPaper = "/design/2026-09-07/guide/report-paper-bottom.webp";
 
     expect(page).toHaveClass("is-loading");
-    expect(container.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/guide/guide-window-mask.webp");
-    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-first-frame.webp");
+    expect(container.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/2026-09-07/guide/guide-window-mask.webp");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/2026-09-07/guide/guide-first-frame.webp");
     await act(async () => {
-      await resolvePendingImages(({ src }) => src.includes("/design/guide/") && !src.includes(finalPaper));
+      await resolvePendingImages(({ src }) => src.includes("/design/2026-09-07/guide/") && !src.includes(finalPaper));
     });
     expect(page).toHaveClass("is-loading");
 
@@ -819,7 +791,7 @@ describe("multi-page H5 interactions", () => {
     const animatedCanvas = container.querySelector(".is-animated-canvas");
     const windowFrame = animatedCanvas?.querySelector(".brand-guide-arch");
     expect(windowFrame).toBeInTheDocument();
-    expect(animatedCanvas?.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/guide/guide-window-mask.webp");
+    expect(animatedCanvas?.querySelector(".brand-guide-window-mask")).toHaveAttribute("src", "/design/2026-09-07/guide/guide-window-mask.webp");
     expect(animatedCanvas?.querySelector(".brand-guide-base")).not.toBeInTheDocument();
     expect(container.querySelector(".brand-guide-character-open")?.getAttribute("src")).toContain("guide-character-open.webp");
     expect(container.querySelector(".brand-guide-character-closed")?.getAttribute("src")).toContain("guide-character-closed.webp");
@@ -904,18 +876,18 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-load-state", "reduced");
     expect(container.querySelector(".brand-guide-stage")).toHaveAttribute("data-animation-state", "paused");
     expect(container.querySelector(".brand-guide-dynamic-stage")).not.toBeInTheDocument();
-    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/guide/guide-static-foreground-v2.webp");
+    expect(container.querySelector(".brand-guide-fallback")).toHaveAttribute("src", "/design/2026-09-07/guide/guide-static-foreground-v2.webp");
     expect(container.querySelector('[data-guide-destination-group="archive-book"]')).toBeInTheDocument();
     expect(container.querySelector('[data-guide-destination-group="latest-batch"]')).toBeInTheDocument();
     const routeRibbon = container.querySelector<HTMLElement>(".h5-guide-archive-entry-ribbon-clip");
-    expect(routeRibbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
-    expect(routeRibbon).toHaveAttribute("data-unlock-progress", "0.000");
+    expect(routeRibbon).toHaveAttribute("data-guide-destination-ribbon", "fixed");
+    expect(routeRibbon).toHaveAttribute("data-unlock-progress", "1.000");
     const liveRibbonRender = render(<ArchiveUnlockTabMotion />);
     const liveRibbon = liveRibbonRender.container.querySelector<HTMLElement>(".archive-unlock-tab-motion");
-    expect(liveRibbon).toHaveAttribute("data-unlock-state", "idle");
-    expect(liveRibbon).toHaveAttribute("data-unlock-progress", "0.000");
-    expect(Number.parseFloat(liveRibbon?.style.getPropertyValue("--archive-unlock-hidden-bottom") ?? "0"))
-      .toBeCloseTo(Number.parseFloat(routeRibbon?.style.getPropertyValue("--archive-entry-ribbon-hidden-bottom") ?? "0"), 8);
+    expect(liveRibbon).toHaveAttribute("data-unlock-state", "fixed");
+    expect(liveRibbon).toHaveAttribute("data-unlock-progress", "1.000");
+    expect(liveRibbon?.style.getPropertyValue("--archive-unlock-hidden-bottom")).toBe("");
+    expect(routeRibbon?.style.getPropertyValue("--archive-entry-ribbon-hidden-bottom")).toBe("0%");
     liveRibbonRender.unmount();
     expect(container.querySelector('[src*="archive-transition-preview.webp"]')).not.toBeInTheDocument();
   });

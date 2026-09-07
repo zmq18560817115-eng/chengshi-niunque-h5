@@ -1,3 +1,5 @@
+import { designAssets } from "@/config/design-assets.generated";
+import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
 import { MotionBoundary } from "@/components/h5/motion/MotionBoundary";
@@ -127,17 +129,17 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("GuideLandscapeComposition");
     expect(guide).toContain('? "portrait-compact" : "portrait-standard"');
     expect(guide).toContain('setLayoutProfile("landscape")');
-    expect(css).toContain('background-image: url("/design/guide/guide-background.webp")');
+    expect(css).toContain('background-image: url("/design/2026-09-07/guide/guide-background.webp")');
     expect(css).toMatch(/\.guide-loading-buffer-poster\s*\{[^}]*object-fit:\s*cover;/);
     expect(css).not.toContain(".guide-loading-buffer-gif");
-    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*background-image:\s*url\("\/design\/guide\/guide-background\.webp"\);/);
+    expect(css).toMatch(/\.guide-loading-buffer-stage\s*\{[^}]*background-image:\s*url\("\/design\/2026-09-07\/guide\/guide-background\.webp"\);/);
     expect(css).toMatch(/\.brand-guide\s*\{[^}]*width:\s*100%;[^}]*touch-action:\s*none;/);
     expect(layout).toContain('viewportFit: "cover"');
     expect(css).toContain(".brand-guide-paper { z-index: 34;");
     expect(css).toMatch(/\.brand-guide-window-mask\s*\{[^}]*z-index:\s*25;[^}]*object-fit:\s*fill;/);
     expect(guide).toContain('"guide-window-mask.webp"');
-    expect(existsSync("public/design/guide/guide-window-mask.webp")).toBe(true);
-    expect(existsSync("public/design/guide/guide-static-foreground-v2.webp")).toBe(true);
+    expect(existsSync("public/design/2026-09-07/guide/guide-window-mask.webp")).toBe(true);
+    expect(existsSync("public/design/2026-09-07/guide/guide-static-foreground-v2.webp")).toBe(true);
     expect(guide).not.toContain("brand-guide-base");
     expect(css).not.toContain("brand-guide-portrait-edge-bleed");
     expect(guide).not.toContain("GuidePortraitEdgeBleed");
@@ -234,8 +236,8 @@ describe("H5 motion isolation", () => {
     expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) ease-out;");
     expect(css).toContain(".h5-guide-route-buffer.is-committing .h5-guide-route-guide-panel { opacity: .08;");
     expect(css).toContain(".h5-guide-route-buffer.is-committing .h5-guide-route-destination-panel { opacity: 1;");
-    expect(css).toMatch(/\.reports-archive-entry-group\s*\{[^}]*height:\s*38\.9958610761%;[^}]*overflow:\s*hidden;/);
-    expect(css).toContain(".reports-archive-entry-coordinate-layer { position: absolute; top: 0; left: 0; width: 100%; height: 256.4374711583%; }");
+    expect(css).toMatch(/\.reports-archive-entry-group\s*\{[^}]*height:\s*100%;[^}]*overflow:\s*hidden;/);
+    expect(css).toContain(".reports-archive-entry-coordinate-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }");
     expect(css).toContain("html[data-guide-route-entry], html[data-guide-route-entry] body { width: 100%; height: 100%; overflow: hidden;");
     expect(css).not.toContain("opacity: .94; transform: translate3d(0,clamp(48px,12dvh,112px),0)");
     expect(css).not.toContain("@keyframes guide-route-layer-reveal");
@@ -273,7 +275,7 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
     expect(routeTransition).toContain('snapshot.className = `h5-guide-route-snapshot is-${guideRouteOrientation(profile)}`');
     expect(routeTransition).toContain('createTransitionImage(guideRouteSnapshotSrc, "h5-guide-route-portrait-snapshot")');
-    expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/guide/guide-static-foreground-v2.webp"');
+    expect(routeTransition).toContain('export const guideRouteSnapshotSrc = "/design/2026-09-07/guide/guide-static-foreground-v2.webp"');
     expect(routeTransition).not.toContain("archive-transition-preview.webp");
     expect(routeTransition).toContain("createArchiveEntryTransitionVisual(createTransitionImage)");
     expect(routeTransition).not.toContain('dataset.guideDestinationGroup = "archive-book"');
@@ -377,7 +379,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('.category-page-final[data-route-entry="reports-archive-loading"]:not(.is-leaving) { opacity: 1; transform: none; animation: none; }');
     expect(css).toContain("animation: none !important;");
     expect(css).toContain("html[data-category-native-transition]::view-transition-old(root)");
-    expect(css).toContain('background-image: url("/design/final-v1/archive/runtime-layers/archive-paper-texture.runtime.webp")');
+    expect(css).toContain('background-image: url("/design/2026-09-07/runtime/archive-paper.webp")');
     expect(routeTransition).toContain("archiveModuleNavigationDelayMs = 0");
     expect(routeTransition).toContain("navigateWithCategoryLoadingHandoff");
     expect(routeTransition).toContain("createLoadingFeedback(attemptId, { immediate: true })");
@@ -403,7 +405,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('html[data-h5-page-lock="category"]');
     expect(css).toContain("aspect-ratio: 2000 / 4333;");
     expect(css).toContain("container-type: inline-size;");
-    expect(css).toContain('background-image: url("/design/final-v1/category-runtime/category-paper-base.runtime.webp")');
+    expect(css).toContain('background-image: url("/design/2026-09-07/runtime/archive-paper.webp")');
     expect(css).toContain("background-position: center top;");
     expect(css).toContain("background-size: auto min(216.65cqw,1624.875px);");
     expect(category).toContain('data-artwork-source="layered-components"');
@@ -452,7 +454,7 @@ describe("H5 motion isolation", () => {
     const route = readFileSync("src/app/go/page.tsx", "utf8");
     const css = readFileSync("src/app/globals.css", "utf8");
 
-    expect(existsSync("public/design/guide/data-loading-buffer.gif")).toBe(false);
+    expect(existsSync("public/design/2026-09-07/guide/data-loading-buffer.gif")).toBe(false);
     expect(route).toContain("<GuideExperience/>");
     expect(experience).not.toContain('fetch("/api/public/content"');
     expect(experience).toContain('router.prefetch("/reports")');
@@ -473,7 +475,7 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("setDeferredMounted(true);");
     expect(reports).toContain('settleSelector=".reports-archive-final"');
     expect(reports).toContain('data-deferred-artwork={deferredMounted ? "mounted" : "waiting"}');
-    expect(runtimeBuffer).toContain('src="/design/guide/data-loading-buffer-poster.webp"');
+    expect(runtimeBuffer).toContain('src="/design/2026-09-07/runtime/loading-poster.webp"');
     expect(runtimeBuffer).not.toContain("data-loading-buffer.gif");
     expect(runtimeBuffer).not.toContain("guide-loading-buffer-gif");
     expect(runtimeBuffer).toContain("const [suppressedByGuideContinuity] = useState");
@@ -549,9 +551,8 @@ describe("H5 motion isolation", () => {
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeGreaterThanOrEqual(600);
     expect(h5MotionTiming.archiveResultColor.durationMs).toBeLessThanOrEqual(800);
     expect(h5MotionTiming.archiveStoryCopy.lineDurationMs).toBe(900);
-    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBe(500);
-    expect(h5MotionTiming.archiveStoryCopy.lineOffsetsMs).toEqual([0, -100, 0, -200]);
-    expect(h5MotionTiming.archiveStoryCopy.lineStepMs + h5MotionTiming.archiveStoryCopy.lineOffsetsMs[3]).toBeLessThan(h5MotionTiming.archiveStoryCopy.lineStepMs);
+    expect(h5MotionTiming.archiveStoryCopy.lineStepMs).toBe(200);
+    expect(h5MotionTiming.archiveStoryCopy.lineOffsetsMs).toEqual([0, 0, 0, 100, 100, 100, 100]);
     const lineStarts = h5MotionTiming.archiveStoryCopy.lineOffsetsMs.map(
       (offset, index) => index * h5MotionTiming.archiveStoryCopy.lineStepMs + offset,
     );
@@ -565,56 +566,32 @@ describe("H5 motion isolation", () => {
     expect(component).toContain("remainingMs.current = Math.max(0, remainingMs.current - (performance.now() - startedAt));");
   });
 
-  it("keeps the reference composite only as a decoded layered-artwork fallback", () => {
+  it("keeps the new reference fallback and deferred source regions on the same master", () => {
     const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
     const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
-    const transitionVisual = readFileSync("src/components/h5/archive-entry-transition-visual.ts", "utf8");
-    expect(reports).toContain("ArchiveArtwork, archiveArtworkCriticalAssets");
-    expect(reports).not.toContain("archiveArtworkDeferredAssets");
-    expect(reports).toContain("const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);");
-    expect(reports).toContain("<ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />");
-    expect(reports).toContain('data-archive-artwork-ready={artworkComplete ? "true" : "false"}');
-    expect(reports).toContain('data-archive-artwork-failed={artworkFailed ? "true" : "false"}');
-    expect(reports).toContain('className="reports-archive-reference-fallback"');
-    expect(reports).toContain('src="/design/final-v1/archive-reference-public.webp"');
+    expect(reports).toContain('src="/design/2026-09-07/runtime/archive-reference.webp"');
     expect(artwork).toContain('data-artwork-source="layered-originals"');
-    expect(artwork).toContain('const archiveOutputRoot = "/design/final-v1/长图输出"');
-    expect(artwork).toContain('moduleTwoAsset("资源 10.png")');
-    expect(artwork).toContain('moduleTwoAsset("资源 20.png")');
-    expect(artwork).not.toContain("docs/input");
-    expect(artwork).toContain('const archiveRuntimeRoot = "/design/final-v1/archive/runtime-layers"');
-    expect(artwork).toContain("archiveEntryBatchLayers.map(entryLayer)");
-    expect(transitionVisual).toContain('layer("module-1-passed-copy", 63, 1821, 628, 113, 40)');
-    expect(existsSync("public/design/final-v1/archive/runtime-layers/module-1-passed-copy.runtime.webp")).toBe(true);
-    expect(artwork).toContain("module-3-output.webp");
-    expect(artwork).toContain('top: 4374.5, width: 1000, height: 1182.5, unoptimized: true');
-    expect(artwork).toContain('loading="eager"');
-    expect(artwork).toContain('fetchPriority={layer.eager ? "high" : "low"}');
-    expect(artwork).toContain("archiveArtworkCriticalAssets");
-    expect(artwork).toContain("archiveArtworkDeferredAssets");
-    expect(artwork).toContain("const deepDeferredParts = new Set([");
     expect(artwork).toContain("mountDeepDeferred = true");
-    expect(artwork).toContain("(mountDeepDeferred && deepDeferredParts.has(layer.id))");
-    for (let resource = 11; resource <= 19; resource += 1) {
-      expect(artwork).not.toContain(`moduleTwoAsset("资源 ${resource}.png")`);
-    }
+    expect(artwork).toContain('(mountDeepDeferred && deepDeferredParts.has(layer.id))');
+    expect(artwork).toContain('fetchPriority={layer.eager ? "high" : "low"}');
+    expect(designAssets.archiveModule2[0].y).toBeGreaterThan(3733);
+    expect(designAssets.archiveModule3.y).toBe(7974);
+    expect(designAssets.archiveModule3.y + designAssets.archiveModule3.height).toBe(designAssets.archiveHeight);
+    for (const part of [...designAssets.archiveBook, ...designAssets.archiveBatch, ...designAssets.archiveModule2, designAssets.archiveModule3]) expect(existsSync(`public${part.src}`)).toBe(true);
   });
 
-  it("uses the four supplied GIF motions at the matching archive fish positions", () => {
+  it("restores four original fish poses with the shared click-cue rhythm and visibility gate", () => {
     const component = readFileSync("src/components/h5/motion/modules/ArchiveFishFloatMotion.tsx", "utf8");
-    const css = readFileSync("src/app/globals.css", "utf8");
-    expect(component).toContain("data-fish-index={index + 1}");
-    expect(component.match(/fish-motion-0[1-4]\.gif/g)).toHaveLength(4);
-    expect(component).toContain('x: 54, y: 4408, width: 140.5, height: 88');
-    expect(component).toContain('x: 791, y: 4403, width: 140.5, height: 88');
+    const paths = readFileSync("src/app/design-motion.generated.css", "utf8");
+    expect(designAssets.fishParts).toHaveLength(4);
+    expect(designAssets.fishSourceDurationMs).toBe(8640);
+    expect(readFileSync("src/app/globals.css", "utf8")).toContain("--archive-fish-duration: var(--archive-click-cue-duration)");
+    expect(component).not.toContain("--archive-fish-duration");
+    expect(paths.match(/rotate\((?!0deg)[^)]+deg\)/g)).toHaveLength(4);
     expect(component).toContain("ready && visible");
     expect(component).toContain("data-fish-nearby={nearby}");
-    expect(component).toContain("unoptimized onError={handleGifError}");
-    expect(component).toContain("/motion/archive-runtime/fish-clean-patch.png");
-    expect(component).not.toContain("archive-base-clean.webp");
-    expect(css).toContain(".archive-fish-motion-gif");
-    expect(css).not.toContain("@keyframes archive-fish-float");
-    expect(css).not.toContain("--archive-fish-duration");
+    for (let index = 1; index <= 4; index++) expect(paths).toContain(`@keyframes source-fish-${index}`);
+    for (const part of designAssets.fishParts) expect(existsSync(`public${part.src}`)).toBe(true);
   });
 
   it("slows every archive fish GIF frame without adding heavier replacement assets", () => {
@@ -631,123 +608,35 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("keeps the archive unlock ribbon on a single tight compositor layer", () => {
-    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
-    const component = readFileSync("src/components/h5/motion/modules/ArchiveUnlockTabMotion.tsx", "utf8");
-    const css = readFileSync("src/app/globals.css", "utf8");
-    const clipRule = css.match(/\.archive-unlock-tab-clip\s*\{([^}]*)\}/)?.[1] ?? "";
-    const movingRule = css.match(/\.archive-unlock-tab-clip\.is-moving\s*\{([^}]*)\}/)?.[1] ?? "";
-    const imageRule = css.match(/\.archive-unlock-tab-image\s*\{([^}]*)\}/)?.[1] ?? "";
-    const percent = (rule: string, property: string) => Number(rule.match(new RegExp(`${property}:\\s*([\\d.]+)%`))?.[1]);
-
-    expect(artwork).not.toContain('moduleOneLayer("module-1-swipe"');
-    expect(artwork).toContain("<ArchiveUnlockTabMotion preview={preview} />");
-    expect(artwork).toContain('id === "module-1-folder-back"');
-    expect(artwork).toContain('id === "module-1-folder-front"');
-    expect(component).toContain("accumulated.current / h5MotionTiming.archiveUnlockTab.revealDistancePx");
-    expect(component).toContain("data-unlock-progress");
-    expect(component).not.toContain("sessionStorage");
-    expect(component).toContain("/design/final-v1/archive-unlock-ribbon.webp");
-    expect(component).toContain("width={193}");
-    expect(component).toContain("height={674}");
-    expect(component).not.toContain("h5长图-下滑条.png");
-    expect(component).not.toContain("MotionStage");
-    expect(component).not.toContain("setProgress");
-    expect(component).toContain("--archive-unlock-hidden-bottom");
-    expect(css).toContain("z-index: 20");
-    expect(percent(clipRule, "left")).toBeCloseTo(83.35, 6);
-    expect(percent(clipRule, "top")).toBeCloseTo(32.6974986504, 6);
-    expect(percent(clipRule, "width")).toBeCloseTo(9.65, 6);
-    expect(percent(clipRule, "height")).toBeCloseTo(6.06442324996, 6);
-    expect(imageRule).toContain("inset: 0");
-    expect(imageRule).toContain("width: 100%");
-    expect(imageRule).toContain("height: 100%");
-    expect(movingRule).toContain("clip-path: inset(0 0 var(--archive-unlock-hidden-bottom) 0)");
-    expect(css).not.toContain("--archive-unlock-reveal-top");
-    expect(css).not.toContain("left: -40.6%");
-    expect(css).not.toContain("width: 151.7%");
-    expect(css).not.toContain(".archive-unlock-tab-motion > .motion-stage");
+  it("keeps the ribbon whole on the document and story decoration stationary", () => {
+    const ribbon = readFileSync("src/components/h5/motion/modules/ArchiveUnlockTabMotion.tsx", "utf8");
+    const story = readFileSync("src/components/h5/motion/modules/ArchiveStoryCopyMotion.tsx", "utf8");
+    expect(ribbon).not.toContain('addEventListener("scroll"');
+    expect(ribbon).not.toContain("clip-path");
+    expect(ribbon).toContain('data-unlock-state="fixed"');
+    expect(ribbon).toContain('data-unlock-progress="1.000"');
+    expect(designAssets.storyLines).toHaveLength(7);
+    expect(story).not.toContain("archive-story-copy-clean-patch");
+    expect(designAssets.archiveModule3.src).toContain("archive-3-static");
   });
 
-  it("replaces the retired decoration and sequences the three supplied title posters with compositor bounce motion", () => {
-    const reports = readFileSync("src/components/h5/ReportsArchive.tsx", "utf8");
-    const artwork = readFileSync("src/components/h5/ArchiveArtwork.tsx", "utf8");
-    const component = readFileSync("src/components/h5/motion/modules/ArchiveSectionTitleMotion.tsx", "utf8");
+  it("keeps three click cues and fifteen ordered original title parts visible in static previews", () => {
+    const { container } = render(<ArchiveSectionTitleMotion preview />);
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(reports).toContain('import { ArchiveSectionTitleMotion } from "@/components/h5/motion/modules/ArchiveSectionTitleMotion"');
-    expect(reports).not.toContain("archiveSectionTitleWarmAssets");
-    expect(reports).toContain("<ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />");
-    expect(component).not.toContain("archive-module-exit-layer");
-    expect(component).not.toContain("exitingSlug");
-    expect(component).toContain("/design/final-v1/motion/archive-runtime");
-    expect(component).toContain("section-click-cue.gif");
-    expect(component).not.toContain("section-title-inspection.gif");
-    expect(component).not.toContain("section-title-review.gif");
-    expect(component).not.toContain("section-title-production.gif");
-    expect(component.match(/section-title-(inspection|review|production)-poster\.webp/g)).toHaveLength(3);
-    expect(component).toContain("archiveTitleBounceDurationMs = 1217");
-    expect(component).not.toContain("window.setInterval");
-    expect(component).toContain('data-title-sequence-mode={running ? "css-compositor-loop" : "paused"}');
-    expect(component).toContain("data-title-sequence-order={sequenceIndex + 1}");
-    expect(component).not.toContain("const renderAssets = nearby || visible");
-    expect(component).toContain('data-title-ready="true"');
-    expect(component).toContain('data-title-render-layer="poster"');
-    expect(component).not.toContain("sequenceCycle}`");
-    expect(component.match(/section-number-(inspection|review|production)-(ring|digit)\.png/g)).toHaveLength(6);
-    const clickCue = readFileSync("public/design/final-v1/motion/archive-runtime/section-click-cue.gif");
-    expect([clickCue.readUInt16LE(6), clickCue.readUInt16LE(8)]).toEqual([840, 412]);
-    const pngDimensions = (name: string) => {
-      const png = readFileSync(`public/design/final-v1/motion/archive-runtime/${name}`);
-      return [png.readUInt32BE(16), png.readUInt32BE(20)];
-    };
-    expect(pngDimensions("section-number-inspection-ring.png")).toEqual([161, 169]);
-    expect(pngDimensions("section-number-inspection-digit.png")).toEqual([51, 114]);
-    expect(pngDimensions("section-number-review-ring.png")).toEqual([161, 169]);
-    expect(pngDimensions("section-number-review-digit.png")).toEqual([87, 110]);
-    expect(pngDimensions("section-number-production-ring.png")).toEqual([161, 169]);
-    expect(pngDimensions("section-number-production-digit.png")).toEqual([81, 118]);
-    expect(artwork).not.toContain('moduleTwoAsset("资源 4.png")');
-    expect(artwork).not.toContain('moduleTwoAsset("资源 5.png")');
-    expect(artwork).not.toContain('moduleTwoAsset("资源 6.png")');
-    expect(artwork).not.toContain('moduleTwoAsset("资源 7.png")');
-    expect(component).not.toContain("title-clean-");
-    expect(component).not.toContain("cleanPatch");
-    expect(component).toContain("left: 533");
-    expect(component).toContain("top: 2545.5");
-    expect(component).toContain("left: 556");
-    expect(component).toContain("top: 2779.5");
-    expect(component).toContain("left: 94");
-    expect(component).toContain("top: 3155.5");
-    expect(component).toContain("left: 542.5");
-    expect(component).toContain("top: 3518");
-    expect(component).toContain("left: 475, top: 2787.5");
-    expect(component).toContain("left: 10.5, top: 3168");
-    expect(component).toContain("left: 28, top: 3181.5");
-    expect(component).toContain("left: 468.5, top: 3532.5");
-    expect(component).toContain("height: `${group.height / masterHeight * 100}%`");
-    expect(component).not.toContain("aspectRatio:");
-    expect(component).toContain('rootMargin: "45% 0px"');
-    expect(component).toContain("h5MotionModules.archiveSectionTitle");
-    expect(component).toContain("IntersectionObserver");
-    expect(css).not.toContain("archive-section-title-clean-patch");
+    expect(container.querySelectorAll("[data-title-group]")).toHaveLength(3);
+    expect(container.querySelectorAll("[data-cue-module]")).toHaveLength(3);
+    expect(container.querySelectorAll("[data-title-character]")).toHaveLength(15);
+    const groups = [...container.querySelectorAll("[data-title-group]")];
+    const expectedParts = [[7, 11, 10, 9, 8], [13, 17, 16, 15, 14], [18, 22, 21, 20, 19]];
+    for (const [index, group] of groups.entries()) {
+      expect([...group.querySelectorAll("[data-title-character]")].map((part) => part.getAttribute("src"))).toEqual(expectedParts[index].map((number) => `/design/2026-09-07/runtime/archive-2-${number}.webp`));
+    }
+    expect(container.querySelector("[data-title-sequence-running]")).toHaveAttribute("data-title-sequence-running", "false");
     expect(css).toContain("--archive-title-bounce-duration: 1217ms");
     expect(css).toContain("--archive-title-sequence-duration: 3651ms");
-    expect(css).toContain("@keyframes archive-section-title-bounce");
-    expect(css).toContain('data-title-sequence-running="true"');
-    expect(css).toContain("calc(var(--archive-title-sequence-index) * var(--archive-title-bounce-duration)) infinite both");
-    expect(css).toContain("10.5% { transform: translate3d(0,3.2%,0) scale3d(.9,.9,1)");
-    expect(css).toContain("17.5% { transform: translate3d(0,-3.5%,0) scale3d(.985,.985,1)");
-    expect(css).toContain("animation-timing-function: cubic-bezier(.4,0,.2,1)");
+    expect(css).toContain("--archive-click-cue-duration: 1800ms");
+    expect(css).toContain("--archive-title-character-step: 120ms");
     expect(css).toContain("animation-play-state: paused");
-    expect(css).toContain('data-title-sequence-running="true"] .archive-section-title-poster { animation-play-state: running; }');
-    expect(css).toContain("transform-origin: 50% 72%");
-    expect(css).toContain("contain: paint");
-    expect(css).toContain("backface-visibility: hidden");
-    expect(css).toContain("will-change: transform");
-    expect(css).not.toContain(".archive-section-title-gif");
-    expect(css).toContain(".archive-section-click-cue-gif { z-index: 0; animation: archive-click-cue-attention");
-    expect(css).toContain("@keyframes archive-click-cue-attention");
-    expect(css).toContain(".archive-section-number-part");
   });
 
   it("draws the archive circle along an SVG stroke instead of a rectangular reveal", () => {
