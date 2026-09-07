@@ -1142,7 +1142,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .reports-story { min-height: 70svh; padding: var(--space-12) var(--space-6); background: var(--color-paper); }.reports-story h2 { margin-top: var(--space-8); font-size: 2rem; line-height: 1.35; }
 .category-page > header, .report-page > header { padding: var(--space-8) var(--space-6); background: var(--color-yellow); }.category-page > header > a, .report-page > header > a { color: inherit; text-decoration: none; }.category-page > header h1, .report-page > header h1 { margin: var(--space-6) 0 var(--space-3); font-size: 2.3rem; }
 .category-items { display: grid; gap: var(--space-4); padding: var(--space-6); }.category-items article { padding: var(--space-6); border-radius: var(--radius-md); background: var(--color-paper); box-shadow: var(--shadow-paper); }.category-items h2 { margin-top: 0; }.inline-report-images { display: grid; gap: var(--space-3); margin-top: var(--space-4); }.inline-report-images figure { overflow: hidden; margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white; }.inline-report-images img { display: block; width: 100%; height: auto; }.inline-report-images figcaption { padding: var(--space-3); color: var(--color-muted); font-size: .875rem; }.category-items article > small { display: block; margin-top: var(--space-3); color: var(--color-muted); }
-.report-page-final { --report-accent: #7fad61; --report-accent-soft: #d9ebc7; position: relative; min-width: 0; width: min(calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)), var(--h5-content-width)); min-height: 100vh; min-height: 100svh; min-height: 100dvh; overflow-x: hidden; color: var(--color-ink); background-color: #f4f0e7; background-image: url("/design/2026-09-07/runtime/archive-paper.webp"); background-position: top center; background-size: 100% auto; background-repeat: repeat-y; }
+.report-page-final { --report-accent: #7fad61; --report-accent-soft: #d9ebc7; position: relative; min-width: 0; width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-height: 100vh; min-height: 100svh; min-height: 100dvh; overflow-x: hidden; color: var(--color-ink); background-color: #f4f0e7; background-image: url("/design/2026-09-07/runtime/archive-paper.webp"); background-position: top center; background-size: 100% auto; background-repeat: repeat-y; }
 .report-page--review { --report-accent: #d7a813; --report-accent-soft: #bce5ef; background-color: #f2d45f; }
 .report-page--traceability { --report-accent: #d97935; --report-accent-soft: #f3cf58; background-color: #c87843; }
 .report-page--default { --report-accent: #805f48; --report-accent-soft: #ead9bd; background-color: var(--color-canvas); }
@@ -1152,8 +1152,10 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .report-page-title > p { margin: 0 0 var(--space-2); color: var(--report-accent); font-weight: 800; letter-spacing: .08em; }
 .report-page-title h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 9vw, 3.5rem); line-height: 1.15; }
 .report-page-title > div { max-width: 32rem; margin-top: var(--space-4); line-height: var(--report-description-line-height); }
-.report-page-content { display: grid; min-width: 0; gap: var(--space-6); padding: 0 max(var(--space-4), env(safe-area-inset-right)) max(var(--space-8), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left)); }
-.image-report, .report-file-card { min-width: 0; max-width: 100%; overflow: hidden; border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); background: var(--color-paper); box-shadow: var(--shadow-paper); }
+/* Report images use the full safe viewport width; only text and controls have gutters. */
+.report-page-content { display: grid; min-width: 0; gap: var(--space-6); padding: 0 0 max(var(--space-8), env(safe-area-inset-bottom)); }
+.image-report, .report-file-card { min-width: 0; max-width: 100%; overflow: hidden; background: var(--color-paper); }
+.report-file-card { border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); box-shadow: var(--shadow-paper); }
 .image-report > header, .report-file-card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); }
 .image-report h2, .report-file-card h2 { margin: 0; font-size: 1rem; }
 .image-report header p, .report-file-card p { margin: var(--space-1) 0 0; color: var(--color-muted); font-size: .82rem; line-height: 1.5; }
@@ -1243,7 +1245,6 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 
 @media (max-width: 359px) {
   .report-page-title { padding-left: max(var(--space-4), env(safe-area-inset-left)); padding-right: max(var(--space-4), env(safe-area-inset-right)); }
-  .report-page-content { padding-left: max(var(--space-3), env(safe-area-inset-left)); padding-right: max(var(--space-3), env(safe-area-inset-right)); }
   .report-file-card { align-items: stretch; flex-direction: column; }
   .report-file-card a { width: 100%; }
   .report-image-stage.is-zoomed { height: clamp(18rem,64vh,34rem); height: clamp(18rem,64svh,34rem); }
