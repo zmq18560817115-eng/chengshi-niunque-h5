@@ -230,7 +230,7 @@ describe("H5 motion isolation", () => {
     expect(css).toContain('html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-book,');
     expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-book,');
     expect(css).toContain("--guide-route-transition-easing: cubic-bezier(.25,.1,.25,1);");
-    expect(css).toContain('.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,504ms) ease-out var(--guide-route-batch-delay,504ms)');
+    expect(css).toContain('.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-group.is-batch { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--guide-route-batch-duration,672ms) ease-out var(--guide-route-batch-delay,672ms)');
     expect(css).toContain('.reports-archive-final[data-guide-entry] .reports-archive-entry-batch { opacity: 1; transform: translate3d(0,0,0); animation: none; will-change: auto; }');
     expect(css).toContain(".h5-guide-route-buffer.is-releasing { opacity: 0; transform: translate3d(0,0,0);");
     expect(css).toContain("transition: opacity var(--guide-route-buffer-release-duration) ease-out;");
@@ -260,17 +260,17 @@ describe("H5 motion isolation", () => {
     expect(reports).toContain("revealDelayMs={160}");
     expect(artwork).toContain("data-guide-entry-stage={layerEntryStage(layer.id)}");
     expect(guideRouteBufferReleaseDurationMs).toBe(520);
-    expect(guideRouteCommitDurationMs).toBe(630);
-    expect(guideArchiveEntryTiming.bookDurationMs).toBe(630);
-    expect(guideArchiveEntryTiming.batchDurationMs).toBe(504);
+    expect(guideRouteCommitDurationMs).toBe(840);
+    expect(guideArchiveEntryTiming.bookDurationMs).toBe(840);
+    expect(guideArchiveEntryTiming.batchDurationMs).toBe(672);
     expect(guideArchiveBatchDelayMs).toBe(
       guideArchiveEntryTiming.bookDelayMs
       + guideArchiveEntryTiming.bookDurationMs * guideArchiveEntryTiming.batchOverlapProgress,
     );
     expect(guideArchiveEntryTiming.batchOverlapProgress).toBe(0.8);
-    expect(guideArchiveBatchDelayMs).toBe(504);
+    expect(guideArchiveBatchDelayMs).toBe(672);
     expect(guideRouteStageSettleMs).toBe(120);
-    expect(guideRouteStageDurationMs).toBe(1128);
+    expect(guideRouteStageDurationMs).toBe(1464);
     expect(routeTransition).toContain('root.setAttribute(guideRouteEntryAttribute, "revealing")');
     expect(routeTransition).toContain("root.removeAttribute(guideRouteEntryAttribute)");
     expect(routeTransition).toContain('snapshot.className = `h5-guide-route-snapshot is-${guideRouteOrientation(profile)}`');

@@ -152,6 +152,65 @@ def build_fish_motion(config):
     (ROOT/"src/app/design-motion.generated.css").write_text("\n".join(css)+"\n",encoding="utf-8")
 
 
+def build_archive_entry(config, manifest):
+    """Two complete groups, with the approved final frame preserved pixel-for-pixel.
+
+    Resource 5 supplies the actual card/mascot silhouette. The temporary
+    covered book area is extended from adjacent pixels of this same reference;
+    no old artwork, painted shape or rectangular moving page slice is used.
+    """
+    group=manifest["groups"]["archive-1"]
+    a1=rgba(SOURCES/group["reference"])
+    parts=group["parts"]
+    for n,x,y in [(11,745,2904),(7,100,2846),(18,134,3312),(19,134,3173)]:
+        parts[f"资源 {n}"].update(x=x,y=y)
+    mask=np.zeros((a1.height,a1.width),np.uint8)
+    for n in [5,6,7,8,9,10,11,12,14,15,16,17,18,19]:
+        p=parts[f"资源 {n}"]
+        part=rgba(SOURCES/p["source"]).resize((p["width"],p["height"]),Image.Resampling.LANCZOS)
+        layer=Image.new("L",a1.size)
+        layer.paste(part.getchannel("A"),(p["x"],p["y"]))
+        mask=np.maximum(mask,np.asarray(layer))
+    mask=cv2.dilate((mask>8).astype(np.uint8)*255,np.ones((7,7),np.uint8))
+    batch_mask=Image.fromarray(mask)
+
+    underlay=a1.copy()
+    yellow=a1.crop((10,1800,210,2400))
+    for y in range(2500,3700,600):
+        for x in range(0,1800,200): underlay.paste(yellow,(x,y))
+    # Follow the visible, slightly slanted lower book edge. Only the area
+    # hidden by the original white card is affected, including its paper base.
+    pixels=np.asarray(a1)
+    edge=[]
+    for x in range(1640,1920):
+        col=pixels[3300:3610,x,:3].astype(int)
+        ys=np.where((col[:,0]<215)&(col[:,1]<180)&(col[:,0]-col[:,1]>30))[0]
+        if len(ys):edge.append((x,int(ys[-1])+3300))
+    slope=float(np.polyfit(*np.array(edge).T,1)[0])
+    for x in range(1640):
+        donor_x=1640+x%200
+        shift=round(slope*(x-donor_x))
+        column=a1.crop((donor_x,3160,donor_x+1,a1.height))
+        feather=Image.fromarray(np.minimum(np.arange(column.height)*255/160,255).astype(np.uint8).reshape(-1,1))
+        underlay.paste(column,(x,3160+shift),feather)
+    clean=a1.copy();clean.paste(underlay,(0,0),batch_mask)
+    batch=a1.copy();batch.putalpha(batch_mask)
+    def export(im,box,name):
+        cut=im.crop(box)
+        width=min(cut.width,1000)
+        cut=cut.resize((width,round(cut.height*width/cut.width)),Image.Resampling.LANCZOS)
+        cut.save(OUTPUT/f"runtime/{name}.webp","WEBP",quality=92,method=6,exact=True)
+        return {"src":f"/design/2026-09-07/runtime/{name}.webp","x":box[0],"y":box[1],"width":box[2]-box[0],"height":box[3]-box[1]}
+    config["archiveBook"]=[export(clean,(0,0,2000,3733),"archive-1-book-stage")]
+    config["archiveBatch"]=[export(batch,batch_mask.getbbox(),"archive-1-batch-module")]
+    config["archiveBatchSourceParts"]=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    clean.resize((750,1400)).save(QA/"archive-book-before-batch.png")
+    batch.resize((750,1400)).save(QA/"archive-batch-group.png")
+    composed=clean.copy();composed.alpha_composite(batch)
+    assert np.array_equal(np.asarray(composed),np.asarray(a1)), "Final artwork must match the approved reference"
+    composed.resize((750,1400)).save(QA/"archive-entry-complete.png")
+
+
 def build():
     manifest = json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8"))
     groups = manifest["groups"]
@@ -194,35 +253,11 @@ def build():
     for slug,label,nums,cue in [("inspection-projects","检测项目",[7,11,10,9,8],4),("review-assurance","复核保障",[13,17,16,15,14],5),("production-traceability","生产溯源",[18,22,21,20,19],6)]:
         config["archiveTitles"].append({"slug":slug,"label":label,"parts":[save_part("archive-2",n,offset=3733) for n in nums],"cue":save_part("archive-2",cue,offset=3733)})
 
-    # Keep one continuous first-module backing. Only actual batch lettering
-    # enters separately; never translate an opaque rectangular page crop.
+    # One continuous book, then the entire latest-batch card as a single group.
     a1=ref("archive-1")
-    clean=a1.copy()
     def cut_layer(im,box,name,offset=0):
         return {"src":save(im.crop(box),name,min(box[2]-box[0],1000)),"x":box[0],"y":box[1]+offset,"width":box[2]-box[0],"height":box[3]-box[1]}
-    fix("archive-1",11,745,2904)
-    fix("archive-1",7,100,2846)
-    fix("archive-1",18,134,3312)
-    fix("archive-1",19,134,3173)
-    batch_mask=Image.new("L",a1.size)
-    for n in [6,7,8,9,10,11,12,14,15,16,17,18,19]:
-        p=item("archive-1",n)
-        mask=Image.new("L",a1.size);mask.paste(part("archive-1",n).getchannel("A"),(p["x"],p["y"]))
-        batch_mask=Image.fromarray(np.maximum(np.asarray(batch_mask),np.asarray(mask)))
-    # A three-source-pixel fringe retains the approved antialiasing. The
-    # temporary underlay uses only supplied yellow/pink texture; no generated
-    # content is visible in the completed composition.
-    batch_mask=Image.fromarray(cv2.dilate((np.asarray(batch_mask)>8).astype(np.uint8)*255,np.ones((7,7),np.uint8)))
-    underlay=a1.copy()
-    yellow=a1.crop((10,1800,210,2400))
-    for y in range(2500,3100,600):
-        for x in range(0,1800,200): underlay.paste(yellow,(x,y))
-    pink=part("archive-1",13)
-    underlay.alpha_composite(pink,(92,3135))
-    clean.paste(underlay,(0,0),batch_mask)
-    batch=a1.copy();batch.putalpha(batch_mask)
-    config["archiveBook"]=[cut_layer(clean,(0,0,2000,3733),"archive-1-continuous")]
-    config["archiveBatch"]=[cut_layer(batch,batch_mask.getbbox(),"archive-1-batch-lettering")]
+    build_archive_entry(config,manifest)
     config["archiveRibbon"]=save_part("archive-1",4)
     config["archivePaper"]=save(rgba(SOURCES/"长图三个模块共同的底图（肌理）/底图纹理.jpg"),"archive-paper",750)
     save(part("archive-1",1),"brand-logo",554)
@@ -296,8 +331,8 @@ def build():
     # can still be rendered as HTML in the same card slot.
     category_paper=save(rgba(SOURCES/"2-长图模块1/三个模块的底图（都是一样的）.jpg"),"category-paper",1000)
     specs={
-      "inspection": {"slug":"inspection-projects","folder":83,"title":106,"footer":102,"cards":[[84,96,104,98,95,97,101],[85,92,105,94,91,93,100],[86,88,103,90,87,89,99]],"titles":["核心营养含量","油脂新鲜度","安全底线"],"descriptions":["DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免含量没问题但氧化的藻油","每粒DHA和ARA的实测含量是多少","把重金属、致病菌、呕吐毒素、塑化剂、防腐剂、溶剂残留放在一起看，食品安全无小事，这些看不见、闻不到的东西，我们用检测结果替妈妈把关"]},
-      "review": {"slug":"review-assurance","folder":107,"title":108,"footer":127,"cards":[[126,123,130,125,122,124,121],[120,117,129,119,116,118,109],[114,111,128,113,110,112,115]],"titles":["非必要物质实测","原料与工艺","产品基础型检"],"descriptions":["包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必须脂肪酸和糖分，让每口都是需要的营养","包含FMT580藻油原料COA、原料溯源。妈妈可以看到原料来自哪里","工厂出厂检测和第三方检测，双层兜底检测"]},
+      "inspection": {"slug":"inspection-projects","folder":83,"title":106,"footer":102,"cards":[[84,96,105,98,95,97,101],[85,92,104,94,91,93,100],[86,88,103,90,87,89,99]],"titles":["核心营养含量","油脂新鲜度","安全底线"],"descriptions":["每粒DHA和ARA的实测含量是多少","DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免食用过度氧化的藻油","把重金属、致病菌、呕吐毒素、塑化剂、防腐剂、溶剂残留放在一起看，食品安全无小事，这些看不见、闻不到的东西，我们用检测结果替妈妈把关"]},
+      "review": {"slug":"review-assurance","folder":107,"title":108,"footer":127,"cards":[[126,123,130,125,122,124,121],[120,117,129,119,116,118,109],[114,111,128,113,110,112,115]],"titles":["非必要物质实测","原料与工艺","产品基础型检"],"descriptions":["包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必要脂肪酸和糖分，让每口都是需要的营养","包含FMT580藻油原料COA、原料溯源。妈妈可以看到原料来自哪里","工厂出厂检测和第三方检测，双层兜底检测"]},
       "traceability": {"slug":"production-traceability","folder":131,"title":132,"footer":None,"cards":[[134,143,142,145,141,138,140],[133,137,None,139,136,144,135]],"titles":["生产资质","经营资质"],"descriptions":["确认生产方具备对应产品的生产许可、资质文件和基础生产条件",""]},
     }
     config["categories"]={}
@@ -372,12 +407,14 @@ if __name__ == "__main__":
     parser.add_argument("--source", type=Path)
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--fish-motion", action="store_true")
+    parser.add_argument("--archive-entry", action="store_true")
     args = parser.parse_args()
     if args.build: build()
-    elif args.fish_motion:
+    elif args.fish_motion or args.archive_entry:
         target=ROOT/"src/config/design-assets.generated.ts"
         prefix="// Generated by scripts/refresh-design-assets.py --build. Do not hand edit.\nexport const designAssets = "
         config=json.loads(target.read_text(encoding="utf-8").split("export const designAssets = ",1)[1].removesuffix(" as const;\n"))
-        build_fish_motion(config)
+        if args.fish_motion: build_fish_motion(config)
+        else: build_archive_entry(config,json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8")))
         target.write_text(prefix+json.dumps(config,ensure_ascii=False,indent=2)+" as const;\n",encoding="utf-8")
     else: inventory(args.source)

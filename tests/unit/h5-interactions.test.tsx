@@ -308,7 +308,7 @@ describe("multi-page H5 interactions", () => {
       "module-1-batch-0",
     ]);
     const batch = batchGroup.querySelector<HTMLElement>('[data-source-part="module-1-batch-0"]');
-    expect(batch).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-lettering.webp");
+    expect(batch).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-module.webp");
     expect(batch).toHaveAttribute("data-guide-entry-stage", "3");
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();

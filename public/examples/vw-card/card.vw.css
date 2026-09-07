@@ -1,0 +1,11 @@
+/* Design px / 750 * 100 = vw. Run pnpm example:vw after editing. */
+.mobile-card {
+  width: 200px;
+  height: 100px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #f7d85d;
+  color: #40291f;
+  font-size: 24px;
+}

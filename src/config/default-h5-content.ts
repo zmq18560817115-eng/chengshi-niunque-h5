@@ -14,8 +14,8 @@ export const DEFAULT_H5_CONTENT = [
     description: "查看产品检测项目与对应报告资料。",
     sortOrder: 10,
     cards: [
-      { id: "seed-card-inspection-nutrition", title: "核心营养含量", description: "DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免含量没问题但氧化的藻油", sortOrder: 10, legacyTitle: "营养成分检测" },
-      { id: "seed-card-inspection-freshness", title: "油脂新鲜度", description: "每粒DHA和ARA的实测含量是多少", sortOrder: 20 },
+      { id: "seed-card-inspection-nutrition", title: "核心营养含量", description: "每粒DHA和ARA的实测含量是多少", sortOrder: 10, legacyTitle: "营养成分检测" },
+      { id: "seed-card-inspection-freshness", title: "油脂新鲜度", description: "DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免食用过度氧化的藻油", sortOrder: 20 },
       { id: "seed-card-inspection-safety", title: "安全底线", description: "把重金属、致病菌、呕吐毒素、塑化剂、防腐剂、溶剂残留放在一起看，食品安全无小事，这些看不见、闻不到的东西，我们用检测结果替妈妈把关", sortOrder: 30, legacyTitle: "安全指标检测" },
     ],
   },
@@ -26,7 +26,7 @@ export const DEFAULT_H5_CONTENT = [
     description: "查看非必要物质实测、原料与工艺及产品基础型检资料。",
     sortOrder: 20,
     cards: [
-      { id: "seed-card-review-formula-label", title: "非必要物质实测", description: "包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必须脂肪酸和糖分，让每口都是需要的营养", sortOrder: 10, legacyTitle: "配方与标签" },
+      { id: "seed-card-review-formula-label", title: "非必要物质实测", description: "包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必要脂肪酸和糖分，让每口都是需要的营养", sortOrder: 10, legacyTitle: "配方与标签" },
       { id: "seed-card-review-raw-process", title: "原料与工艺", description: "包含FMT580藻油原料COA、原料溯源。妈妈可以看到原料来自哪里", sortOrder: 20 },
       { id: "seed-card-review-stability-sensory", title: "产品基础型检", description: "工厂出厂检测和第三方检测，双层兜底检测", sortOrder: 30, legacyTitle: "稳定性与感官" },
     ],

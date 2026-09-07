@@ -17,8 +17,8 @@ export type ArchiveEntryLayer = {
 type SourcePart = { src: string; x: number; y: number; width: number; height: number };
 const layer = (part: SourcePart, id: string, stack: number): ArchiveEntryLayer => ({ id, src: part.src, left: part.x / 2, top: part.y / 2, width: part.width / 2, height: part.height / 2, stack });
 
-// Live rendering and the route handoff share one continuous backing and
-// transparent lettering so staged entry never exposes rectangular seams.
+// Live rendering and the route handoff share one continuous book and a whole
+// batch-card silhouette, so no rectangular page slice moves independently.
 export const archiveEntryBookLayers = designAssets.archiveBook.map((part, index) => layer(part, `module-1-book-${index}`, 10));
 export const archiveEntryBatchLayers = designAssets.archiveBatch.map((part, index) => layer(part, `module-1-batch-${index}`, 40));
 

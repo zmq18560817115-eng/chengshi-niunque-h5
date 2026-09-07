@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>750px 设计稿 · vw 适配示例</title>
+  <link rel="stylesheet" href="card.css">
+  <style>
+    body { margin: 0; padding: 24px; font-family: system-ui, sans-serif; background: #fffaf0; color: #40291f; }
+    h1 { font-size: 20px; }
+    p { line-height: 1.6; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>750px 设计稿适配</h1>
+  <p>公式：设计稿 px ÷ 750 × 100 = vw</p>
+  <div class="mobile-card">200 × 100</div>
+  <p>卡片：26.666667vw × 13.333333vw，始终占屏幕宽度的 26.666667%。</p>
+  <p id="size" aria-live="polite"></p>
+  <script>
+    const card = document.querySelector('.mobile-card');
+    function showSize() {
+      const { width, height } = card.getBoundingClientRect();
+      document.querySelector('#size').textContent = `当前屏幕宽 ${innerWidth}px，卡片 ${width.toFixed(2)} × ${height.toFixed(2)}px。`;
+    }
+    addEventListener('resize', showSize);
+    showSize();
+  </script>
+</body>
+</html>

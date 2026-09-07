@@ -4,37 +4,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
-import { getCategoryTheme, placeholderCardId, type CategoryCardFallback } from "@/config/h5-category-themes";
+import { getCategoryTheme, placeholderCardId } from "@/config/h5-category-themes";
+import { resolveCategoryCardCopy } from "@/config/h5-card-copy";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { RuntimeLoadingBuffer } from "@/components/h5/RuntimeLoadingBuffer";
 import { H5_MOTION_ENABLED, h5MotionModules } from "@/components/h5/motion/motion-config";
 import { pushHierarchyRoute, readCategoryScrollPosition, saveCategoryScrollPosition } from "@/components/h5/hierarchy-navigation";
 import { announceCategoryRouteMounted, announceCategoryRouteReady, categoryRouteAttemptAttribute, categoryRouteBufferAttribute, categoryRouteBufferedEntrySource, categoryRouteEntryAttribute, categoryRouteEntrySource, categoryRouteLoadingEntrySource, categoryRouteLoadingFeedbackAttribute, categoryRouteNativeEntrySource, categoryRouteNativeTransitionAttribute } from "@/components/h5/category-route-transition";
 import type { PublicModule } from "@/server/services/public-content-service";
-
-const legacyPlaceholderDescription = "资料整理中，正式发布后可在此查看。";
-const legacySeedDescriptions = new Set([
-  "DHA、ARA 等核心营养指标检测结果。",
-  "查看油脂新鲜度相关检测资料。",
-  "重金属、微生物及污染物等安全指标资料。",
-  "配方与标签复核资料。",
-  "原料与生产工艺复核资料。",
-  "稳定性与感官复核资料。",
-  "生产主体与资质资料。",
-  "生产过程中的质量管理资料。",
-]);
-
-function resolveArtworkCopy(card: PublicModule["cards"][number] | null, fallback: CategoryCardFallback) {
-  const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim()) || (card.id.startsWith("seed-card-") && fallback.legacyTitles.includes(card.title));
-  const description = card?.description?.trim();
-  const placeholderDescription = !description || description === legacyPlaceholderDescription || legacySeedDescriptions.has(description);
-  const reportCount = card?.assets.length ?? 0;
-  return {
-    title: placeholderTitle ? fallback.title : card?.title ?? fallback.title,
-    description: placeholderDescription ? fallback.description : description,
-    buttonText: reportCount > 0 ? `查看${reportCount}份报告` : card ? "暂无报告" : fallback.buttonText,
-  };
-}
 
 type CategoryDetailProps = { module: PublicModule; preview?: boolean };
 
@@ -167,7 +144,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
         const layout = theme.cardLayouts[index];
         const fallback = theme.cardFallbacks[index];
         const cardId = card?.id ?? placeholderCardId(index);
-        const { title, description, buttonText } = resolveArtworkCopy(card, fallback);
+        const { title, description, buttonText } = resolveCategoryCardCopy(module.slug, card, index);
         const label = `${title}，${buttonText}`;
         const useTitleArtwork = title === fallback.title;
         const useDescriptionArtwork = description === fallback.description;

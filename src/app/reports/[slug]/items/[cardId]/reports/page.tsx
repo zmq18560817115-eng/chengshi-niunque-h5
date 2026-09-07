@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ImageReportViewer } from "@/components/h5/ImageReportViewer";
 import { SwipeBackPage } from "@/components/h5/SwipeBackPage";
 import { getCategoryTheme } from "@/config/h5-category-themes";
+import { resolveCategoryCardCopy } from "@/config/h5-card-copy";
 import { PublicContentService } from "@/server/services/public-content-service";
 import { PublicContentLiveRefresh } from "@/components/h5/PublicContentLiveRefresh";
 import { isReservedPlaceholderCardId } from "@/server/public-report-policy";
@@ -16,10 +17,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   if (!result) notFound();
   const theme = getCategoryTheme(slug);
   const images = result.card.assets.filter((asset) => asset.type === "IMAGE");
+  const { title, description } = resolveCategoryCardCopy(slug, result.card);
 
   return <><PublicContentLiveRefresh version={snapshot.version}/><SwipeBackPage className={`h5-shell report-page report-page-final ${theme.backgroundClass}`} fallbackHref={`/reports/${slug}`} showBackControl={false} data-theme={theme.theme}>
     <section className="report-page-title">
-      <p>{theme.label}</p><h1>{result.card.title}</h1>{result.card.description && <div>{result.card.description}</div>}
+      <p>{theme.label}</p><h1>{title}</h1>{description && <div>{description}</div>}
     </section>
     <section className="report-page-content" aria-label="报告内容">
       {images.map((asset) => <ImageReportViewer key={asset.id} asset={asset} returnHref={`/reports/${slug}`} returnLabel={`返回${theme.label}`}/>)}
