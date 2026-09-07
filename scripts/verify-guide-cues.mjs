@@ -17,14 +17,14 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
       const hint = page.locator(".brand-guide-entry-hint");
       await expect.poll(() => hint.evaluate((node) => node.complete && node.naturalWidth > 0)).toBe(true);
       await expect(page.locator(".brand-guide-stage")).toHaveAttribute("data-load-state", "loading");
-      await expect(hint).toBeVisible();
-      await expect(hint).toHaveCSS("opacity", "1");
+      await expect(hint).toHaveCSS("opacity", "0");
+      expect((await hint.boundingBox()).y).toBeGreaterThanOrEqual(height);
       await page.screenshot({ path: `${output}/${engine}-${width}x${height}-hint-loading.png` });
       releasePaper();
       await expect(page.locator(".brand-guide-stage")).toHaveAttribute("data-animation-state", "running", { timeout: 15000 });
-      await expect(page.locator(".brand-guide-stage")).toHaveAttribute("data-swipe-state", "locked");
+      await expect(page.locator(".brand-guide-stage")).toHaveAttribute("data-swipe-state", "ready");
       await expect(hint).toBeVisible();
-      await expect(hint).toHaveCSS("animation-name", "guide-entry-hint-float");
+      await expect(hint).toHaveCSS("animation-name", "guide-entry-hint-enter");
       await page.screenshot({ path: `${output}/${engine}-${width}x${height}-hint-animating.png` });
       await expect(page.getByRole("button", { name: "进入档案" })).toBeEnabled({ timeout: 15000 });
       await page.getByRole("button", { name: "进入档案" }).click();
@@ -56,7 +56,7 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
       await page.screenshot({ path: `${output}/${engine}-${width}x${height}-arrows-peak.png` });
       await page.locator('[data-cue-slug="review-assurance"]').click();
       await expect(page).toHaveURL(`${base}/reports/review-assurance`, { timeout: 15000 });
-      results.push({ engine, width, height, hintDuringLoading: true, hintBeforeEntryUnlock: true, reviewArrowLink: true, rest, lift: rest.map((item, i) => item.top - peak[i]) });
+      results.push({ engine, width, height, hintStartsBelowViewport: true, entryDuringAnimation: true, reviewArrowLink: true, rest, lift: rest.map((item, i) => item.top - peak[i]) });
       await fs.writeFile(`${output}/${engine}-results.json`, JSON.stringify(results.filter((result) => result.engine === engine), null, 2));
       await page.close();
     }

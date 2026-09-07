@@ -273,6 +273,41 @@ function currentGuideRouteProfile(): ResolvedGuideRouteProfile {
   return window.innerWidth > window.innerHeight ? "landscape" : "portrait-standard";
 }
 
+function captureCurrentGuideArtwork(sourceStage: HTMLElement, buffer: HTMLElement) {
+  const artwork = sourceStage.querySelector<HTMLElement>(".brand-guide-artwork");
+  const panel = buffer.querySelector<HTMLElement>(".h5-guide-route-guide-panel");
+  if (!artwork || !panel) return () => {};
+
+  // A fast swipe can commit while papers are still flying in, or while the
+  // first-frame fallback is visible. Preserve that actual pose across routing
+  // instead of replacing it with the old, fully settled guide poster.
+  const running = (sourceStage.getAnimations?.({ subtree: true }) ?? [])
+    .filter((animation) => animation.playState === "running");
+  running.forEach((animation) => animation.pause());
+  const snapshot = artwork.cloneNode(true) as HTMLElement;
+  const originals = [artwork, ...artwork.querySelectorAll<HTMLElement>("*")];
+  const copies = [snapshot, ...snapshot.querySelectorAll<HTMLElement>("*")];
+  originals.forEach((original, index) => {
+    const copy = copies[index]!;
+    const style = window.getComputedStyle(original);
+    for (let propertyIndex = 0; propertyIndex < style.length; propertyIndex++) {
+      const property = style.item(propertyIndex);
+      copy.style.setProperty(property, style.getPropertyValue(property));
+    }
+    copy.style.animation = "none";
+    copy.style.transition = "none";
+    copy.removeAttribute("id");
+    // An undecoded decorative image must not pop into the frozen frame later.
+    if (original instanceof HTMLImageElement && (!original.complete || !original.naturalWidth)) {
+      copy.style.visibility = "hidden";
+    }
+  });
+  snapshot.dataset.guideCurrentFrame = "true";
+  snapshot.setAttribute("aria-hidden", "true");
+  panel.replaceChildren(snapshot);
+  return () => running.forEach((animation) => animation.play());
+}
+
 export async function prepareGuideRouteContinuity(initialProgress = 0, destinationFallback = false, latestBatch: LatestBatch = defaultLatestBatch): Promise<boolean> {
   const root = document.documentElement;
   const host = document.getElementById(guideRouteBufferHostId);
@@ -326,8 +361,12 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   buffer.style.setProperty("--guide-route-batch-duration", `${batchDuration}ms`);
   buffer.dataset.commitState = "prepared";
 
+  const resumeGuide = captureCurrentGuideArtwork(sourceStage, buffer);
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  if (!buffer.isConnected) return false;
+  if (!buffer.isConnected) {
+    resumeGuide();
+    return false;
+  }
   // Freeze the exact gesture handoff state before exposing the primed buffer.
   // This prevents hidden CSS transitions from advancing before first paint.
   void buffer.offsetWidth;
@@ -335,6 +374,7 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   root.setAttribute(guideRouteEntryAttribute, "active");
   const committed = await new Promise<boolean>((resolve) => window.requestAnimationFrame(() => {
     if (!buffer.isConnected) {
+      resumeGuide();
       resolve(false);
       return;
     }

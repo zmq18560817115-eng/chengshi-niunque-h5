@@ -1,6 +1,7 @@
 import { designAssets } from "@/config/design-assets.generated";
 import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
 import { batchArtworkSource, createBatchDetails } from "./archive-batch-details";
+import { H5_MOTION_ENABLED, h5MotionModules } from "./motion/motion-config";
 
 export const archiveEntryMasterWidth = designAssets.archiveWidth / 2;
 export const archiveEntryMasterHeight = designAssets.archiveHeight / 2;
@@ -101,6 +102,9 @@ export function createArchiveEntryTransitionVisual(createImage: TransitionImageF
   ribbonClip.className = "h5-guide-archive-entry-ribbon-clip";
   ribbonClip.dataset.guideDestinationRibbon = "fixed";
   ribbonClip.dataset.unlockProgress = "1.000";
+  // The live page owns the one-time slide after the guide handoff, avoiding
+  // a visible static ribbon that disappears before its own entry starts.
+  if (H5_MOTION_ENABLED && h5MotionModules.archiveUnlockTab) ribbonClip.dataset.ribbonEntryPending = "true";
   ribbonClip.style.setProperty(
     "--archive-entry-ribbon-hidden-bottom",
     `${(archiveEntryRibbon.height - archiveEntryRibbon.initialVisibleHeight) / archiveEntryRibbon.height * 100}%`,

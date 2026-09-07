@@ -20,6 +20,7 @@ export const h5MotionModules = {
   archiveStoryCopy: moduleEnabled("archiveStoryCopy", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_STORY_COPY),
   archiveFishFloat: moduleEnabled("archiveFishFloat", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_FISH_FLOAT),
   archiveSectionTitle: moduleEnabled("archiveSectionTitle", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_SECTION_TITLE),
+  archiveFolderPaper: moduleEnabled("archiveFolderPaper", process.env.NEXT_PUBLIC_H5_MOTION_ARCHIVE_FOLDER_PAPER),
   categoryEnter: moduleEnabled("categoryEnter", process.env.NEXT_PUBLIC_H5_MOTION_CATEGORY_ENTER),
   reportImageLoad: moduleEnabled("reportImageLoad", process.env.NEXT_PUBLIC_H5_MOTION_REPORT_IMAGE_LOAD),
 } as const;
@@ -33,8 +34,8 @@ export const h5MotionTiming = {
     blinkDurationMs: 270,
     paperStartMs: 420,
     paperDurationMs: 1500,
-    // 最后一张纸（220ms stagger）落定后再开放滑动/点击进入。
-    swipeReadyMs: 2140,
+    // 首页过渡资源就绪即可进入，不等待引导页装饰动画结束。
+    swipeReadyMs: 0,
   },
   archiveLatestCircle: {
     delayMs: 250,
@@ -42,6 +43,7 @@ export const h5MotionTiming = {
     threshold: 0.3,
   },
   archiveUnlockTab: {
+    enterDurationMs: 800,
     revealDistancePx: 180,
     followMs: 90,
   },

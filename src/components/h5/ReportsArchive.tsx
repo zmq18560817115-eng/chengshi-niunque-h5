@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { archiveClickCueLayouts, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
@@ -119,6 +119,8 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
   const [navigationSlug, setNavigationSlug] = useState<string | null>(null);
   const navigating = useRef(false);
+  const pressGesture = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const cancelledPress = useRef(false);
   const enteredFromGuide = useRef(false);
   const archiveCanvas = useRef<HTMLDivElement | null>(null);
   const artworkFailed = readinessFailed || layerArtworkFailed;
@@ -283,6 +285,10 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
 
   const enter = (module: PublicModule) => {
     if (navigating.current || leaving || guideEntry || preview) return;
+    if (cancelledPress.current) {
+      cancelledPress.current = false;
+      return;
+    }
     const guideRouteState = document.documentElement.getAttribute(guideRouteEntryAttribute);
     if (guideRouteState && guideRouteState !== "revealing") return;
     if (guideRouteState === "revealing") clearGuideRouteContinuity();
@@ -300,6 +306,38 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     setPressedSlug(slug);
   };
 
+  const releasePress = (cancelled = false) => {
+    if (cancelled && pressGesture.current) cancelledPress.current = true;
+    pressGesture.current = null;
+    if (!navigating.current) setPressedSlug(null);
+  };
+
+  const modulePressHandlers = (slug: string) => ({
+    onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+      if (event.isPrimary === false || event.button > 0) return;
+      cancelledPress.current = false;
+      pressGesture.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      pressModule(slug);
+    },
+    onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
+      const gesture = pressGesture.current;
+      // Clear feedback as soon as a touch turns into scrolling; never leave a
+      // highlighted folder behind or turn a cancelled drag into navigation.
+      if (gesture && gesture.pointerId === event.pointerId
+        && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) releasePress(true);
+    },
+    onPointerUp: () => releasePress(),
+    onPointerCancel: () => releasePress(true),
+    onPointerLeave: () => releasePress(true),
+    onBlur: () => releasePress(),
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      cancelledPress.current = false;
+      pressModule(slug);
+    },
+    onKeyUp: () => releasePress(),
+  });
+
   const exitingSlug = leaving ? navigationSlug : null;
 
   const guideEntryStyle = {
@@ -313,7 +351,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Stationary backing and transparent original parts share one canvas;
           character and cue animation never moves an opaque page crop. */}
-      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} latestBatch={config.latestBatch} />
+      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} paperMotionReady={artworkComplete && !guideEntry} ribbonMotionReady={artworkComplete && !guideEntry && !fallbackImageMounted} latestBatch={config.latestBatch} />
       <p className="sr-only">适用批次号：正装 {config.latestBatch.regularBatch}，试用装 {config.latestBatch.trialBatch}；检测日期：{formatInspectionDate(config.latestBatch.inspectionDate)}</p>
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
@@ -330,13 +368,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
           const targetModule = visibleModules.find((item) => item.slug === slug);
           if (!targetModule) return null;
           return preview ? <div key={slug} className="archive-click-cue-hotspot" data-cue-slug={slug} style={layout}><span>{targetModule.title}</span></div> :
-            <button key={slug} type="button" className={`archive-click-cue-hotspot ${pressedSlug === slug ? "is-pressed" : ""}`} data-cue-slug={slug} style={layout} aria-label={`点击进入${targetModule.title}`} disabled={leaving || guideEntry} onPointerDown={() => pressModule(slug)} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(targetModule)}><span>{targetModule.title}</span></button>;
+            <button key={slug} type="button" className={`archive-click-cue-hotspot ${pressedSlug === slug ? "is-pressed" : ""}`} data-cue-slug={slug} style={layout} aria-label={`点击进入${targetModule.title}`} disabled={leaving || guideEntry} {...modulePressHandlers(slug)} onClick={() => enter(targetModule)}><span>{targetModule.title}</span></button>;
         })}
         {visibleModules.map((module) => {
           const layout = getArchiveModuleLayout(module.slug)!;
           const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, clipPath: layout.clipPath, "--archive-order": layout.order } as CSSProperties;
           return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
-            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving || guideEntry} onPointerDown={() => pressModule(module.slug)} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(module)}><span>{module.title}</span></button>;
+            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving || guideEntry} {...modulePressHandlers(module.slug)} onClick={() => enter(module)}><span>{module.title}</span></button>;
         })}
       </nav>
     </div>

@@ -9215,5 +9215,25 @@ export const designAssets = {
     "height": 2809
   },
   "archiveBatchEditable": "/design/2026-09-07/runtime/archive-batch-editable.webp",
-  "archiveFallbackEditable": "/design/2026-09-07/runtime/archive-reference-editable.webp"
+  "archiveFallbackEditable": "/design/2026-09-07/runtime/archive-reference-editable.webp",
+  "loadingMotion": {
+    "width": 2000,
+    "height": 4333,
+    "base": "/design/2026-09-07/runtime/loading-motion-base.webp",
+    "label": {
+      "src": "/design/2026-09-07/runtime/loading-label.webp",
+      "x": 416,
+      "y": 1710,
+      "width": 346,
+      "height": 377
+    },
+    "track": {
+      "x": 344,
+      "y": 1992,
+      "width": 1314,
+      "height": 94
+    },
+    "initialFill": 418,
+    "travel": 896
+  }
 } as const;

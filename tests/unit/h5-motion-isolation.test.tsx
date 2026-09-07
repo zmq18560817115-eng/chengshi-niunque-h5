@@ -34,6 +34,7 @@ describe("H5 motion isolation", () => {
       archiveStoryCopy: true,
       archiveFishFloat: true,
       archiveSectionTitle: true,
+      archiveFolderPaper: true,
       categoryEnter: true,
       reportImageLoad: true,
     });
@@ -172,7 +173,8 @@ describe("H5 motion isolation", () => {
     expect(guide).toMatch(
       /<div className="brand-guide-portrait-scene">[\s\S]*?<\/div>\s*{mountLivePortrait && <GuideEntryHint/,
     );
-    expect(css).toContain("@keyframes guide-entry-hint-float");
+    expect(css).toContain("@keyframes guide-entry-hint-enter");
+    expect(css).toContain("--guide-entry-hint-enter-duration: 900ms;");
     expect(css).toContain('.brand-guide.is-animating .brand-guide-entry-hint');
     expect(css).not.toContain('.brand-guide-stage[data-swipe-state="locked"] .brand-guide-entry-hint');
     expect(css).not.toContain('.brand-guide.is-loading .brand-guide-entry-hint');
@@ -197,12 +199,10 @@ describe("H5 motion isolation", () => {
     }
   });
 
-  it("keeps entry unlock timing while the guide hint accompanies the animation", () => {
-    expect(h5MotionTiming.guide.swipeReadyMs).toBe(
-      h5MotionTiming.guide.paperStartMs + 220 + h5MotionTiming.guide.paperDurationMs,
-    );
+  it("allows immediate entry while the guide hint accompanies the animation", () => {
+    expect(h5MotionTiming.guide.swipeReadyMs).toBe(0);
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toContain("@keyframes guide-entry-hint-float");
+    expect(css).toContain("@keyframes guide-entry-hint-enter");
     expect(css).toContain("@keyframes guide-entry-hint-accepted");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-fallback { visibility: visible; opacity: 1; }");
     expect(css).toContain(".brand-guide.is-reduced .brand-guide-entry-hint,");
@@ -301,7 +301,9 @@ describe("H5 motion isolation", () => {
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-travel-distance", `${routeDistance}px`);');
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-exit-distance", `${-routeDistance}px`);');
     expect(routeTransition).toContain('root.style.setProperty("--guide-route-remaining-distance", `${remainingDistance}px`);');
-    expect(routeTransition).not.toContain("cloneNode(true)");
+    expect(routeTransition).toContain("captureCurrentGuideArtwork(sourceStage, buffer)");
+    expect(routeTransition).toContain('copy.style.animation = "none";');
+    expect(routeTransition).toContain('copy.style.transition = "none";');
     expect(routeTransition).not.toContain("freezeGuideSnapshot");
     expect(routeTransition).toContain('root.setAttribute(guideRouteEntryAttribute, "revealing")');
     expect(routeTransition).toContain('buffer?.classList.add("is-releasing")');
@@ -469,7 +471,8 @@ describe("H5 motion isolation", () => {
     expect(guide).toContain("markImageDecoded(event.currentTarget");
     expect(guide).toContain("requiredReadyKeys.every((required) => readyLayers.current.has(required))");
     expect(guide).toContain("void primeGuideRouteContinuity(layoutProfile, destinationStatus === \"fallback\", latestBatch)");
-    expect(guide).toContain("const transitionGestureReady = gestureReady && destinationUsable && continuityReady;");
+    expect(guide).toContain('const transitionSwipeReady = layoutProfile !== "unknown" && destinationUsable && continuityReady;');
+    expect(guide).toContain("const transitionGestureReady = transitionSwipeReady;");
     expect(reports).not.toContain("reportsDeferredWarmRequests");
     expect(reports).not.toContain("categoryRouteWarmRequests");
     expect(reports).toContain('idleWindow.requestIdleCallback(prefetchCategoryRoutes, { timeout: 1500 })');
@@ -617,7 +620,7 @@ describe("H5 motion isolation", () => {
     const story = readFileSync("src/components/h5/motion/modules/ArchiveStoryCopyMotion.tsx", "utf8");
     expect(ribbon).not.toContain('addEventListener("scroll"');
     expect(ribbon).not.toContain("clip-path");
-    expect(ribbon).toContain('data-unlock-state="fixed"');
+    expect(ribbon).toContain('data-unlock-state={state}');
     expect(ribbon).toContain('data-unlock-progress="1.000"');
     expect(designAssets.storyLines).toHaveLength(7);
     expect(story).not.toContain("archive-story-copy-clean-patch");

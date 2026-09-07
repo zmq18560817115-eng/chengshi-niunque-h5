@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useVisualViewportHeight } from "@/components/h5/useVisualViewportHeight";
+import { LoadingTagMotion } from "./LoadingTagMotion";
 
 export type RuntimeLoadingPhase = "loading" | "leaving" | "failed";
 
@@ -46,9 +47,8 @@ export function RuntimeLoadingBuffer({
   persistent?: boolean;
 }) {
   useVisualViewportHeight();
-  // The guide clone already is the route buffer. Keep the heavier poster/GIF
-  // out of the DOM for this component lifetime so it cannot decode underneath
-  // the handoff and compete for mobile GPU memory during the reveal.
+  // The guide clone already covers this handoff. Keep loading artwork out of
+  // the DOM for this component lifetime so it cannot compete during the reveal.
   const [suppressedByGuideContinuity] = useState(() => !persistent && typeof document !== "undefined"
     && document.documentElement.hasAttribute("data-guide-route-entry"));
   if (suppressedByGuideContinuity) return null;
@@ -66,6 +66,7 @@ export function RuntimeLoadingBuffer({
             priority
             unoptimized
           />
+          <LoadingTagMotion/>
           {phase === "failed" ? <div className="runtime-loading-error" role="alert">
             <strong>内容暂时无法加载</strong>
             <span>请检查网络后重试，当前画面会保留。</span>

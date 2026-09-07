@@ -54,6 +54,7 @@ const landscapeReadyKeys = [
 ] as const;
 
 function markImageDecoded(image: HTMLImageElement, key: string, onReady: (key: string) => void, onError: (name: string) => void) {
+  image.dataset.guideReadyKey = key;
   const ready = () => onReady(key);
   if (typeof image.decode === "function") void image.decode().then(ready, () => onError(key));
   else ready();
@@ -189,14 +190,14 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
   const [layoutProfile, setLayoutProfile] = useState<GuideLayoutProfile>("unknown");
   const [fallbackUnavailable, setFallbackUnavailable] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
-  const [swipeReady, setSwipeReady] = useState(!motionEnabled);
-  const [gestureReady, setGestureReady] = useState(!motionEnabled);
   const [destinationStatus, setDestinationStatus] = useState<GuideDestinationStatus>(preview ? "ready" : "loading");
   const [continuityReady, setContinuityReady] = useState(preview);
   const [transitionError, setTransitionError] = useState(false);
   const destinationUsable = destinationStatus !== "loading";
-  const transitionSwipeReady = swipeReady && destinationUsable && continuityReady;
-  const transitionGestureReady = gestureReady && destinationUsable && continuityReady;
+  // Entry depends on a usable destination, never on the decorative intro
+  // finishing (or all of its image layers loading).
+  const transitionSwipeReady = layoutProfile !== "unknown" && destinationUsable && continuityReady;
+  const transitionGestureReady = transitionSwipeReady;
   const requiredReadyKeys = useMemo<readonly string[]>(() => {
     if (layoutProfile === "portrait-standard" || layoutProfile === "portrait-compact") return standardReadyKeys;
     if (layoutProfile === "landscape") return landscapeReadyKeys;
@@ -245,13 +246,12 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
     if (motionEnabled && motionPreference === "allowed") {
       setAssetStatus("loading");
       setAnimationStarted(false);
-      setSwipeReady(false);
-      setGestureReady(false);
     }
   }, [layoutProfile, motionEnabled, motionPreference]);
 
   const handleLayerReady = useCallback((key: string) => {
     if (!motionEnabled || motionPreference !== "allowed" || !requiredReadyKeys.includes(key)) return;
+    if (readyLayers.current.has(key)) return;
     readyLayers.current.add(key);
     if (!requiredReadyKeys.every((required) => readyLayers.current.has(required))) return;
     const firstFrame = window.requestAnimationFrame(() => {
@@ -268,6 +268,20 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
     });
     readyFrames.current.push(firstFrame);
   }, [motionEnabled, motionPreference, requiredReadyKeys]);
+
+  useEffect(() => {
+    if (!motionEnabled || motionPreference !== "allowed") return;
+    let cancelled = false;
+    // Cached landscape images may report load before the motion preference is
+    // resolved. Recheck those mounted images after readiness has been reset.
+    guideRoot.current?.querySelectorAll<HTMLImageElement>("img[data-guide-ready-key]").forEach((image) => {
+      if (!image.complete || !image.naturalWidth) return;
+      const ready = () => { if (!cancelled) handleLayerReady(image.dataset.guideReadyKey!); };
+      if (typeof image.decode === "function") void image.decode().then(ready, () => {});
+      else ready();
+    });
+    return () => { cancelled = true; };
+  }, [handleLayerReady, motionEnabled, motionPreference]);
 
   const handleLiveStageTransitionEnd = useCallback((event: ReactTransitionEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget || event.propertyName !== "opacity" || assetStatus !== "ready" || animationStarted) return;
@@ -323,8 +337,6 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
       setMotionPreference(nextPreference);
       setAssetStatus(nextPreference === "reduced" ? "reduced" : "loading");
       setAnimationStarted(false);
-      setSwipeReady(nextPreference === "reduced");
-      setGestureReady(nextPreference === "reduced");
     };
     sync();
     if (!media) return;
@@ -349,15 +361,6 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
     });
     return () => { cancelled = true; };
   }, [destinationStatus, destinationUsable, latestBatch, layoutProfile, preview]);
-
-  useEffect(() => {
-    if (!animationStarted) return;
-    const timer = window.setTimeout(() => {
-      setSwipeReady(true);
-      setGestureReady(true);
-    }, h5MotionTiming.guide.swipeReadyMs);
-    return () => window.clearTimeout(timer);
-  }, [animationStarted]);
 
   const enter = useCallback((source: "gesture" | "control", progress = swipeProgress.current) => {
     const ready = source === "gesture" ? transitionGestureReady : transitionSwipeReady;
@@ -483,21 +486,15 @@ export function BrandGuide({ preview = false, onEnter, latestBatch = defaultLate
     console.error(`[BrandGuide] asset failed: ${name}`);
     setAssetStatus("failed");
     setAnimationStarted(false);
-    setSwipeReady(true);
-    setGestureReady(true);
   }, []);
   const handleFallbackError = useCallback((name: string) => {
     console.error(`[BrandGuide] asset failed: ${name}`);
     if (name === "guide-first-frame.webp") {
       setAssetStatus("failed");
       setAnimationStarted(false);
-      setSwipeReady(true);
-      setGestureReady(true);
       return;
     }
     setFallbackUnavailable(true);
-    setSwipeReady(true);
-    setGestureReady(true);
   }, []);
   const handleDestinationError = useCallback(() => {
     console.error("[BrandGuide] archive entry transition layer failed");

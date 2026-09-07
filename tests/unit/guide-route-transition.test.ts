@@ -84,6 +84,7 @@ describe("guide route transition priming", () => {
     expect(ribbon).not.toBeNull();
     expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "fixed");
     expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
+    expect(ribbon).toHaveAttribute("data-ribbon-entry-pending", "true");
     expect(ribbon!.querySelectorAll(".h5-guide-archive-entry-ribbon")).toHaveLength(1);
     const imageSources = [...primed.querySelectorAll("img")].map((image) => image.getAttribute("src") ?? "");
     expect(imageSources[0]).toBe(guideRouteSnapshotSrc);
@@ -100,6 +101,22 @@ describe("guide route transition priming", () => {
     expect(primed).toHaveClass("is-committing");
     expect(decodedSources).toHaveLength(imageSources.length);
     expect(document.documentElement).toHaveAttribute(guideRouteEntryAttribute, "active");
+  });
+
+  it("preserves the visible paper pose on a fast swipe instead of jumping to the terminal poster", async () => {
+    const stage = document.querySelector<HTMLElement>(".brand-guide-stage")!;
+    stage.innerHTML = '<div class="brand-guide-artwork"><img class="brand-guide-paper" src="/paper.webp" style="transform: translateY(43px); opacity: 0.45"></div>';
+    const animation = { playState: "running", pause: vi.fn(), play: vi.fn() };
+    stage.getAnimations = vi.fn(() => [animation as unknown as Animation]);
+    await primeGuideRouteContinuity("portrait-standard", false);
+    await expect(prepareGuideRouteContinuity(.18, false)).resolves.toBe(true);
+    const snapshot = document.querySelector<HTMLElement>("[data-guide-current-frame]")!;
+    expect(snapshot).not.toBeNull();
+    expect(snapshot.querySelector("img")).toHaveStyle({ transform: "translateY(43px)", opacity: "0.45", animation: "none", transition: "none" });
+    expect(document.querySelector(".h5-guide-route-portrait-snapshot")).toBeNull();
+    expect(animation.pause).toHaveBeenCalledOnce();
+    expect(animation.play).not.toHaveBeenCalled();
+    expect(stage.querySelector("img")).toHaveStyle({ transform: "translateY(43px)" });
   });
 
   it("primes compact and landscape buffers from semantic responsive layers", async () => {

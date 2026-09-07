@@ -92,12 +92,6 @@ const guideEntryTransitionSourceSet = new Set<string>(archiveEntryTransitionSour
 const isGuideRoutePrimeAsset = (image: PendingImage) => isGuideReadinessAsset(image)
   || guideEntryTransitionSourceSet.has(image.src);
 
-function signalVisibleGuideDestinationDecoded(container: HTMLElement) {
-  const destinationImages = [...container.querySelectorAll<HTMLImageElement>('[data-guide-destination-group] img')];
-  if (destinationImages.length === 0) throw new Error("Guide destination preview was not mounted");
-  destinationImages.forEach((destination) => fireEvent.load(destination));
-}
-
 function signalGuideCrossfadeComplete(element: HTMLElement) {
   const event = new Event("transitionend", { bubbles: true });
   Object.defineProperty(event, "propertyName", { value: "opacity" });
@@ -251,6 +245,45 @@ describe("multi-page H5 interactions", () => {
     window.dispatchEvent(new Event("pagehide"));
   });
 
+  it.each(["pointercancel", "pointerleave", "pointermove"])("clears folder feedback on %s without navigating, and accepts the next tap", (type) => {
+    const slug = "review-assurance";
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: "复核保障", description: null, cards: [] }]}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>(`[data-slug="${slug}"]`)!;
+    const archive = container.querySelector(".reports-archive");
+    const pointer = (name: string, y = 300) => {
+      const event = new Event(name, { bubbles: true, cancelable: true });
+      for (const [key, value] of Object.entries({ pointerId: 1, isPrimary: true, button: 0, clientX: 200, clientY: y })) {
+        Object.defineProperty(event, key, { value });
+      }
+      fireEvent(hotspot, event);
+    };
+    pointer("pointerdown");
+    expect(archive).toHaveAttribute("data-pressed-slug", slug);
+    pointer(type === "pointerleave" ? "pointerout" : type, 280);
+    expect(archive).not.toHaveAttribute("data-pressed-slug");
+    fireEvent.click(hotspot);
+    expect(archive).not.toHaveClass("is-leaving");
+    pointer("pointerdown");
+    pointer("pointerup");
+    expect(archive).not.toHaveAttribute("data-pressed-slug");
+    fireEvent.click(hotspot);
+    expect(archive).toHaveClass("is-leaving");
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
+    window.dispatchEvent(new Event("pagehide"));
+  });
+
+  it("responds to keyboard presses on a cue and clears a cancelled key press on blur", () => {
+    const slug = "production-traceability";
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: "生产溯源", description: null, cards: [] }]}/>);
+    const cue = screen.getByRole("button", { name: "点击进入生产溯源" });
+    const archive = container.querySelector(".reports-archive");
+    fireEvent.keyDown(cue, { key: " " });
+    expect(archive).toHaveAttribute("data-pressed-slug", slug);
+    fireEvent.blur(cue);
+    expect(archive).not.toHaveAttribute("data-pressed-slug");
+    expect(archive).not.toHaveClass("is-leaving");
+  });
+
   it("does not drop a category click while the completed guide reveal marker awaits cleanup", () => {
     vi.useFakeTimers();
     const modules = [{ id: "inspection", slug: "inspection-projects", title: "检测项目", description: null, cards: [] }];
@@ -362,15 +395,15 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelectorAll(".archive-section-title-character")).toHaveLength(15);
     expect(container.querySelectorAll(".archive-section-click-cue")).toHaveLength(3);
     expect(container.querySelector(".archive-unlock-tab-motion")).toBeInTheDocument();
-    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "fixed");
+    expect(container.querySelector(".archive-unlock-tab-motion")).toHaveAttribute("data-unlock-state", "hidden");
   });
 
-  it("keeps the complete ribbon anchored while scrolling without image duplication", () => {
+  it("keeps the complete static ribbon anchored while scrolling without image duplication", () => {
     const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
     let scrollY = 0;
     Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
     try {
-      const { container } = render(<ArchiveUnlockTabMotion />);
+      const { container } = render(<ArchiveUnlockTabMotion enabled={false} />);
       const ribbon = container.querySelector(".archive-unlock-tab-motion");
 
       fireEvent.wheel(window);
@@ -492,6 +525,20 @@ describe("multi-page H5 interactions", () => {
     expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
   });
 
+  it("keeps the complete loading poster until both motion assets load and retains it on an image failure", () => {
+    const { container } = render(<RuntimeLoadingBuffer />);
+    const motion = container.querySelector(".guide-loading-motion")!;
+    const images = motion.querySelectorAll("image");
+    expect(motion).toHaveAttribute("data-loading-motion-ready", "false");
+    fireEvent.load(images[0]);
+    expect(motion).toHaveAttribute("data-loading-motion-ready", "false");
+    fireEvent.load(images[1]);
+    expect(motion).toHaveAttribute("data-loading-motion-ready", "true");
+    fireEvent.error(images[1]);
+    expect(motion).toHaveAttribute("data-loading-motion-ready", "false");
+    expect(container.querySelector(".guide-loading-buffer-poster")).toBeInTheDocument();
+  });
+
   it("keeps the persistent category loading poster prepainted during guide continuity", () => {
     document.documentElement.setAttribute("data-guide-route-entry", "active");
     const { container } = render(<RuntimeLoadingBuffer persistent />);
@@ -563,7 +610,7 @@ describe("multi-page H5 interactions", () => {
     expect(landscape.container.querySelector(".guide-compact-portrait-composition")).not.toBeInTheDocument();
   });
 
-  it("tracks touch progress after actual DOM decode and the fallback crossfade", async () => {
+  it("tracks touch progress before the intro crossfade or paper animation finishes", async () => {
     vi.useFakeTimers();
     const onEnter = vi.fn();
     const { container } = render(<BrandGuide onEnter={onEnter} />);
@@ -571,28 +618,11 @@ describe("multi-page H5 interactions", () => {
     const stage = container.querySelector(".brand-guide-stage");
     await decodeMountedGuideImages();
     expect(page).toHaveClass("is-ready", "is-motion-enabled");
-    expect(stage).toHaveAttribute("data-swipe-state", "locked");
-    expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    expect(stage).toHaveAttribute("data-swipe-distance-px", "24");
-    expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
-    await act(async () => signalVisibleGuideDestinationDecoded(container));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs - 1);
-    });
-    expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1);
-    });
-    expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    expect(page).not.toHaveClass("is-animating");
-    const liveStage = container.querySelector<HTMLElement>(".brand-guide-live-stage");
-    expect(liveStage).not.toBeNull();
-    signalGuideCrossfadeComplete(liveStage as HTMLElement);
-    expect(page).toHaveClass("is-animating");
-    await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs - 1); });
-    expect(stage).toHaveAttribute("data-gesture-state", "locked");
-    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(stage).toHaveAttribute("data-swipe-state", "ready");
     expect(stage).toHaveAttribute("data-gesture-state", "ready");
+    expect(stage).toHaveAttribute("data-swipe-distance-px", "24");
+    expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
+    expect(page).not.toHaveClass("is-animating");
     fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 300 }] });
     await act(async () => {
       fireEvent.touchMove(page, { touches: [{ identifier: 1, clientX: 198, clientY: 276 }] });
@@ -606,6 +636,26 @@ describe("multi-page H5 interactions", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(guideRouteAssetTimeoutMs + guideRouteNavigationDelayMs + 1); });
     expect(onEnter).toHaveBeenCalledOnce();
     fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 196, clientY: 180 }] });
+    expect(onEnter).toHaveBeenCalledOnce();
+  });
+
+  it("accepts an early swipe while a decorative paper is still loading, after the destination is decoded", async () => {
+    vi.useFakeTimers();
+    const onEnter = vi.fn();
+    const { container } = render(<BrandGuide onEnter={onEnter} />);
+    const stage = container.querySelector(".brand-guide-stage");
+    expect(stage).toHaveAttribute("data-gesture-state", "locked");
+    const page = screen.getByRole("main");
+    fireEvent.touchStart(page, { touches: [{ identifier: 1, clientX: 200, clientY: 400 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 1, clientX: 200, clientY: 180 }] });
+    expect(page).not.toHaveClass("is-leaving");
+    await resolveAllPendingImages(({ src }) => !src.endsWith("report-paper-bottom.webp"));
+    expect(stage).toHaveAttribute("data-load-state", "loading");
+    expect(stage).toHaveAttribute("data-animation-state", "paused");
+    expect(stage).toHaveAttribute("data-gesture-state", "ready");
+    fireEvent.touchStart(page, { touches: [{ identifier: 2, clientX: 200, clientY: 400 }] });
+    fireEvent.touchEnd(page, { changedTouches: [{ identifier: 2, clientX: 200, clientY: 180 }] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(guideRouteNavigationDelayMs); });
     expect(onEnter).toHaveBeenCalledOnce();
   });
 
@@ -803,7 +853,7 @@ describe("multi-page H5 interactions", () => {
     expect(stage).toHaveAttribute("data-paper-duration-ms", "1500");
     expect(stage).not.toHaveAttribute("data-hint-start-ms");
     expect(stage).not.toHaveAttribute("data-hint-duration-ms");
-    expect(stage).toHaveAttribute("data-swipe-ready-ms", "2140");
+    expect(stage).toHaveAttribute("data-swipe-ready-ms", "0");
     expect(h5MotionTiming.guide.crossfadeMs).toBe(180);
     expect(container.querySelector(".brand-guide-dynamic-stage")).toBeInTheDocument();
     expect(container.querySelector(".motion-stage")).not.toBeInTheDocument();
@@ -811,7 +861,7 @@ describe("multi-page H5 interactions", () => {
     expect(page).toHaveClass("is-loading");
     await decodeMountedGuideImages();
     expect(page).toHaveClass("is-ready");
-    expect(screen.getByRole("button", { name: "进入档案" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "进入档案" })).toBeEnabled();
     await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.crossfadeMs); });
     signalGuideCrossfadeComplete(container.querySelector(".brand-guide-live-stage") as HTMLElement);
     await act(async () => { await vi.advanceTimersByTimeAsync(h5MotionTiming.guide.swipeReadyMs); });
