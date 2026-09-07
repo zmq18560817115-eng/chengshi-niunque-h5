@@ -8,7 +8,7 @@ export type H5FixedContent = {
 /** Fixed visual copy. It is intentionally not editable from the admin area. */
 export const h5FixedContent: H5FixedContent = {
   brandName: "Honest Nutri · 诚实纽雀",
-  guideTitle: "每一份安心，都有据可查",
+  guideTitle: "请查收检测报告",
   guideDescription: "向上滑动或点击下方提示，进入透明档案",
   guideButtonText: "进入档案",
   archiveEyebrow: "Honest Nutri",
@@ -17,8 +17,8 @@ export const h5FixedContent: H5FixedContent = {
   evidenceTitle: "为宝贝把关",
   evidenceSubtitle: "看清3层证据",
   storyEyebrow: "品牌初心",
-  storyTitle: "不止于宣传数字，我们透明呈现DHA各项指标与安全检测。",
-  storyDescription: "给宝宝的营养，看得见、查得准、更放心。",
+  storyTitle: "中国好营养，本该很简单",
+  storyDescription: "「诚实纽雀」是我们送给初生生命的礼物，一份诚实、安全、安心的营养。",
   archiveInstruction: "查看报告三步走",
   reportDisclaimer: "报告仅供对应批次查阅",
 };

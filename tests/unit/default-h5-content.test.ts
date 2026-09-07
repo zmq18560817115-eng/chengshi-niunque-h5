@@ -8,8 +8,8 @@ describe("formal H5 default content mapping", () => {
   it("matches the approved card structure and ordering", () => {
     expect(DEFAULT_H5_CONTENT.map((item) => ({ slug: item.slug, cards: item.cards.map((card) => card.title) }))).toEqual([
       { slug: "inspection-projects", cards: ["核心营养含量", "油脂新鲜度", "安全底线"] },
-      { slug: "review-assurance", cards: ["配方与标签", "原料与工艺", "稳定性与感官"] },
-      { slug: "production-traceability", cards: ["生产资质", "质量管理"] },
+      { slug: "review-assurance", cards: ["非必要物质实测", "原料与工艺", "产品基础型检"] },
+      { slug: "production-traceability", cards: ["生产资质", "经营资质"] },
     ]);
   });
 

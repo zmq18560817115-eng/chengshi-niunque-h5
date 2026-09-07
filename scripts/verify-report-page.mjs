@@ -4,7 +4,7 @@ import path from "node:path";
 
 const output = path.resolve("test-results/report-page-v1");
 await fs.mkdir(output, { recursive: true });
-const viewports = [[320,568],[360,800],[375,667],[375,812],[390,844],[393,852],[414,896],[430,932]];
+const viewports = [[320,568],[360,800],[375,667],[375,812],[390,844],[393,852],[412,892],[414,896],[428,926],[430,932]];
 const routes = [
   ["inspection", "/reports/inspection-projects/items/seed-card-inspection-nutrition/reports"],
   ["review", "/reports/review-assurance/items/seed-card-review-standard/reports"],

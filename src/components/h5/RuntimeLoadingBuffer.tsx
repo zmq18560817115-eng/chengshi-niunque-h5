@@ -59,7 +59,7 @@ export function RuntimeLoadingBuffer({
         <section className="guide-loading-buffer-stage" aria-live="polite">
           <Image
             className="guide-loading-buffer-poster"
-            src="/design/guide/data-loading-buffer-poster.webp"
+            src="/design/2026-09-07/runtime/loading-poster.webp"
             alt=""
             fill
             sizes="(max-width: 750px) 100vw, 750px"

@@ -52,11 +52,11 @@ export const h5MotionTiming = {
   },
   archiveStoryCopy: {
     delayMs: 150,
-    // 快速逐字渐显：保留柔边扫入，但在约 2.35 秒内显示完四行。
+    // 七行原文字独立进入，保留 2350ms 总时长。
     lineDurationMs: 900,
     // 紧凑衔接各行，同一语句的换行通过偏移提前进入。
-    lineStepMs: 500,
-    lineOffsetsMs: [0, -100, 0, -200] as const,
+    lineStepMs: 200,
+    lineOffsetsMs: [0, 0, 0, 100, 100, 100, 100] as const,
     easing: "linear",
     threshold: 0.3,
   },

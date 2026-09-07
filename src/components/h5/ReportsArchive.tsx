@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { archiveClickCueLayout, archiveInspectionMascotLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
+import { archiveClickCueLayouts, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
 import { AdaptiveReadinessGate, useAdaptiveReadiness, useAdaptiveReadinessFailed } from "@/components/h5/AdaptiveReadinessGate";
@@ -98,7 +98,6 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const artworkFailed = readinessFailed || layerArtworkFailed;
   const artworkComplete = artworkReady && !artworkFailed;
   const visibleModules = useMemo(() => [...modules].filter((module) => getArchiveModuleLayout(module.slug)).sort((a, b) => getArchiveModuleLayout(a.slug)!.order - getArchiveModuleLayout(b.slug)!.order), [modules]);
-  const inspectionModule = visibleModules.find((module) => module.slug === "inspection-projects");
 
   useEffect(() => {
     if (preview) return;
@@ -286,32 +285,29 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
 
   return <main className={`h5-shell reports-archive reports-archive-final reports-entry-transition h5-page-transition ${leaving ? "is-leaving" : ""}`} aria-label={config.archiveTitle} aria-busy={guideEntry || leaving || !artworkComplete || undefined} data-exit-slug={exitingSlug ?? undefined} data-pressed-slug={pressedSlug ?? undefined} data-guide-entry={enteredFromGuide.current ? (guideEntry ? "reference-staged" : "complete") : undefined} data-deferred-artwork={deferredMounted ? "mounted" : "waiting"} data-archive-artwork-ready={artworkComplete ? "true" : "false"} data-archive-artwork-failed={artworkFailed ? "true" : "false"} data-preview={preview || undefined} style={guideEntryStyle}>
     <div ref={archiveCanvas} className="reports-archive-canvas">
-      {/* Runtime artwork is assembled from the approved source parts. The old
-          plant decoration and module-two title layers are omitted because their
-          supplied GIF replacements are rendered by ArchiveSectionTitleMotion. */}
+      {/* Stationary backing and transparent original parts share one canvas;
+          character and cue animation never moves an opaque page crop. */}
       <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} />
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />}
       <div className="reports-archive-reference-fallback" data-fallback-image={fallbackImageMounted ? "mounted" : "released"}>
-        {fallbackImageMounted ? <Image className="reports-archive-reference-fallback-image" src="/design/final-v1/archive-reference-public.webp" alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /> : null}
+        {fallbackImageMounted ? <Image className="reports-archive-reference-fallback-image" src="/design/2026-09-07/runtime/archive-reference.webp" alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /> : null}
       </div>
       {artworkFailed ? <div className="reports-archive-artwork-error" role="alert">
         <span>部分档案素材加载失败，已保留预览。</span>
         <button type="button" onClick={() => window.location.reload()}>重新加载</button>
       </div> : null}
       <nav className="reports-archive-hotspots" aria-label="档案分类">
-        {inspectionModule && (preview ?
-          <div className="archive-click-cue-hotspot" data-cue-slug="inspection-projects" style={archiveClickCueLayout}><span>点击进入检测项目</span></div> :
-          <button type="button" className={`archive-click-cue-hotspot ${pressedSlug === "inspection-projects" ? "is-pressed" : ""}`} data-cue-slug="inspection-projects" style={archiveClickCueLayout} aria-label="点击进入检测项目" disabled={leaving || guideEntry} onPointerDown={() => pressModule("inspection-projects")} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(inspectionModule)}><span>点击进入检测项目</span></button>
-        )}
-        {inspectionModule && (preview ?
-          <div className="archive-click-cue-hotspot archive-inspection-mascot-hotspot" data-mascot-slug="inspection-projects" style={archiveInspectionMascotLayout}><span>检测项目人物</span></div> :
-          <button type="button" className={`archive-click-cue-hotspot archive-inspection-mascot-hotspot ${pressedSlug === "inspection-projects" ? "is-pressed" : ""}`} data-mascot-slug="inspection-projects" style={archiveInspectionMascotLayout} aria-label="检测项目人物，点击进入检测项目" disabled={leaving || guideEntry} onPointerDown={() => pressModule("inspection-projects")} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(inspectionModule)}><span>检测项目人物</span></button>
-        )}
+        {archiveClickCueLayouts.map(({ slug, ...layout }) => {
+          const targetModule = visibleModules.find((item) => item.slug === slug);
+          if (!targetModule) return null;
+          return preview ? <div key={slug} className="archive-click-cue-hotspot" data-cue-slug={slug} style={layout}><span>{targetModule.title}</span></div> :
+            <button key={slug} type="button" className={`archive-click-cue-hotspot ${pressedSlug === slug ? "is-pressed" : ""}`} data-cue-slug={slug} style={layout} aria-label={`点击进入${targetModule.title}`} disabled={leaving || guideEntry} onPointerDown={() => pressModule(slug)} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(targetModule)}><span>{targetModule.title}</span></button>;
+        })}
         {visibleModules.map((module) => {
           const layout = getArchiveModuleLayout(module.slug)!;
-          const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, "--archive-order": layout.order } as CSSProperties;
+          const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, clipPath: layout.clipPath, "--archive-order": layout.order } as CSSProperties;
           return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
             <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving || guideEntry} onPointerDown={() => pressModule(module.slug)} onPointerCancel={() => { if (!navigating.current) setPressedSlug(null); }} onClick={() => enter(module)}><span>{module.title}</span></button>;
         })}

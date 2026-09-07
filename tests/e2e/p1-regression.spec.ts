@@ -164,19 +164,19 @@ async function expectLayeredGuideDestination(root: Locator) {
   const batch = root.locator('[data-guide-destination-group="latest-batch"]');
   await expect(book).toHaveCount(1);
   await expect(batch).toHaveCount(1);
-  await expect(book.locator('[data-source-part]')).toHaveCount(5);
-  await expect(batch.locator('[data-source-part]')).toHaveCount(4);
+  await expect(book.locator('[data-source-part]')).toHaveCount(1);
+  await expect(batch.locator('[data-source-part]')).toHaveCount(1);
   const ribbon = book.locator(".h5-guide-archive-entry-ribbon-clip");
   await expect(ribbon).toHaveCount(1);
-  await expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "idle");
-  await expect(ribbon).toHaveAttribute("data-unlock-progress", "0.000");
+  await expect(ribbon).toHaveAttribute("data-guide-destination-ribbon", "fixed");
+  await expect(ribbon).toHaveAttribute("data-unlock-progress", "1.000");
   await expect(ribbon.locator(".h5-guide-archive-entry-ribbon")).toHaveCount(1);
   expect(await ribbon.evaluate((element) => {
     const clip = getComputedStyle(element).clipPath;
-    return clip !== "none" && !/^inset\((?:0(?:px|%)?(?:\s+|$)){1,4}\)$/i.test(clip);
+    return clip === "none" || /^inset\(0(?:px|%)?(?:\s+0(?:px|%)?){0,3}\)$/i.test(clip);
   })).toBe(true);
   await expect(root.locator('img[src*="archive-transition-preview.webp"]')).toHaveCount(0);
-  await expectDecodedImages(root, '[data-guide-destination-group] img', 10);
+  await expectDecodedImages(root, '[data-guide-destination-group] img', 3);
   return { book, batch };
 }
 
