@@ -356,7 +356,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Stationary backing and transparent original parts share one canvas;
           character and cue animation never moves an opaque page crop. */}
-      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} paperMotionReady={artworkComplete && !guideEntry} ribbonMotionReady={readinessReady && !guideEntry && !fallbackImageMounted} ribbonStartedAt={ribbonStartedAt} latestBatch={config.latestBatch} />
+      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} paperMotionReady={artworkComplete && !guideEntry} ribbonMotionReady={readinessReady && !fallbackImageMounted && (!guideEntry || ribbonStartedAt !== undefined)} ribbonStartedAt={ribbonStartedAt} latestBatch={config.latestBatch} />
       <p className="sr-only">适用批次号：正装 {config.latestBatch.regularBatch}，试用装 {config.latestBatch.trialBatch}；检测日期：{formatInspectionDate(config.latestBatch.inspectionDate)}</p>
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}

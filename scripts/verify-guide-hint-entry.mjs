@@ -66,7 +66,7 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           animation.play();
           return { distance: bottom.y - top.y, height: bottom.height };
         });
-        expect(bob.distance / bob.height).toBeCloseTo(.14, 2);
+        expect(bob.distance / bob.height).toBeCloseTo(.30, 2);
         await expect(page.getByRole("button", { name: "进入档案" })).toBeEnabled();
         await page.getByRole("button", { name: "进入档案" }).click();
         await expect(page).toHaveURL(`${base}/reports`, { timeout: 15000 });

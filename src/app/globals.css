@@ -30,7 +30,7 @@
   --guide-entry-hint-bottom: max(3.3%, env(safe-area-inset-bottom));
   --guide-entry-hint-enter-duration: 900ms;
   --guide-entry-hint-float-duration: var(--archive-click-cue-duration);
-  --guide-entry-hint-float-lift: -14%;
+  --guide-entry-hint-float-lift: -30%;
   --guide-entry-hint-travel: calc(100% + 8cqh);
   --guide-entry-feedback-duration: 420ms;
   --guide-swipe-accepted-duration: 420ms;

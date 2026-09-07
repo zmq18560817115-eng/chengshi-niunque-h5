@@ -17,7 +17,7 @@ describe("archive ribbon entry", () => {
       observe() {}
     });
   });
-  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   it("waits for image loading and the page handoff before starting on visibility", () => {
     const view = render(<ArchiveUnlockTabMotion active={false}/>);
@@ -66,6 +66,50 @@ describe("archive ribbon entry", () => {
     expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
     expect(observers).toHaveLength(0);
     now.mockRestore();
+  });
+
+  it("prepares beneath the guide but keeps the future batch-completion start time", () => {
+    const now = vi.spyOn(performance, "now").mockReturnValue(700);
+    const view = render(<ArchiveUnlockTabMotion startedAt={1000}/>);
+    load(view.container);
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "entering");
+    expect((view.container.firstChild as HTMLElement).style.getPropertyValue("--archive-ribbon-enter-delay")).toBe("300ms");
+    expect(observers).toHaveLength(0);
+    act(() => vi.advanceTimersByTime(h5MotionTiming.archiveUnlockTab.enterDurationMs + 50));
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "entering");
+    act(() => vi.advanceTimersByTime(300));
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
+    now.mockRestore();
+  });
+
+  it("follows a delayed CSS start and does not truncate its remaining frames", async () => {
+    vi.spyOn(performance, "now").mockReturnValue(1640);
+    const source = document.createElement("div");
+    source.id = "h5-guide-route-buffer-host";
+    source.innerHTML = '<div class="h5-guide-route-buffer is-committing"><img class="h5-guide-archive-entry-ribbon"/></div>';
+    document.body.append(source);
+    const reference = { animationName: "archive-ribbon-enter", startTime: 1050, ready: Promise.resolve(), effect: { getTiming: () => ({ delay: 400 }) } };
+    const current = { animationName: "archive-ribbon-enter", startTime: 1640, currentTime: 60,
+      effect: { getTiming: () => ({ delay: -640 }), getComputedTiming: () => ({ endTime: 160 }) } };
+    const getAnimations = vi.fn(function (this: HTMLImageElement) {
+      return [this.classList.contains("h5-guide-archive-entry-ribbon") ? reference : current];
+    });
+    const previous = HTMLImageElement.prototype.getAnimations;
+    HTMLImageElement.prototype.getAnimations = getAnimations as unknown as HTMLImageElement["getAnimations"];
+    try {
+      const view = render(<ArchiveUnlockTabMotion startedAt={1000}/>);
+      await act(async () => load(view.container));
+      expect(current.startTime).toBe(2090);
+      act(() => vi.advanceTimersByTime(210));
+      expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "entering");
+      current.currentTime = 160;
+      act(() => vi.advanceTimersByTime(150));
+      expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
+    } finally {
+      source.remove();
+      if (previous) HTMLImageElement.prototype.getAnimations = previous;
+      else Reflect.deleteProperty(HTMLImageElement.prototype, "getAnimations");
+    }
   });
 
   it("shows the static original for previews, disabled motion, and unsupported browsers", () => {
