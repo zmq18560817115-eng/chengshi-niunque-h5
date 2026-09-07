@@ -260,6 +260,12 @@ describe("CategoryDetail dynamic card copy", () => {
     expect(container.querySelector(".category-card-status-text-art")).not.toBeInTheDocument();
   });
 
+  it("places nutrition and oxidation source descriptions under their matching titles", () => {
+    const { container } = render(<CategoryDetail module={{ ...moduleFixture, cards: [] }} preview />);
+    expect(container.querySelector('[data-index="0"] [data-card-part="description"]')).toHaveAttribute("src", expect.stringContaining("inspection-105.webp"));
+    expect(container.querySelector('[data-index="1"] [data-card-part="description"]')).toHaveAttribute("src", expect.stringContaining("inspection-104.webp"));
+  });
+
   it("preloads the complete category asset set, hides the visual back pill, and navigates immediately", async () => {
     const { container } = render(<CategoryDetail module={moduleFixture} />);
 

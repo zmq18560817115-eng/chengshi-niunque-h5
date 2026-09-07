@@ -72,3 +72,5 @@ pnpm start
 构建后 `200px` 和 `100px` 会分别转换成 `26.666667vw` 和 `13.333333vw`。`1px` 细线会保留为 `1px`，媒体查询中的 px 也不会转换。项目里的实际用法可参考 `src/app/guide-adaptation.vw.css`：移动端按 750×1625 原始画布生成 `100vw × 216.666667vw`，桌面端仍封顶为 750×1625px。不要把整个 `globals.css` 改名为 `.vw.css`。
 
 没有 PostCSS 构建流程的纯静态 HTML/CSS/JS 项目，CSS 本身不能自动把源码中的 px 改成 vw，需要使用上面的公式手动换算，或先接入 PostCSS 再使用同样配置。
+
+可运行的纯 HTML/CSS/JS 示例位于 `public/examples/vw-card/index.html`，本地服务启动后访问 `/examples/vw-card/index.html`。也可以直接用浏览器打开该 HTML 文件。修改同目录的 `card.vw.css`，运行 `pnpm example:vw` 即生成可直接发布的 `card.css`；示例不依赖 React。应用里的 `.vw.css` 文件则在 `pnpm dev` / `pnpm build` 时自动转换。`public/` 下的文件不会经过 Next.js 的 CSS 构建，因此静态示例需要这条生成命令。

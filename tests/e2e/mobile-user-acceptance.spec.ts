@@ -207,8 +207,9 @@ async function expectLayeredGuideDestination(root: Locator) {
   const batch = root.locator('[data-guide-destination-group="latest-batch"]');
   await expect(book).toHaveCount(1);
   await expect(batch).toHaveCount(1);
-  await expect(book.locator('[data-source-part]')).toHaveCount(5);
-  await expect(batch.locator('[data-source-part]')).toHaveCount(4);
+  await expect(book.locator('[data-source-part]')).toHaveCount(1);
+  await expect(batch.locator('[data-source-part]')).toHaveCount(1);
+  await expect(batch.locator('[data-source-part]')).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-module.webp");
   await expect(root.locator('img[src*="archive-transition-preview.webp"]')).toHaveCount(0);
   await expectImagesDecodedWithoutStretch(root.locator('[data-guide-destination-group] img'));
   return { book, batch };
@@ -728,9 +729,9 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
       delays: toMilliseconds(style.transitionDelay),
     };
   });
-  expect(routeTiming.panelDurations).toEqual([630, 630]);
-  expect(routeTiming.durations).toEqual([504, 504]);
-  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(504, 3));
+  expect(routeTiming.panelDurations).toEqual([840, 840]);
+  expect(routeTiming.durations).toEqual([672, 672]);
+  routeTiming.delays.forEach((delay) => expect(delay).toBeCloseTo(672, 3));
 
   await expect(root).toHaveAttribute("data-guide-route-entry", "revealing", { timeout: 10000 });
   await expect(guideBuffer).toHaveClass(/is-releasing/);
@@ -762,7 +763,7 @@ test("375x812 guide handoff exposes staged timing and restores archive scrolling
   expect(stagedSamples.slice(0, firstBatchVisible).every((sample) => (sample.batchOpacity ?? 0) <= .03)).toBe(true);
   const commitStart = stagedSamples.find((sample) => sample.commitState === "committing");
   expect(commitStart).toBeDefined();
-  expect(stagedSamples[firstBatchVisible].at - (commitStart?.at ?? stagedSamples[firstBatchVisible].at)).toBeGreaterThanOrEqual(470);
+  expect(stagedSamples[firstBatchVisible].at - (commitStart?.at ?? stagedSamples[firstBatchVisible].at)).toBeGreaterThanOrEqual(640);
   for (let index = firstBookVisible + 1; index < stagedSamples.length; index += 1) {
     expect(stagedSamples[index].bookOpacity ?? 0).toBeGreaterThanOrEqual((stagedSamples[index - 1].bookOpacity ?? 0) - .04);
   }

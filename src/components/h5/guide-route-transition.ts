@@ -9,7 +9,7 @@ export const guideRouteNavigationDelayMs = 16;
 export const guideRouteBufferReleaseDurationMs = 520;
 const guideRouteReducedReleaseDurationMs = 150;
 const guideRouteFallbackReleaseDurationMs = 180;
-export const guideRouteCommitDurationMs = 630;
+export const guideRouteCommitDurationMs = 840;
 export const guideRouteAssetTimeoutMs = 4500;
 export const guideRouteSnapshotSrc = "/design/2026-09-07/guide/guide-static-foreground-v2.webp";
 export const guideRouteForegroundSrc = "/design/2026-09-07/guide/guide-foreground-top.webp";
@@ -31,8 +31,9 @@ const smoothstep = (value: number) => {
 export function getGuideTransitionVisualState(progressValue: number, viewportHeight: number) {
   const progress = clamp(progressValue);
   const travel = Math.max(1, viewportHeight) * guideTransitionTravelRatio;
-  const destinationOpacity = smoothstep(progress / 0.7);
-  const guideOpacity = 1 - 0.92 * smoothstep((progress - 0.3) / 0.7);
+  // Use one progress scale for both visual opacity and the 80% batch gate.
+  const destinationOpacity = progress;
+  const guideOpacity = 1 - 0.92 * progress;
   return {
     progress,
     guideY: -travel * progress,
@@ -47,7 +48,7 @@ export const guideArchiveEntryTiming = {
   bookDelayMs: 0,
   bookDurationMs: guideRouteCommitDurationMs,
   batchOverlapProgress: 0.8,
-  batchDurationMs: 504,
+  batchDurationMs: 672,
 } as const;
 
 export function getGuideArchiveBatchProgress(progressValue: number) {

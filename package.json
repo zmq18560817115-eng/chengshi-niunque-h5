@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "example:vw": "node scripts/build-vw-example.mjs",
     "build": "next build",
     "build:production": "sh deploy/build-production.sh",
     "start": "next start",

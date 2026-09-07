@@ -152,7 +152,7 @@ export const designAssets = {
   ],
   "archiveBook": [
     {
-      "src": "/design/2026-09-07/runtime/archive-1-continuous.webp",
+      "src": "/design/2026-09-07/runtime/archive-1-book-stage.webp",
       "x": 0,
       "y": 0,
       "width": 2000,
@@ -161,12 +161,30 @@ export const designAssets = {
   ],
   "archiveBatch": [
     {
-      "src": "/design/2026-09-07/runtime/archive-1-batch-lettering.webp",
-      "x": 56,
+      "src": "/design/2026-09-07/runtime/archive-1-batch-module.webp",
+      "x": 0,
       "y": 2594,
-      "width": 1432,
-      "height": 817
+      "width": 1631,
+      "height": 1008
     }
+  ],
+  "archiveBatchSourceParts": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
   ],
   "archiveRibbon": {
     "src": "/design/2026-09-07/runtime/archive-1-4.webp",
@@ -271,6 +289,7 @@ export const designAssets = {
       "height": 147
     }
   ],
+  "fishSourceDurationMs": 8640,
   "categories": {
     "inspection-projects": {
       "layers": [
@@ -321,7 +340,7 @@ export const designAssets = {
             "height": 809
           },
           "title": "核心营养含量",
-          "description": "DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免含量没问题但氧化的藻油",
+          "description": "每粒DHA和ARA的实测含量是多少",
           "titleArtwork": {
             "src": "/design/2026-09-07/runtime/inspection-96.webp",
             "x": 256,
@@ -330,11 +349,11 @@ export const designAssets = {
             "height": 92
           },
           "descriptionArtwork": {
-            "src": "/design/2026-09-07/runtime/inspection-104.webp",
+            "src": "/design/2026-09-07/runtime/inspection-105.webp",
             "x": 257,
-            "y": 1089,
-            "width": 1514,
-            "height": 123
+            "y": 1088,
+            "width": 867,
+            "height": 54
           },
           "controls": [
             {
@@ -380,7 +399,7 @@ export const designAssets = {
             "height": 808
           },
           "title": "油脂新鲜度",
-          "description": "每粒DHA和ARA的实测含量是多少",
+          "description": "DHA是多不饱和脂肪酸，除了看含量，也要看PV过氧化值、AV酸价，避免食用过度氧化的藻油",
           "titleArtwork": {
             "src": "/design/2026-09-07/runtime/inspection-92.webp",
             "x": 256,
@@ -389,11 +408,11 @@ export const designAssets = {
             "height": 92
           },
           "descriptionArtwork": {
-            "src": "/design/2026-09-07/runtime/inspection-105.webp",
+            "src": "/design/2026-09-07/runtime/inspection-104.webp",
             "x": 257,
-            "y": 2037,
-            "width": 867,
-            "height": 54
+            "y": 2038,
+            "width": 1514,
+            "height": 123
           },
           "controls": [
             {
@@ -536,7 +555,7 @@ export const designAssets = {
             "height": 809
           },
           "title": "非必要物质实测",
-          "description": "包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必须脂肪酸和糖分，让每口都是需要的营养",
+          "description": "包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必要脂肪酸和糖分，让每口都是需要的营养",
           "titleArtwork": {
             "src": "/design/2026-09-07/runtime/review-123.webp",
             "x": 258,
@@ -9191,6 +9210,5 @@ export const designAssets = {
     "y": 7974,
     "width": 2000,
     "height": 2809
-  },
-  "fishSourceDurationMs": 8640
+  }
 } as const;

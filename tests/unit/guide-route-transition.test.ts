@@ -6,6 +6,7 @@ import {
   guideRouteSnapshotSrc,
   guideRouteStageDurationMs,
   getGuideArchiveBatchProgress,
+  getGuideTransitionVisualState,
   navigateWithGuideContinuity,
   prepareGuideRouteContinuity,
   primeGuideRouteContinuity,
@@ -60,6 +61,7 @@ describe("guide route transition priming", () => {
   it("starts the latest-batch module only after the book reaches exactly eighty percent", () => {
     expect(getGuideArchiveBatchProgress(0.7999)).toBe(0);
     expect(getGuideArchiveBatchProgress(0.8)).toBe(0);
+    expect(getGuideTransitionVisualState(0.8, 812).destinationOpacity).toBe(.8);
     expect(getGuideArchiveBatchProgress(0.81)).toBeGreaterThan(0);
     expect(getGuideArchiveBatchProgress(1)).toBe(1);
   });

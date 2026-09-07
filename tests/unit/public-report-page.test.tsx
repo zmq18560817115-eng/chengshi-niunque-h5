@@ -70,4 +70,14 @@ describe("public report page", () => {
     expect(screen.queryByText(/测试报告占位/)).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
+  it("retains the clicked card's assets while displaying its corrected category title", async () => {
+    const snapshot = cardSnapshot([imageAsset]);
+    snapshot.result.card.id = "seed-card-review-formula-label";
+    snapshot.result.card.title = "配方与标签";
+    mocks.getCardSnapshot.mockResolvedValue(snapshot);
+    render(await ReportPage({ params: Promise.resolve({ slug: "review-assurance", cardId: snapshot.result.card.id }) }));
+    expect(screen.getByRole("heading", { name: "非必要物质实测" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "图片检测报告 第 1 页" })).toHaveAttribute("src", imageAsset.pages[0].href);
+  });
 });
