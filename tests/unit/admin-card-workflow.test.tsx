@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ManagedReportCard } from "@/server/services/admin-report-images-service";
 const { publish, remove, refresh } = vi.hoisted(() => ({ publish: vi.fn(), remove: vi.fn(), refresh: vi.fn() }));
-vi.mock("@/app/admin/report-image-actions", () => ({ publishReportImagesAction: publish, removeReportImagesAction: remove }));
+vi.mock("@/app/admin/report-image-actions", () => ({ removeReportImagesAction: remove }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 import { ReportImagesManager } from "@/components/admin/ReportImagesManager";
 const card: ManagedReportCard = { id: "seed-card-inspection-safety", title: "安全底线", category: "检测项目", slug: "inspection-projects", href: "/reports/inspection-projects/items/seed-card-inspection-safety/reports", revision: "version-one", reports: [] };
@@ -9,6 +9,7 @@ const card: ManagedReportCard = { id: "seed-card-inspection-safety", title: "安
 describe("direct report image management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", publish);
     vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:preview"); static revokeObjectURL = vi.fn(); });
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -22,7 +23,7 @@ describe("direct report image management", () => {
     expect(screen.getByRole("button", { name: "上传并发布" })).toBeDisabled();
   });
   it("publishes selected images in the reviewed order with the current card revision", async () => {
-    publish.mockResolvedValue({ saved: true });
+    publish.mockResolvedValue(Response.json({ saved: true }));
     render(<ReportImagesManager cards={[card]}/>); open();
     const first = new File(["a"], "first.png", { type: "image/png" });
     const second = new File(["b"], "second.png", { type: "image/png" });
@@ -30,14 +31,16 @@ describe("direct report image management", () => {
     fireEvent.click(screen.getByRole("button", { name: "第 2 页上移" }));
     await act(async () => fireEvent.submit(screen.getByRole("form", { name: "安全底线上传报告图片" })));
     await waitFor(() => expect(publish).toHaveBeenCalledOnce());
-    const form = publish.mock.calls[0][1] as FormData;
+    expect(publish.mock.calls[0][0]).toBe("/api/admin/report-images");
+    expect(publish.mock.calls[0][1]).toMatchObject({ method: "POST", credentials: "same-origin", headers: { "X-Report-Upload": "1" } });
+    const form = publish.mock.calls[0][1].body as FormData;
     expect(form.get("reportCardId")).toBe(card.id);
     expect(form.get("revision")).toBe("version-one");
     expect((form.getAll("files") as File[]).map((file) => file.name)).toEqual(["second.png", "first.png"]);
     expect(refresh).toHaveBeenCalled();
   });
   it("keeps the chosen images and reports a failed save", async () => {
-    publish.mockResolvedValue({ error: "图片存储暂不可用" });
+    publish.mockResolvedValue(Response.json({ error: "图片存储暂不可用" }, { status: 400 }));
     render(<ReportImagesManager cards={[card]}/>); open();
     fireEvent.change(screen.getByLabelText("选择报告图片"), { target: { files: [new File(["a"], "report.png", { type: "image/png" })] } });
     await act(async () => fireEvent.submit(screen.getByRole("form", { name: "安全底线上传报告图片" })));
@@ -54,5 +57,29 @@ describe("direct report image management", () => {
     const form = remove.mock.calls[0][1] as FormData;
     expect(form.get("assetId")).toBe("asset-one");
     expect(form.get("reportCardId")).toBe(card.id);
+  });
+
+  it("selects and uploads more than 30 images above the former single-file and total size ceilings", async () => {
+    publish.mockResolvedValue(Response.json({ saved: true }));
+    render(<ReportImagesManager cards={[card]}/>); open();
+    const files = Array.from({ length: 31 }, (_, index) => {
+      const file = new File(["image"], `report-${index}.png`, { type: "image/png" });
+      Object.defineProperty(file, "size", { value: 11 * 1024 * 1024 });
+      return file;
+    });
+    fireEvent.change(screen.getByLabelText("选择报告图片"), { target: { files } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getAllByAltText(/待上传第/)).toHaveLength(31);
+    await act(async () => fireEvent.submit(screen.getByRole("form", { name: "安全底线上传报告图片" })));
+    const form = publish.mock.calls[0][1].body as FormData;
+    expect((form.getAll("files") as File[]).map((file) => file.name)).toEqual(files.map((file) => file.name));
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("still explains unsupported image formats", () => {
+    render(<ReportImagesManager cards={[card]}/>); open();
+    fireEvent.change(screen.getByLabelText("选择报告图片"), { target: { files: [new File(["pdf"], "report.pdf", { type: "application/pdf" })] } });
+    expect(screen.getByRole("alert")).toHaveTextContent("请选择 JPG、PNG 或 WebP");
+    expect(screen.getByRole("button", { name: "上传并发布" })).toBeDisabled();
   });
 });

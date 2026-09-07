@@ -6,12 +6,6 @@ export const STATIC_REPORT_IMAGE_MIME_TYPES = [
 
 export type StaticReportImageMimeType = typeof STATIC_REPORT_IMAGE_MIME_TYPES[number];
 
-export const MAX_REPORT_IMAGE_BYTES = 10 * 1024 * 1024;
-export const MAX_REPORT_IMAGE_PAGES = 30;
-export const MAX_REPORT_TOTAL_BYTES = 100 * 1024 * 1024;
-export const MAX_REPORT_IMAGE_DIMENSION = 12_000;
-export const MAX_REPORT_IMAGE_PIXELS = 25_000_000;
-
 const allowedExtensions: Record<StaticReportImageMimeType, ReadonlySet<string>> = {
   "image/jpeg": new Set(["jpg", "jpeg"]),
   "image/png": new Set(["png"]),

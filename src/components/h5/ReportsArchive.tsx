@@ -20,6 +20,7 @@ import {
   guideArchiveEntryTiming,
   guideRouteCompleteEvent,
   guideRouteEntryAttribute,
+  getGuideRibbonEntryStartedAt,
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 import { ArchiveBatchDetails } from "./ArchiveBatchDetails";
@@ -113,6 +114,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const readinessFailed = useAdaptiveReadinessFailed();
   const [leaving, setLeaving] = useState(false);
   const [guideEntry, setGuideEntry] = useState(false);
+  const [ribbonStartedAt, setRibbonStartedAt] = useState<number>();
   const [deferredMounted, setDeferredMounted] = useState(preview);
   const [deepDeferredMounted, setDeepDeferredMounted] = useState(preview);
   const [artworkReady, setArtworkReady] = useState(false);
@@ -173,6 +175,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       return;
     }
     enteredFromGuide.current = true;
+    setRibbonStartedAt(getGuideRibbonEntryStartedAt());
     setFallbackImageMounted(false);
     setGuideEntry(true);
     let revealFrame = 0;
@@ -353,7 +356,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     <div ref={archiveCanvas} className="reports-archive-canvas">
       {/* Stationary backing and transparent original parts share one canvas;
           character and cue animation never moves an opaque page crop. */}
-      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} paperMotionReady={artworkComplete && !guideEntry} ribbonMotionReady={artworkComplete && !guideEntry && !fallbackImageMounted} latestBatch={config.latestBatch} />
+      <ArchiveArtwork preview={preview} mountDeferred={preview || deferredMounted} mountDeepDeferred={preview || deepDeferredMounted} paperMotionReady={artworkComplete && !guideEntry} ribbonMotionReady={readinessReady && !guideEntry && !fallbackImageMounted} ribbonStartedAt={ribbonStartedAt} latestBatch={config.latestBatch} />
       <p className="sr-only">适用批次号：正装 {config.latestBatch.regularBatch}，试用装 {config.latestBatch.trialBatch}；检测日期：{formatInspectionDate(config.latestBatch.inspectionDate)}</p>
       {(preview || deferredMounted) && <ArchiveFishFloatMotion preview={preview} />}
       {(preview || deferredMounted) && <ArchiveStoryCopyMotion preview={preview} />}

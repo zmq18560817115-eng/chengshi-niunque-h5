@@ -9,12 +9,13 @@ const tabAsset = archiveEntryRibbon.src;
 export const archiveUnlockWarmAssets = [tabAsset] as const;
 
 // Only the original ribbon slides into place; its document anchor never moves.
-export function ArchiveUnlockTabMotion({ preview = false, enabled = true, active = true }: { preview?: boolean; enabled?: boolean; active?: boolean }) {
+export function ArchiveUnlockTabMotion({ preview = false, enabled = true, active = true, startedAt }: { preview?: boolean; enabled?: boolean; active?: boolean; startedAt?: number }) {
   const clip = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const motionEnabled = enabled && H5_MOTION_ENABLED && h5MotionModules.archiveUnlockTab && !preview;
   const settled = useRef(!motionEnabled);
   const [state, setState] = useState<"hidden" | "entering" | "fixed">(motionEnabled ? "hidden" : "fixed");
+  const [enterDelay, setEnterDelay] = useState(0);
 
   useEffect(() => {
     const node = clip.current;
@@ -26,6 +27,20 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled = true, active
       return;
     }
     if (!active || !ready || settled.current) return;
+    if (startedAt !== undefined) {
+      const elapsed = Math.max(0, performance.now() - startedAt);
+      const remaining = h5MotionTiming.archiveUnlockTab.enterDurationMs - elapsed;
+      if (remaining <= 0) { complete(); return; }
+      setEnterDelay(-elapsed);
+      setState("entering");
+      const timer = window.setTimeout(complete, remaining + 50);
+      const reduceMotion = () => { if (media?.matches) { window.clearTimeout(timer); complete(); } };
+      media?.addEventListener?.("change", reduceMotion);
+      return () => {
+        window.clearTimeout(timer);
+        media?.removeEventListener?.("change", reduceMotion);
+      };
+    }
     let timer: number | undefined;
     let started = false;
     const observer = new IntersectionObserver(([entry]) => {
@@ -48,7 +63,7 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled = true, active
       window.clearTimeout(timer);
       media?.removeEventListener?.("change", reduceMotion);
     };
-  }, [active, motionEnabled, ready]);
+  }, [active, motionEnabled, ready, startedAt]);
 
   const style = {
     "--archive-ribbon-left": `${archiveEntryRibbon.left / 10}%`,
@@ -56,6 +71,7 @@ export function ArchiveUnlockTabMotion({ preview = false, enabled = true, active
     "--archive-ribbon-width": `${archiveEntryRibbon.width / 10}%`,
     "--archive-ribbon-height": `${archiveEntryRibbon.height / archiveEntryMasterHeight * 100}%`,
     "--archive-ribbon-enter-duration": `${h5MotionTiming.archiveUnlockTab.enterDurationMs}ms`,
+    "--archive-ribbon-enter-delay": `${enterDelay}ms`,
   } as CSSProperties;
   return <div data-motion-module="archiveUnlockTab" className={`archive-unlock-tab-motion ${ready ? "is-ready" : ""}`} style={style} data-unlock-state={state} data-unlock-progress="1.000" data-unlock-ready={ready} data-preview={preview || undefined} aria-hidden="true">
     <div ref={clip} className="archive-unlock-tab-clip">

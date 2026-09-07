@@ -48,6 +48,9 @@ describe("multi-page report content linkage", () => {
       { storageKey: "reports/2026/b.webp", mimeType: "image/webp", byteSize: BigInt(240), pageNumber: 2 },
     ]);
     expect(() => validateAssetInput({ ...report, pages: [{ storageKey: "../bad.png", mimeType: "image/png" }] })).toThrow(/存储路径无效/);
+    const largePages = Array.from({ length: 31 }, (_, index) => ({ storageKey: `reports/${index}.png`, mimeType: "image/png", byteSize: 11 * 1024 * 1024 }));
+    expect(validateAssetInput({ ...report, pages: largePages }).pages).toHaveLength(31);
+    expect(() => validateAssetInput({ ...report, pages: [{ ...largePages[0], byteSize: -1 }] })).toThrow(/大小无效/);
   });
 
   it("changes the public version when an older published report is removed", async () => {

@@ -45,6 +45,29 @@ describe("archive ribbon entry", () => {
     expect(observers).toHaveLength(1);
   });
 
+  it("continues the guide's existing entrance without waiting for intersection or replaying it", () => {
+    const now = vi.spyOn(performance, "now").mockReturnValue(1640);
+    const view = render(<ArchiveUnlockTabMotion active={false} startedAt={1000}/>);
+    load(view.container);
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "hidden");
+    view.rerender(<ArchiveUnlockTabMotion active startedAt={1000}/>);
+    expect(observers).toHaveLength(0);
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "entering");
+    expect((view.container.firstChild as HTMLElement).style.getPropertyValue("--archive-ribbon-enter-delay")).toBe("-640ms");
+    act(() => vi.advanceTimersByTime(210));
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
+    now.mockRestore();
+  });
+
+  it("does not replay a completed guide entrance after a slow page handoff", () => {
+    const now = vi.spyOn(performance, "now").mockReturnValue(3000);
+    const view = render(<ArchiveUnlockTabMotion startedAt={1000}/>);
+    load(view.container);
+    expect(view.container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
+    expect(observers).toHaveLength(0);
+    now.mockRestore();
+  });
+
   it("shows the static original for previews, disabled motion, and unsupported browsers", () => {
     expect(render(<ArchiveUnlockTabMotion preview/>).container.firstChild).toHaveAttribute("data-unlock-state", "fixed");
     expect(render(<ArchiveUnlockTabMotion enabled={false}/>).container.firstChild).toHaveAttribute("data-unlock-state", "fixed");

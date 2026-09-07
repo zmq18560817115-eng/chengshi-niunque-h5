@@ -22,6 +22,7 @@ export class S3ObjectStorage implements ObjectStorage {
       region: config.region,
       forcePathStyle: config.forcePathStyle,
       maxAttempts: config.maxAttempts,
+      requestHandler: { connectionTimeout: config.requestTimeoutMs, socketTimeout: 30_000 },
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
@@ -30,9 +31,10 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async put(key: string, body: Uint8Array, contentType: string): Promise<StoredObject> {
+    // Large uploads may take longer than the short read/health deadline.
+    // Connection and socket inactivity timeouts still detect stalled transfers.
     const response = await this.client.send(
       new PutObjectCommand({ Bucket: this.config.bucket, Key: key, Body: body, ContentType: contentType }),
-      { abortSignal: AbortSignal.timeout(this.config.requestTimeoutMs) },
     );
     return { key, contentType, size: body.byteLength, etag: response.ETag };
   }

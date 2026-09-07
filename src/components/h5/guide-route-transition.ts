@@ -1,6 +1,7 @@
 import { createArchiveEntryTransitionVisual } from "@/components/h5/archive-entry-transition-visual";
 import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
 import { requestVisualViewportHeightSync } from "@/components/h5/useVisualViewportHeight";
+import { h5MotionTiming } from "./motion/motion-config";
 
 export const guideRouteEntryAttribute = "data-guide-route-entry";
 export const guideRouteReadyEvent = "h5-guide-route-ready";
@@ -69,6 +70,8 @@ let stageCleanupTimer: number | undefined;
 let revealDelayTimer: number | undefined;
 let bufferCommitReadyAt = 0;
 let bufferStageReadyAt = 0;
+let ribbonEntryStartedAt: number | undefined;
+export const getGuideRibbonEntryStartedAt = () => ribbonEntryStartedAt;
 let primeGeneration = 0;
 
 type PrimedGuideRouteBuffer = {
@@ -359,6 +362,7 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
   buffer.style.setProperty("--guide-route-batch-start-y", `${(4 * (1 - batchStartProgress)).toFixed(3)}cqw`);
   buffer.style.setProperty("--guide-route-batch-delay", `${batchDelay}ms`);
   buffer.style.setProperty("--guide-route-batch-duration", `${batchDuration}ms`);
+  buffer.style.setProperty("--archive-ribbon-enter-duration", `${h5MotionTiming.archiveUnlockTab.enterDurationMs}ms`);
   buffer.dataset.commitState = "prepared";
 
   const resumeGuide = captureCurrentGuideArtwork(sourceStage, buffer);
@@ -381,6 +385,9 @@ export async function prepareGuideRouteContinuity(initialProgress = 0, destinati
     buffer.dataset.commitState = "committing";
     buffer.classList.add("is-committing");
     const stageStartedAt = performance.now();
+    // The buffer begins the tab as soon as the whole batch card finishes.
+    // The live page resumes this clock instead of starting another entrance.
+    ribbonEntryStartedAt = skipDestinationStage ? undefined : stageStartedAt + batchDelay + batchDuration;
     bufferCommitReadyAt = stageStartedAt + commitDuration;
     // Give the final eased frame one paint interval beyond its CSS duration;
     // releasing at the timer boundary can otherwise capture ~94% opacity on
@@ -459,6 +466,7 @@ export function clearGuideRouteContinuity() {
   window.clearTimeout(revealDelayTimer);
   bufferCommitReadyAt = 0;
   bufferStageReadyAt = 0;
+  ribbonEntryStartedAt = undefined;
   primeGeneration += 1;
   primedGuideRouteBuffer = null;
   guideRoutePrimeRequest = null;

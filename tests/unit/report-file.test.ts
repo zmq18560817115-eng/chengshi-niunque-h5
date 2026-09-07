@@ -1,4 +1,4 @@
-import { MAX_REPORT_FILE_BYTES, validateReportFile } from "@/server/upload/report-file";
+import { validateReportFile } from "@/server/upload/report-file";
 
 describe("report file validation", () => {
   function serverFile(content: Uint8Array, name: string, type: string, size = content.byteLength): File {
@@ -58,11 +58,16 @@ describe("report file validation", () => {
       .rejects.toThrow(/静态图片/);
   });
 
-  it("rejects oversized files and decompression-bomb-scale dimensions", async () => {
-    const oversized = serverFile(png(), "report.png", "image/png", MAX_REPORT_FILE_BYTES + 1);
-    await expect(validateReportFile(oversized, "IMAGE")).rejects.toThrow(/10MB/);
+  it("accepts files above 10MB and dimensions above the former width and pixel limits", async () => {
+    const bytes = new Uint8Array(11 * 1024 * 1024);
+    bytes.set(png(13_000, 3_000));
+    const result = await validateReportFile(serverFile(bytes, "report.png", "image/png"), "IMAGE");
+    expect(result.body.byteLength).toBe(bytes.length);
+    expect(result).toMatchObject({ width: 13_000, height: 3_000 });
+  });
 
-    const hugeDimensions = serverFile(png(10_000, 10_000), "report.png", "image/png");
-    await expect(validateReportFile(hugeDimensions, "IMAGE")).rejects.toThrow(/2500 万/);
+  it("still rejects empty images and invalid dimensions", async () => {
+    await expect(validateReportFile(serverFile(new Uint8Array(), "report.png", "image/png"), "IMAGE")).rejects.toThrow("请选择");
+    await expect(validateReportFile(serverFile(png(0, 100), "report.png", "image/png"), "IMAGE")).rejects.toThrow("无法读取图片尺寸");
   });
 });

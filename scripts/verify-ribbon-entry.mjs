@@ -41,7 +41,18 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           disconnect() { pending.delete(this); super.disconnect(); }
         };
         window.__ribbonSamples = [];
+        window.__guideRibbonSamples = [];
         const sample = () => {
+          const buffer = document.querySelector("#h5-guide-route-buffer-host > .h5-guide-route-buffer.is-committing");
+          const guideImage = buffer?.querySelector(".h5-guide-archive-entry-ribbon");
+          if (guideImage) {
+            const animation = guideImage.getAnimations()[0];
+            const batch = buffer.querySelector(".h5-guide-archive-entry-group.is-batch");
+            const batchStyle = getComputedStyle(batch);
+            window.__guideRibbonSamples.push({ opacity: Number(getComputedStyle(guideImage).opacity),
+              batchOpacity: Number(batchStyle.opacity), batchY: new DOMMatrix(batchStyle.transform).m42,
+              elapsed: animation ? Number(animation.currentTime) - Number(animation.effect.getTiming().delay) : null });
+          }
           const root = document.querySelector(".reports-archive .archive-unlock-tab-motion");
           if (root) {
             const image = root.querySelector("img");
@@ -87,18 +98,31 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
         const image = root.locator("img");
         await expect(page.locator(".reports-archive")).toHaveAttribute("data-archive-artwork-ready", "true", { timeout: 15000 });
         await clip.scrollIntoViewIfNeeded();
-        await expect(root).toHaveAttribute("data-unlock-state", "hidden");
-        await expect(image).toHaveCSS("opacity", "0");
-        const hiddenPath = `${output}/${name}-hidden-tab.png`;
-        await clip.screenshot({ path: hiddenPath });
-        expect(purplePixels(hiddenPath), "no printed purple ribbon may remain behind the hidden moving layer").toBe(0);
-        await page.screenshot({ path: `${output}/${name}-hidden-page.png` });
-        await page.evaluate(() => window.__releaseRibbon());
+        if (!fromGuide) {
+          await expect(root).toHaveAttribute("data-unlock-state", "hidden");
+          await expect(image).toHaveCSS("opacity", "0");
+          const hiddenPath = `${output}/${name}-hidden-tab.png`;
+          await clip.screenshot({ path: hiddenPath });
+          expect(purplePixels(hiddenPath), "no printed purple ribbon may remain behind the hidden moving layer").toBe(0);
+          await page.screenshot({ path: `${output}/${name}-hidden-page.png` });
+          await page.evaluate(() => window.__releaseRibbon());
+        }
         await expect(root).toHaveAttribute("data-unlock-state", "fixed", { timeout: 10000 });
         const samples = await page.evaluate(() => window.__ribbonSamples);
         expect(samples.some((s) => s.state === "hidden" && s.x >= s.right)).toBe(true);
-        expect(samples.some((s) => s.state === "entering" && s.x > s.anchorX + .1 && s.x < s.right && s.duration === "0.8s" && s.name === "archive-ribbon-enter")).toBe(true);
-        expect(samples.some((s) => s.state === "entering" && s.opacity > 0 && s.opacity < 1)).toBe(true);
+        if (fromGuide) {
+          const guideSamples = await page.evaluate(() => window.__guideRibbonSamples);
+          const first = guideSamples.find((sample) => sample.opacity > .001);
+          expect(first, "the guide buffer must own the initial entrance").toBeTruthy();
+          expect(first.elapsed).toBeGreaterThanOrEqual(0);
+          expect(first.elapsed, "start within a frame of the batch card completing").toBeLessThan(100);
+          expect(first.batchOpacity).toBeCloseTo(1, 2);
+          expect(first.batchY).toBeCloseTo(0, 1);
+          expect(guideSamples.some((s) => s.opacity > 0 && s.opacity < 1)).toBe(true);
+        } else {
+          expect(samples.some((s) => s.state === "entering" && s.x > s.anchorX + .1 && s.x < s.right && s.duration === "0.8s" && s.name === "archive-ribbon-enter")).toBe(true);
+          expect(samples.some((s) => s.state === "entering" && s.opacity > 0 && s.opacity < 1)).toBe(true);
+        }
         const final = await image.boundingBox();
         const anchor = await clip.boundingBox();
         expect(final.x).toBeCloseTo(anchor.x, 1);

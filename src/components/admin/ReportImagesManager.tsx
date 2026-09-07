@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { publishReportImagesAction, removeReportImagesAction } from "@/app/admin/report-image-actions";
+import { removeReportImagesAction, type ReportImagesState } from "@/app/admin/report-image-actions";
 import type { ManagedReportCard } from "@/server/services/admin-report-images-service";
 
 function UploadForm({ card, assetId }: { card: ManagedReportCard; assetId?: string }) {
@@ -12,11 +12,15 @@ function UploadForm({ card, assetId }: { card: ManagedReportCard; assetId?: stri
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [fileError, setFileError] = useState("");
-  const [state, action, pending] = useActionState(async (previous: { error?: string; saved?: boolean }, form: FormData) => {
+  const [state, action, pending] = useActionState(async (_previous: ReportImagesState, form: FormData): Promise<ReportImagesState> => {
     form.delete("files");
     files.forEach((file) => form.append("files", file));
     try {
-      const result = await publishReportImagesAction(previous, form);
+      const response = await fetch("/api/admin/report-images", {
+        method: "POST", headers: { "X-Report-Upload": "1" }, credentials: "same-origin", body: form,
+      });
+      const result: ReportImagesState = await response.json();
+      if (!response.ok) return { error: result.error || "上传未完成，请稍后重试。" };
       if (result.saved) { setFiles([]); router.refresh(); }
       return result;
     } catch { return { error: "上传未完成，请检查网络后重试。" }; }
@@ -37,15 +41,15 @@ function UploadForm({ card, assetId }: { card: ManagedReportCard; assetId?: stri
       <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={pending} onChange={(event) => {
         const selected = [...files, ...Array.from(event.target.files ?? [])];
         event.target.value = "";
-        const invalid = selected.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 10 * 1024 * 1024);
-        if (invalid || selected.length > 30 || selected.reduce((sum, file) => sum + file.size, 0) > 100 * 1024 * 1024) {
-          setFileError("支持 JPG、PNG、WebP；单张不超过 10MB，每份不超过 30 张、合计 100MB。");
+        const invalid = selected.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type));
+        if (invalid) {
+          setFileError("请选择 JPG、PNG 或 WebP 格式的报告图片。");
           return;
         }
         setFileError(""); setFiles(selected);
       }}/>
     </label>
-    <p className="field-help">一组图片为一份报告，按下方顺序展示。支持 JPG、PNG、WebP，单张 10MB，每份最多 30 张、合计 100MB。{assetId ? "保存后整体替换这份报告，其他报告保留。" : "保存后直接在对应报告页展示。"}</p>
+    <p className="field-help">一组图片为一份报告，按下方顺序展示。支持 JPG、PNG、WebP。{assetId ? "保存后整体替换这份报告，其他报告保留。" : "保存后直接在对应报告页展示。"}</p>
     {files.length > 0 && <ol className="report-image-selection">{files.map((file, index) => <li key={`${file.name}-${index}`}>
       {previews[index] && <Image unoptimized src={previews[index]} width={72} height={92} alt={`待上传第 ${index + 1} 页`}/>}
       <span>第 {index + 1} 页 · {file.name}</span>

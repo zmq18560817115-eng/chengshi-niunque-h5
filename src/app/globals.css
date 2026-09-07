@@ -29,6 +29,8 @@
   --guide-entry-hint-width: 43.4%;
   --guide-entry-hint-bottom: max(3.3%, env(safe-area-inset-bottom));
   --guide-entry-hint-enter-duration: 900ms;
+  --guide-entry-hint-float-duration: var(--archive-click-cue-duration);
+  --guide-entry-hint-float-lift: -14%;
   --guide-entry-hint-travel: calc(100% + 8cqh);
   --guide-entry-feedback-duration: 420ms;
   --guide-swipe-accepted-duration: 420ms;
@@ -64,7 +66,9 @@
   --archive-press-scale: .94;
   --archive-press-offset: .8cqw;
   --archive-press-tint: rgb(64 41 31 / .10);
-  --archive-paper-rise: 50%;
+  --archive-paper-rise: 22%;
+  --archive-paper-production-rise: 18%;
+  --archive-paper-start-opacity: .5;
   --archive-ribbon-enter-offset: 110%;
   --archive-fish-duration: var(--archive-click-cue-duration);
   --archive-master-height: 5391.5;
@@ -384,6 +388,8 @@ html[data-category-loading-feedback] .guide-loading-buffer.is-persistent .guide-
 .h5-guide-archive-entry-ribbon-clip { position: absolute; overflow: hidden; clip-path: inset(0 0 var(--archive-entry-ribbon-hidden-bottom,87.2403560831%) 0); pointer-events: none; backface-visibility: hidden; transform: translateZ(0); }
 .h5-guide-archive-entry-ribbon { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translateZ(0); }
 .h5-guide-archive-entry-ribbon-clip[data-ribbon-entry-pending="true"] { visibility: hidden; }
+.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-ribbon-clip[data-ribbon-entry-pending="true"] { visibility: visible; }
+.h5-guide-route-buffer.is-committing .h5-guide-archive-entry-ribbon-clip[data-ribbon-entry-pending="true"] .h5-guide-archive-entry-ribbon { animation: archive-ribbon-enter var(--archive-ribbon-enter-duration) var(--h5-route-transition-easing) calc(var(--guide-route-batch-delay) + var(--guide-route-batch-duration)) both; }
 .brand-guide-destination-preview .h5-guide-archive-entry-group.is-batch { opacity: var(--guide-swipe-batch-opacity,0); transform: translate3d(0,var(--guide-swipe-batch-y,4cqw),0); }
 .brand-guide.has-destination-fallback .brand-guide-stage { opacity: 1; transform: translate3d(0,0,0); }
 .brand-guide.has-destination-fallback .brand-guide-destination-preview { visibility: hidden; opacity: 0; }
@@ -405,7 +411,7 @@ html[data-category-loading-feedback] .guide-loading-buffer.is-persistent .guide-
 .brand-guide-entry-hint { position: absolute; z-index: 40; left: 50%; bottom: var(--guide-entry-hint-bottom); display: block; width: var(--guide-entry-hint-width); height: auto; translate: -50% 0; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; backface-visibility: hidden; transform: translate3d(0,0,0); }
 .brand-guide.is-motion-enabled:not(.is-animating):not(.is-reduced):not(.is-failed) :is(.brand-guide-entry-hint, .guide-landscape-hint) { opacity: 0; transform: translate3d(0,var(--guide-entry-hint-travel),0); }
 .brand-guide.is-animating .brand-guide-entry-hint,
-.brand-guide.is-animating .guide-landscape-hint { animation: guide-entry-hint-enter var(--guide-entry-hint-enter-duration) var(--guide-route-transition-easing) both; will-change: transform, opacity; }
+.brand-guide.is-animating .guide-landscape-hint { animation: guide-entry-hint-enter var(--guide-entry-hint-enter-duration) var(--guide-route-transition-easing) both, guide-entry-hint-float var(--guide-entry-hint-float-duration) ease-in-out var(--guide-entry-hint-enter-duration) infinite; will-change: transform, opacity; }
 .brand-guide-fallback { z-index: 1; visibility: visible; opacity: 1; transition: opacity var(--motion-crossfade-ms,180ms) ease-out; }
 .brand-guide-fallback-message { position: absolute; z-index: 45; left: 50%; bottom: max(2rem, env(safe-area-inset-bottom)); display: none; translate: -50% 0; color: var(--color-ink); font-size: .9rem; letter-spacing: .08em; }
 .brand-guide.is-failed .brand-guide-dynamic-stage { visibility: hidden; opacity: 0; }
@@ -451,6 +457,7 @@ html[data-category-loading-feedback] .guide-loading-buffer.is-persistent .guide-
 @keyframes guide-paper-from-bottom { from { transform: translate3d(1.2%,21%,0) rotate(3deg); } to { transform: translate3d(0,0,0) rotate(0); } }
 @keyframes guide-paper-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-entry-hint-enter { from { opacity: 0; transform: translate3d(0,var(--guide-entry-hint-travel),0); } to { opacity: 1; transform: translate3d(0,0,0); } }
+@keyframes guide-entry-hint-float { 0%, 100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,var(--guide-entry-hint-float-lift),0); } }
 @keyframes guide-entry-hint-accepted { 0% { transform: translate3d(0,0,0) scale3d(1,1,1); } 45% { transform: translate3d(0,-10px,0) scale3d(1.035,1.035,1); } 100% { transform: translate3d(0,-4px,0) scale3d(1,1,1); } }
 .reports-archive { animation: reports-enter .32s ease both; }
 .reports-archive.reports-entry-transition { animation: reports-slide-up-fade var(--h5-route-transition-duration) var(--h5-route-transition-easing) both; }
@@ -586,8 +593,9 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .reports-archive-final[data-guide-entry] .reports-archive-entry-batch { opacity: 1; transform: translate3d(0,0,0); animation: none; will-change: auto; }
 .reports-archive-source-layer { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .archive-folder-paper { position: absolute; pointer-events: none; }
+.archive-folder-paper[data-paper-id="module-2-production-paper"] { --archive-paper-rise: var(--archive-paper-production-rise); }
 .archive-folder-paper > img { opacity: 1; transform: translate3d(0,0,0); }
-.archive-folder-paper[data-paper-state="hidden"] > img { opacity: 0; transform: translate3d(0,var(--archive-paper-rise),0); }
+.archive-folder-paper[data-paper-state="hidden"] > img { opacity: var(--archive-paper-start-opacity); transform: translate3d(0,var(--archive-paper-rise),0); }
 .archive-folder-paper[data-paper-state="entering"] > img { opacity: 1; transform: translate3d(0,0,0); transition: opacity var(--archive-paper-enter-duration) ease-out, transform var(--archive-paper-enter-duration) var(--guide-route-transition-easing); will-change: transform, opacity; }
 .reports-archive-source-layer.archive-module-pressed-layer,
 .archive-section-title-group.archive-module-pressed-layer,
@@ -715,7 +723,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .archive-unlock-tab-clip { position: absolute; left: var(--archive-ribbon-left); top: var(--archive-ribbon-top); width: var(--archive-ribbon-width); height: var(--archive-ribbon-height); overflow: hidden; contain: layout paint style; }
 .archive-unlock-tab-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; backface-visibility: hidden; transform: translateZ(0); }
 .archive-unlock-tab-motion[data-unlock-state="hidden"] .archive-unlock-tab-image { opacity: 0; visibility: hidden; transform: translate3d(var(--archive-ribbon-enter-offset),0,0); }
-.archive-unlock-tab-motion[data-unlock-state="entering"] .archive-unlock-tab-image { animation: archive-ribbon-enter var(--archive-ribbon-enter-duration) var(--h5-route-transition-easing) both; will-change: transform, opacity; }
+.archive-unlock-tab-motion[data-unlock-state="entering"] .archive-unlock-tab-image { animation: archive-ribbon-enter var(--archive-ribbon-enter-duration) var(--h5-route-transition-easing) var(--archive-ribbon-enter-delay,0ms) both; will-change: transform, opacity; }
 @keyframes archive-ribbon-enter { from { opacity: 0; transform: translate3d(var(--archive-ribbon-enter-offset),0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-result-color > .motion-stage { position: absolute; inset: auto; top: 32.751485%; left: 6.3%; width: 62.8%; height: 2.033471%; overflow: visible; contain: layout paint style; isolation: isolate; }
@@ -1219,6 +1227,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
   .archive-module-unlock { transform: none; transition: none; }
   .archive-unlock-tab-motion .archive-unlock-tab-image { animation: none !important; transform: none !important; }
   .h5-guide-archive-entry-ribbon-clip[data-ribbon-entry-pending="true"] { visibility: visible; }
+  .h5-guide-archive-entry-ribbon { animation: none !important; }
   .archive-section-title-poster { animation: none !important; transform: none; }
   .brand-guide-entry-hint, .guide-landscape-hint, .reports-archive-entry-group, .archive-section-click-cue-gif, .reports-archive-source-layer.archive-module-pressed-layer, .archive-section-title-group.archive-module-pressed-layer, .archive-section-character-slot.archive-module-pressed-layer, .archive-section-click-cue.archive-module-pressed-layer { animation: none !important; transition: none !important; transform: none !important; }
   .reports-archive-final:not([data-exit-slug])[data-pressed-slug="inspection-projects"] .reports-archive-source-layer[data-archive-module="inspection-projects"],

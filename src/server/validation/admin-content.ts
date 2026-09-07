@@ -1,8 +1,5 @@
 import type { AssetOpenMode, AssetType, ContentStatus } from "@prisma/client";
 import {
-  MAX_REPORT_IMAGE_BYTES,
-  MAX_REPORT_IMAGE_PAGES,
-  MAX_REPORT_TOTAL_BYTES,
   hasMatchingReportImageExtension,
   hasStaticReportImageExtension,
   isStaticReportImageMimeType,
@@ -67,15 +64,12 @@ export function validateAssetInput(input: Record<string, unknown>): AssetInput {
     if (!isStaticReportImageMimeType(mimeType)) throw new Error(`第 ${index + 1} 张图片仅支持 JPG、PNG 或 WebP`);
     if (!hasMatchingReportImageExtension(pageStorageKey, mimeType)) throw new Error(`第 ${index + 1} 张图片的扩展名与格式不一致`);
     const numericByteSize = page.byteSize === null || page.byteSize === undefined ? null : Number(page.byteSize);
-    if (numericByteSize !== null && (!Number.isSafeInteger(numericByteSize) || numericByteSize < 1 || numericByteSize > MAX_REPORT_IMAGE_BYTES)) {
-      throw new Error(`第 ${index + 1} 张图片大小无效或超过 10MB`);
+    if (numericByteSize !== null && (!Number.isSafeInteger(numericByteSize) || numericByteSize < 1)) {
+      throw new Error(`第 ${index + 1} 张图片大小无效`);
     }
     const byteSize = numericByteSize === null ? null : BigInt(numericByteSize);
     return { storageKey: pageStorageKey, mimeType, byteSize, pageNumber: index + 1 };
   }) : [];
-  if (pages.length > MAX_REPORT_IMAGE_PAGES) throw new Error(`一份报告最多上传 ${MAX_REPORT_IMAGE_PAGES} 张图片`);
-  const totalBytes = pages.reduce((sum, page) => sum + (page.byteSize ?? BigInt(0)), BigInt(0));
-  if (totalBytes > BigInt(MAX_REPORT_TOTAL_BYTES)) throw new Error("一份报告的图片总大小不能超过 100MB");
   if (storageKey && (storageKey.startsWith("/") || storageKey.includes("..") || !hasStaticReportImageExtension(storageKey))) {
     throw new Error("报告图片的存储路径无效");
   }

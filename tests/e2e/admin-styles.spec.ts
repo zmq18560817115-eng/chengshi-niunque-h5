@@ -68,6 +68,27 @@ test("production pages apply the shared H5 and admin styles", async ({ page }, t
   await card.getByRole("button", { name: "移除待上传第 1 页" }).click();
   await expect(card.locator(".report-image-selection li")).toHaveCount(1);
   await expect(card.getByRole("button", { name: "上传并发布" })).toBeEnabled();
+  // Select past the former count/size limits without publishing test material.
+  const largePng = Buffer.alloc(11 * 1024 * 1024);
+  Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPz8AAAAASUVORK5CYII=", "base64").copy(largePng);
+  await card.getByLabel("选择报告图片", { exact: true }).setInputFiles(Array.from({ length: 30 }, (_, index) => ({
+    name: `additional-${index}.png`, mimeType: "image/png", buffer: index === 0 ? largePng : largePng.subarray(0, 68),
+  })));
+  await expect(card.locator(".report-image-selection li")).toHaveCount(31);
+  await expect(card.getByRole("alert")).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "上传并发布" })).toBeEnabled();
+  // An intentionally stale revision exercises the real >105MB HTTP path,
+  // then stops before any file is stored or report data is changed.
+  const uploadResponse = await page.evaluate(async () => {
+    const form = new FormData();
+    form.set("reportCardId", "seed-card-inspection-safety");
+    form.set("revision", "upload-limit-verification-stale");
+    form.set("files", new File([new Uint8Array(106 * 1024 * 1024)], "large.png", { type: "image/png" }));
+    const response = await fetch("/api/admin/report-images", { method: "POST", headers: { "X-Report-Upload": "1" }, body: form });
+    return { status: response.status, body: await response.json() };
+  });
+  expect(uploadResponse.status).toBe(400);
+  expect(uploadResponse.body.error).toContain("已被更新");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(card.getByLabel("选择报告图片", { exact: true })).toBeVisible();

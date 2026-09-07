@@ -10,16 +10,6 @@ function refreshReports() {
   revalidatePath("/api/public/content");
   revalidatePath("/reports", "layout");
 }
-export async function publishReportImagesAction(_state: ReportImagesState, form: FormData): Promise<ReportImagesState> {
-  const admin = await requireCurrentAdmin();
-  try {
-    await new AdminReportImagesService().publish({ reportCardId: String(form.get("reportCardId") ?? ""),
-      assetId: String(form.get("assetId") ?? "") || undefined, revision: String(form.get("revision") ?? ""),
-      files: form.getAll("files").filter((file): file is File => file instanceof File && file.size > 0) }, admin.id);
-    refreshReports();
-    return { saved: true };
-  } catch (error) { return { error: error instanceof Error ? error.message : "上传未完成，请稍后重试。" }; }
-}
 export async function removeReportImagesAction(_state: ReportImagesState, form: FormData): Promise<ReportImagesState> {
   const admin = await requireCurrentAdmin();
   try {

@@ -28,6 +28,23 @@ async function isolated(run: (service: AdminReportImagesService, tx: Prisma.Tran
 }
 
 describe("fixed report image publication", () => {
+  it("publishes and publicly returns every page above the former count and total-byte limits", async () => {
+    await isolated(async (service, tx, _storage, objects, adminId) => {
+      const card = (await service.list()).find((item) => item.id === cardId)!;
+      const bytes = Buffer.alloc(4 * 1024 * 1024);
+      png.copy(bytes);
+      const files = Array.from({ length: 31 }, (_, index) => new NodeFile([bytes], `page-${index}.png`, { type: "image/png" }) as unknown as File);
+      const assetId = await service.publish({ reportCardId: cardId, revision: card.revision, files }, adminId);
+      const publicService = new PublicContentService(new PublicContentRepository(tx as PrismaClient));
+      const snapshot = await publicService.getCardSnapshot("inspection-projects", cardId);
+      const pages = snapshot.result!.card.assets.find((asset) => asset.id === assetId)!.pages;
+      expect(pages.map((page) => page.pageNumber)).toEqual(Array.from({ length: 31 }, (_, index) => index + 1));
+      expect(objects.size).toBe(31);
+      const stored = await tx.reportAsset.findUniqueOrThrow({ where: { id: assetId } });
+      expect(stored.byteSize).toBe(BigInt(124 * 1024 * 1024));
+    });
+  }, 20000);
+
   it("publishes, replaces and removes images without changing any card/module fields or batch settings", async () => {
     await isolated(async (service, tx, _storage, objects, adminId) => {
       const before = await tx.reportCard.findUniqueOrThrow({ where: { id: cardId } });

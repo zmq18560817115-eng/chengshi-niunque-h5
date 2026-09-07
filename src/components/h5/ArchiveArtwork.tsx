@@ -60,7 +60,7 @@ const risingPaperParts = new Set(["module-2-inspection-paper", "module-2-product
 // 按压高亮改由 CSS 依据 <main data-pressed-slug> + 图层 data-archive-module 驱动
 // (见 globals.css),这样点按只更新父级一个属性,无需重渲染这棵庞大的贴图树。
 // 路由退场由完整首页缓冲层统一承接，不再单独抽走大面积文件夹图层。
-export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mountDeferred = true, mountDeepDeferred = true, paperMotionReady = false, ribbonMotionReady = false, latestBatch = defaultLatestBatch }: { preview?: boolean; mountDeferred?: boolean; mountDeepDeferred?: boolean; paperMotionReady?: boolean; ribbonMotionReady?: boolean; latestBatch?: LatestBatch }) {
+export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mountDeferred = true, mountDeepDeferred = true, paperMotionReady = false, ribbonMotionReady = false, ribbonStartedAt, latestBatch = defaultLatestBatch }: { preview?: boolean; mountDeferred?: boolean; mountDeepDeferred?: boolean; paperMotionReady?: boolean; ribbonMotionReady?: boolean; ribbonStartedAt?: number; latestBatch?: LatestBatch }) {
   const renderLayer = (layer: ArtworkLayer) => {
     const moduleSlug = layerModule[layer.id as keyof typeof layerModule];
     const src = guideEntryBatchParts.has(layer.id) ? batchArtworkSource(layer.src, latestBatch) : layer.src;
@@ -102,7 +102,7 @@ export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mo
         <div className="reports-archive-entry-coordinate-layer">
           {bookLayers.map(renderLayer)}
           <ArchiveRibbonBacking />
-          <ArchiveUnlockTabMotion preview={preview} active={ribbonMotionReady} />
+          <ArchiveUnlockTabMotion preview={preview} active={ribbonMotionReady} startedAt={ribbonStartedAt} />
         </div>
       </div>
       <div className="reports-archive-entry-group reports-archive-entry-batch" data-guide-entry-group="latest-batch">

@@ -38,7 +38,7 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
         });
         release();
         await expect(page.locator(".brand-guide-stage")).toHaveAttribute("data-animation-state", "running", { timeout: 15000 });
-        await expect(hint).toHaveCSS("animation-name", "guide-entry-hint-enter");
+        await expect(hint).toHaveCSS("animation-name", "guide-entry-hint-enter, guide-entry-hint-float");
         await expect.poll(() => hint.evaluate((node) => Number(getComputedStyle(node).opacity))).toBeGreaterThan(.3);
         await page.screenshot({ path: `${output}/${engine}-${width}x${height}-entering.png` });
         await expect(hint).toHaveCSS("opacity", "1");
@@ -49,15 +49,24 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           return { duration: style.animationDuration, iterations: style.animationIterationCount, playState: active.playState, samples: window.__hintSamples,
             bottom: parseFloat(style.bottom), artworkBottom: node.closest(".brand-guide-artwork").getBoundingClientRect().bottom };
         });
-        expect(animation.duration).toBe("0.9s");
-        expect(animation.iterations).toBe("1");
+        expect(animation.duration).toBe("0.9s, 1.8s");
+        expect(animation.iterations).toBe("1, infinite");
         expect(animation.playState).toBe("finished");
         expect(animation.samples.some((s) => s.opacity > 0 && s.opacity < 1 && s.y > final.y + 1 && s.y < initial.y)).toBe(true);
         expect(final.y + final.height).toBeLessThanOrEqual(height);
-        expect(final.y + final.height + animation.bottom).toBeCloseTo(animation.artworkBottom, 0);
+        expect(final.y + final.height + animation.bottom).toBeLessThanOrEqual(animation.artworkBottom + 1);
         await page.screenshot({ path: `${output}/${engine}-${width}x${height}-settled.png` });
-        const settled = await hint.boundingBox();
-        expect(settled.y).toBeCloseTo(final.y, 2);
+        const bob = await hint.evaluate((node) => {
+          const animation = node.getAnimations().find((a) => a.animationName === "guide-entry-hint-float");
+          animation.pause();
+          animation.currentTime = 900;
+          const bottom = node.getBoundingClientRect();
+          animation.currentTime = 1800;
+          const top = node.getBoundingClientRect();
+          animation.play();
+          return { distance: bottom.y - top.y, height: bottom.height };
+        });
+        expect(bob.distance / bob.height).toBeCloseTo(.14, 2);
         await expect(page.getByRole("button", { name: "进入档案" })).toBeEnabled();
         await page.getByRole("button", { name: "进入档案" }).click();
         await expect(page).toHaveURL(`${base}/reports`, { timeout: 15000 });

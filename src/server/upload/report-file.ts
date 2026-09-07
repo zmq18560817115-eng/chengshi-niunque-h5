@@ -1,15 +1,10 @@
 import type { AssetType } from "@prisma/client";
 import {
-  MAX_REPORT_IMAGE_BYTES,
-  MAX_REPORT_IMAGE_DIMENSION,
-  MAX_REPORT_IMAGE_PIXELS,
   hasMatchingReportImageExtension,
   isStaticReportImageMimeType,
   reportImageExtension,
   type StaticReportImageMimeType,
 } from "@/server/report-image-policy";
-
-export { MAX_REPORT_IMAGE_BYTES as MAX_REPORT_FILE_BYTES } from "@/server/report-image-policy";
 
 type ImageDimensions = { width: number; height: number };
 
@@ -123,12 +118,6 @@ function validateDimensions(dimensions: ImageDimensions | null): asserts dimensi
   if (!dimensions || dimensions.width < 1 || dimensions.height < 1) {
     throw new Error("无法读取图片尺寸，请重新导出后上传");
   }
-  if (dimensions.width > MAX_REPORT_IMAGE_DIMENSION || dimensions.height > MAX_REPORT_IMAGE_DIMENSION) {
-    throw new Error(`图片宽高不能超过 ${MAX_REPORT_IMAGE_DIMENSION} 像素`);
-  }
-  if (dimensions.width * dimensions.height > MAX_REPORT_IMAGE_PIXELS) {
-    throw new Error("单张图片总像素不能超过 2500 万");
-  }
 }
 
 export async function validateReportFile(file: File, assetType: AssetType): Promise<{
@@ -140,7 +129,6 @@ export async function validateReportFile(file: File, assetType: AssetType): Prom
 }> {
   if (assetType !== "IMAGE") throw new Error("公开报告仅支持上传 JPG、PNG 或 WebP 静态图片");
   if (!file.size) throw new Error("请选择需要上传的图片");
-  if (file.size > MAX_REPORT_IMAGE_BYTES) throw new Error("单张报告图片不能超过 10MB");
   if (!isStaticReportImageMimeType(file.type)) throw new Error("报告图片仅支持 JPG、PNG 或 WebP 静态格式");
   if (!hasMatchingReportImageExtension(file.name, file.type)) throw new Error("图片扩展名与所选格式不一致");
 

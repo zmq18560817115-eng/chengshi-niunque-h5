@@ -5,7 +5,7 @@ vi.mock("@/server/auth/request-session", () => ({ requireCurrentAdmin: vi.fn().m
 vi.mock("@/server/services/latest-batch-service", () => ({ LatestBatchService: class { get() { return Promise.resolve({ regularBatch: "GD00046087", trialBatch: "GD00046086", inspectionDate: "2026-08" }); } } }));
 vi.mock("@/server/services/admin-report-images-service", () => ({ AdminReportImagesService: class { list = list; } }));
 vi.mock("@/app/admin/actions", () => ({ logoutAction: vi.fn(), publishLatestBatchAction: vi.fn() }));
-vi.mock("@/app/admin/report-image-actions", () => ({ publishReportImagesAction: vi.fn(), removeReportImagesAction: vi.fn() }));
+vi.mock("@/app/admin/report-image-actions", () => ({ removeReportImagesAction: vi.fn() }));
 import AdminLayout from "@/app/admin/(protected)/layout";
 import AdminPage from "@/app/admin/(protected)/page";
 import SiteSettingsPage from "@/app/admin/(protected)/site/page";

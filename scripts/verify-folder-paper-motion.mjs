@@ -21,11 +21,13 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           const paper = page.locator(`[data-paper-id="${id}"]`);
           const image = paper.locator("img");
           await expect(paper).toHaveAttribute("data-paper-state", "hidden");
-          await expect(image).toHaveCSS("opacity", "0");
+          await expect(image).toHaveCSS("opacity", "0.5");
           const position = await paper.evaluate((node) => {
             const r = node.getBoundingClientRect();
-            return { top: r.top + scrollY, left: r.left, width: r.width, height: r.height };
+            return { top: r.top + scrollY, left: r.left, width: r.width, height: r.height,
+              initialOffset: node.querySelector("img").getBoundingClientRect().top - r.top };
           });
+          expect(position.initialOffset / position.height).toBeCloseTo(index === 0 ? .22 : .18, 2);
           await page.evaluate((y) => scrollTo(0, y), position.top - height + 10);
           await expect(paper).toHaveAttribute("data-paper-state", "hidden");
           await page.screenshot({ path: `${output}/${engine}-${width}x${height}-${index}-hidden.png` });
@@ -41,7 +43,7 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           });
           await page.evaluate((y) => scrollTo(0, y), position.top - height * .65);
           await expect(paper).toHaveAttribute("data-paper-state", "entering");
-          await expect.poll(() => image.evaluate((n) => Number(getComputedStyle(n).opacity))).toBeGreaterThan(.2);
+          await expect.poll(() => image.evaluate((n) => Number(getComputedStyle(n).opacity))).toBeGreaterThan(.6);
           await page.screenshot({ path: `${output}/${engine}-${width}x${height}-${index}-entering.png` });
           await expect(paper).toHaveAttribute("data-paper-state", "complete");
           const measured = await paper.evaluate((node) => {
@@ -61,6 +63,11 @@ for (const engine of (process.env.H5_QA_ENGINES ?? "chromium,webkit").split(",")
           expect(measured.stillBehindFolder).toBe(true);
           if (index === 0) await expect(page.locator(`[data-paper-id="${ids[1]}"]`)).toHaveAttribute("data-paper-state", "hidden");
           await page.screenshot({ path: `${output}/${engine}-${width}x${height}-${index}-complete.png` });
+          // Also inspect the initial half-exposed pose in the same viewport as
+          // the completed pose; normal scroll triggering has already finished.
+          await paper.evaluate((node) => { node.dataset.paperState = "hidden"; });
+          await page.screenshot({ path: `${output}/${engine}-${width}x${height}-${index}-half-exposed.png` });
+          await paper.evaluate((node) => { node.dataset.paperState = "complete"; });
           papers.push({ id, ...measured });
         }
         await page.locator('[data-cue-slug="production-traceability"]').click();

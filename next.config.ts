@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   reactStrictMode: true,
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
-  experimental: { serverActions: { bodySizeLimit: "105mb" } },
   async headers() {
     return [
       {

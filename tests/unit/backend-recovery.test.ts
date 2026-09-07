@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import { proxyReportImage, reportImageUnavailableResponse } from "@/server/http/report-image-response";
 import { S3ObjectStorage } from "@/server/storage/s3-object-storage";
 import { OperationTimeoutError, withTimeout } from "@/server/utils/with-timeout";
@@ -72,5 +73,27 @@ describe("backend recovery boundaries", () => {
     expect(unavailable.headers.get("cache-control")).toBe("no-store");
     expect(unavailable.headers.get("retry-after")).toBe("3");
     await expect(unavailable.text()).resolves.toContain("暂时无法加载");
+  });
+
+  it("lets an active upload outlast the short storage read deadline", async () => {
+    const server = createServer((request, response) => {
+      request.resume();
+      request.on("end", () => setTimeout(() => {
+        response.writeHead(200, { ETag: '"upload-test"' });
+        response.end();
+      }, 150));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Missing upload test listener");
+      const storage = new S3ObjectStorage({ endpoint: `http://127.0.0.1:${address.port}`, region: "us-east-1", bucket: "test",
+        accessKeyId: "test", secretAccessKey: "test-secret", forcePathStyle: true, requestTimeoutMs: 50, maxAttempts: 1 });
+      await expect(storage.put("reports/upload.png", new Uint8Array([1]), "image/png"))
+        .resolves.toMatchObject({ key: "reports/upload.png", size: 1, etag: '"upload-test"' });
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
   });
 });

@@ -8,7 +8,6 @@ import { isProductionPublicRecord } from "@/server/public-report-policy";
 import { getObjectStorage } from "@/server/storage";
 import type { ObjectStorage } from "@/server/storage/object-storage";
 import { validateReportFile } from "@/server/upload/report-file";
-import { MAX_REPORT_IMAGE_PAGES, MAX_REPORT_TOTAL_BYTES } from "@/server/report-image-policy";
 
 const scope = DEFAULT_H5_CONTENT.flatMap((module) => module.cards.map((card) => ({ id: card.id, slug: module.slug })));
 const visible = { deletedAt: null, contentStatus: "PUBLISHED" as const, isOnline: true };
@@ -66,8 +65,6 @@ export class AdminReportImagesService {
     assertRevision(card, input.revision);
     selectedAsset(card, input.assetId);
     if (!input.files.length) throw new Error("请先选择报告图片。");
-    if (input.files.length > MAX_REPORT_IMAGE_PAGES) throw new Error(`一份报告最多上传 ${MAX_REPORT_IMAGE_PAGES} 张图片。`);
-    if (input.files.reduce((sum, file) => sum + file.size, 0) > MAX_REPORT_TOTAL_BYTES) throw new Error("一份报告的图片总大小不能超过 100MB。");
     // Validate every file before storing anything; client metadata never selects storage keys.
     const checked = [];
     for (const file of input.files) checked.push(await validateReportFile(file, "IMAGE"));
