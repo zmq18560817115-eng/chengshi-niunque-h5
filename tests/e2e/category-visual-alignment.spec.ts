@@ -5,7 +5,7 @@ import { categoryCardLayouts } from "../../src/config/h5-category-themes";
 const routes = ["inspection-projects", "review-assurance", "production-traceability"] as const;
 // Keep the wider Android/iOS viewport coverage that was added during device QA.
 const widths = [375, 390, 412, 414, 428] as const;
-const fullFitViewports = [
+const portraitViewports = [
   ...widths.map((width) => ({ width, height: 896 })),
   { width: 360, height: 800 },
   { width: 375, height: 812 },
@@ -30,9 +30,9 @@ async function expectCategoryArtworkPainted(page: Page, stage: Locator) {
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
 }
 
-for (const size of fullFitViewports) {
+for (const size of portraitViewports) {
   for (const slug of routes) {
-    test(`${slug} fits and locks its complete artwork at ${size.width}x${size.height}`, async ({ page }) => {
+    test(`${slug} fills the width and bottom edge at ${size.width}x${size.height}`, async ({ page }) => {
       await page.setViewportSize(size);
       await page.goto(`/reports/${slug}`);
       const stage = page.locator(".category-page-final");
@@ -49,8 +49,8 @@ for (const size of fullFitViewports) {
       const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
       expect(stageBox?.width).toBeCloseTo(clientWidth, 0);
       expect(stageBox?.height).toBeCloseTo(size.height, 0);
-      expect(viewportBox?.width ?? Infinity).toBeLessThanOrEqual(clientWidth + 0.5);
-      expect(viewportBox?.height ?? Infinity).toBeLessThanOrEqual(size.height + 0.5);
+      expect(viewportBox?.width).toBeCloseTo(clientWidth, 0);
+      expect(viewportBox?.height).toBeCloseTo(clientWidth * categoryArtworkHeightRatio, 0);
       expect((viewportBox?.width ?? 0) / (viewportBox?.height ?? 1)).toBeCloseTo(2000 / 4333, 3);
       expect(viewportBox?.x).toBeCloseTo((clientWidth - (viewportBox?.width ?? 0)) / 2, 0);
       expect(viewportBox?.y).toBeCloseTo(stageBox?.y ?? 0, 0);
@@ -59,7 +59,11 @@ for (const size of fullFitViewports) {
       expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(size.height);
       expect(await page.evaluate(() => document.documentElement.getAttribute("data-h5-page-lock"))).toBe("category");
       await expect(stage).toHaveCSS("overflow", "hidden");
-      await expect(scrollRegion).toHaveCSS("overflow-y", "hidden");
+      await expect(scrollRegion).toHaveCSS("overflow-y", "auto");
+      const sheetBox = await page.locator(".category-page-sheet").boundingBox();
+      const tailBox = await page.locator(".category-page-tail").boundingBox();
+      expect(sheetBox?.height).toBeCloseTo(Math.max(size.height, viewportBox?.height ?? 0), 0);
+      expect(tailBox?.height).toBeCloseTo(Math.max(0, size.height - (viewportBox?.height ?? 0)), 0);
 
       const fixedMetrics = await page.evaluate(() => {
         const stageNode = document.querySelector<HTMLElement>(".category-page-final");
@@ -79,16 +83,15 @@ for (const size of fullFitViewports) {
       });
       expect(Math.abs(fixedMetrics.stageScrollHeight - fixedMetrics.stageClientHeight)).toBeLessThanOrEqual(1);
       expect(fixedMetrics.stageScrollTop).toBe(0);
-      expect(Math.abs(fixedMetrics.scrollHeight - fixedMetrics.scrollClientHeight)).toBeLessThanOrEqual(1);
-      expect(fixedMetrics.scrollTop).toBe(0);
+      expect(fixedMetrics.scrollTop).toBeCloseTo(Math.max(0, fixedMetrics.scrollHeight - fixedMetrics.scrollClientHeight), 0);
       expect(fixedMetrics.windowScrollY).toBe(0);
+      await scrollRegion.evaluate((node) => { node.scrollTop = 0; });
 
       const backdrop = await scrollRegion.evaluate((node) => {
         const style = getComputedStyle(node);
         return { image: style.backgroundImage, position: style.backgroundPosition, repeat: style.backgroundRepeat, size: style.backgroundSize };
       });
-      expect(backdrop.image).toContain("category-paper-base.runtime.webp");
-      expect(backdrop.image).toContain("category-runtime");
+      expect(backdrop.image).toContain("/design/2026-09-07/runtime/category-paper.webp");
       expect(backdrop.position).toContain("50%");
       expect(backdrop.repeat).toBe("repeat-x");
       expect(backdrop.size).toContain("auto");
@@ -100,9 +103,7 @@ for (const size of fullFitViewports) {
       for (let index = 0; index < layouts.length; index += 1) {
         const cardBox = await cards.nth(index).boundingBox();
         const copyBox = await cards.nth(index).locator(".category-card-copy").boundingBox();
-        // Full-fit mode may make the artboard narrower than the device. Every
-        // authored coordinate must therefore scale from the actual artboard,
-        // not from documentElement.clientWidth.
+        // All authored coordinates follow the same width-based artboard scale.
         const scale = (viewportBox?.width ?? size.width) / 1000;
         expect(cardBox?.x).toBeCloseTo((viewportBox?.x ?? 0) + layouts[index].x * scale, 0);
         expect(cardBox?.y).toBeCloseTo((viewportBox?.y ?? 0) + layouts[index].y * scale, 0);
@@ -135,7 +136,7 @@ for (const size of shortViewports) {
     expect(viewportBox?.height).toBeCloseTo(size.width * categoryArtworkHeightRatio, 0);
     expect(folderBox?.x).toBeLessThan(viewportBox?.x ?? 0);
     expect((folderBox?.x ?? 0) + (folderBox?.width ?? 0)).toBeGreaterThan((viewportBox?.x ?? 0) + (viewportBox?.width ?? 0));
-    expect((folderBox?.width ?? 0) / (viewportBox?.width ?? 1)).toBeCloseTo(2502 / 2000, 3);
+    expect((folderBox?.width ?? 0) / (viewportBox?.width ?? 1)).toBeCloseTo(2325 / 2000, 3);
 
     const beforeScroll = await scrollRegion.evaluate((node) => ({
       clientHeight: node.clientHeight,
@@ -164,7 +165,7 @@ for (const size of shortViewports) {
   });
 }
 
-test("category coordinates remain normalized when a short viewport becomes full-fit", async ({ page }) => {
+test("category coordinates and width remain stable when the visible height changes", async ({ page }) => {
   for (const slug of routes) {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/reports/${slug}`);
@@ -198,11 +199,13 @@ test("category coordinates remain normalized when a short viewport becomes full-
     const shortMetrics = await scrollRegion.evaluate((node) => ({ clientHeight: node.clientHeight, scrollHeight: node.scrollHeight }));
     expect(shortMetrics.scrollHeight).toBeGreaterThan(shortMetrics.clientHeight);
 
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.setViewportSize({ width: 375, height: 932 });
+    await expect.poll(() => stage.evaluate((node) => node.clientHeight)).toBe(932);
     await expect.poll(() => scrollRegion.evaluate((node) => node.scrollTop)).toBe(0);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 
     const after = await readNormalizedGeometry();
+    expect(after.viewport.width).toBeCloseTo(before.viewport.width, 3);
     expect(after.viewport.width / after.viewport.height).toBeCloseTo(2000 / 4333, 3);
     expect(after.cards).toHaveLength(before.cards.length);
     for (let index = 0; index < before.cards.length; index += 1) {
@@ -223,6 +226,6 @@ test("category coordinates remain normalized when a short viewport becomes full-
       documentScrollHeight: document.documentElement.scrollHeight,
       documentScrollWidth: document.documentElement.scrollWidth,
       windowScrollY: window.scrollY,
-    }))).toEqual({ documentScrollHeight: 812, documentScrollWidth: 375, windowScrollY: 0 });
+    }))).toEqual({ documentScrollHeight: 932, documentScrollWidth: 375, windowScrollY: 0 });
   }
 });

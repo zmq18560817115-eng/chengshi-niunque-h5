@@ -53,7 +53,10 @@ describe("H5 category report themes", () => {
     const warmed = new Set(categoryRouteWarmAssets);
 
     for (const slug of slugs) {
+      const theme = getCategoryTheme(slug);
+      if (!theme.artworkLayers) throw new Error(`Missing artwork for ${slug}`);
       const expected = [
+        theme.tailArtwork,
         ...categoryArtworkLayers[slug].map((layer) => layer.src),
         ...categoryCardLayouts[slug].map((card) => card.backplate.src),
         ...categoryCardFallbacks[slug].map((card) => card.statusBaseArtwork?.src).filter((src): src is string => Boolean(src)),

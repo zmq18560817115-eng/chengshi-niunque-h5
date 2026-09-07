@@ -36,8 +36,9 @@ function removeViewportListeners() {
   window.removeEventListener("orientationchange", requestVisualViewportHeightSync);
 }
 
-export function useVisualViewportHeight() {
+export function useVisualViewportHeight(enabled = true) {
   useLayoutEffect(() => {
+    if (!enabled) return;
     viewportUsers += 1;
     if (viewportUsers === 1) addViewportListeners();
     syncVisualViewportHeight();
@@ -51,5 +52,5 @@ export function useVisualViewportHeight() {
         document.documentElement.style.removeProperty("--h5-visible-viewport-height");
       }
     };
-  }, []);
+  }, [enabled]);
 }

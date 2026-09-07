@@ -504,7 +504,8 @@ export const designAssets = {
             }
           ]
         }
-      ]
+      ],
+      "tail": "/design/2026-09-07/runtime/inspection-page-tail.webp"
     },
     "review-assurance": {
       "layers": [
@@ -719,7 +720,8 @@ export const designAssets = {
             }
           ]
         }
-      ]
+      ],
+      "tail": "/design/2026-09-07/runtime/review-page-tail.webp"
     },
     "production-traceability": {
       "layers": [
@@ -861,7 +863,8 @@ export const designAssets = {
             }
           ]
         }
-      ]
+      ],
+      "tail": "/design/2026-09-07/runtime/traceability-page-tail.webp"
     }
   },
   "archiveFallback": "/design/2026-09-07/runtime/archive-reference.webp",

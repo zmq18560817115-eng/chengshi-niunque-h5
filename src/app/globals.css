@@ -493,16 +493,17 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-reference-f
 .reports-archive-final[data-guide-entry="complete"][data-archive-artwork-failed="true"] .reports-archive-reference-fallback { visibility: visible; opacity: 1; }
 .reports-archive-artwork-error { position: sticky; z-index: 90; top: max(.75rem,env(safe-area-inset-top)); left: 50%; display: flex; width: min(calc(100% - 2rem),26rem); translate: -50% 0; align-items: center; justify-content: space-between; gap: .75rem; padding: .7rem .8rem .7rem 1rem; border: 1px solid rgb(64 41 31 / 22%); border-radius: 999px; color: #40291f; background: rgb(255 250 229 / 94%); box-shadow: 0 .35rem 1.2rem rgb(64 41 31 / 12%); font-size: .78rem; }
 .reports-archive-artwork-error button { min-height: 2.25rem; padding-inline: .9rem; border: 1px solid rgb(64 41 31 / 32%); border-radius: 999px; color: inherit; background: #fff8d9; font: inherit; font-weight: 700; white-space: nowrap; }
-.category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: auto; min-width: 0; min-height: 0; margin-inline: auto; overflow: hidden; container: category-stage / size; background: #f5f0e7; overscroll-behavior: none; }
+.category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: calc(var(--h5-visible-viewport-height,100vh) - env(safe-area-inset-top)); min-width: 0; min-height: 0; margin-inline: auto; overflow: hidden; container: category-stage / size; background: #f5f0e7; overscroll-behavior: none; }
 .category-page-scroll-region { display: grid; width: 100%; height: 100%; overflow-x: hidden; overflow-y: auto; justify-items: center; align-items: start; background-color: #f5f0e7; background-image: url("/design/2026-09-07/runtime/category-paper.webp"); background-position: center top; background-size: auto min(216.65cqw,1624.875px); background-repeat: repeat-x; overscroll-behavior-x: none; overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .category-page-scroll-region::-webkit-scrollbar { width: 0; height: 0; }
+.category-page-sheet { display: flex; flex-direction: column; width: 100%; min-height: 100%; }
 .category-page-viewport { position: relative; z-index: 1; width: 100cqw; max-width: 100%; height: auto; aspect-ratio: 2000 / 4333; flex: 0 0 auto; overflow: hidden; container-type: inline-size; background: transparent; }
-@container category-stage (min-width: 320px) and (min-height: 693.28px) {
-  .category-page-scroll-region { overflow-y: hidden; overscroll-behavior: none; touch-action: pan-x; background-size: auto min(216.65cqw,100cqh,1624.875px); }
-  .category-page-viewport { width: min(100cqw,46.1574cqh); }
-}
+/* Scale the reference by width only. Extra screen height receives the supplied
+   folder texture; typography, cards and mascots keep their original ratio. */
+.category-page-tail { flex: 1 0 0; min-height: 0; width: 100%; background-image: var(--category-tail-image); background-position: center top; background-size: 100% auto; background-repeat: repeat-y; pointer-events: none; }
 .category-page-final[data-preview] { position: relative; inset: auto; display: block; height: auto; min-height: 0; overflow: visible; container-name: none; container-type: inline-size; touch-action: auto; }
 .category-page-final[data-preview] .category-page-scroll-region { display: block; width: 100%; height: auto; overflow: visible; background-size: auto min(216.65cqw,1624.875px); touch-action: auto; }
+.category-page-final[data-preview] .category-page-sheet { min-height: 0; }
 .category-page-final[data-preview] .category-page-viewport { width: 100%; max-width: none; height: auto; }
 .reports-archive-art { display: block; width: 100%; height: auto; }
 .category-page-artwork-layers { position: absolute; z-index: 0; inset: 0; pointer-events: none; }

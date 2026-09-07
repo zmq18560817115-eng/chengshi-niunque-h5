@@ -397,7 +397,7 @@ describe("H5 motion isolation", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
     expect(css).toContain(".category-page-viewport { position: relative;");
-    expect(css).toContain("inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+    expect(css).toContain("inset: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);");
     expect(css).toMatch(/\.category-page-final\s*\{[^}]*overflow:\s*hidden;[^}]*container:\s*category-stage \/ size;/);
     expect(css).toMatch(/\.category-page-scroll-region\s*\{[^}]*height:\s*100%;[^}]*overflow-y:\s*auto;[^}]*touch-action:\s*pan-y;/);
     expect(css).toMatch(/\.category-page-viewport\s*\{[^}]*width:\s*100cqw;[^}]*max-width:\s*100%;[^}]*aspect-ratio:\s*2000 \/ 4333;[^}]*overflow:\s*hidden;/);
@@ -421,19 +421,20 @@ describe("H5 motion isolation", () => {
   it.each([
     [375, 812], [390, 844], [393, 797], [393, 852], [412, 892],
     [414, 896], [428, 926], [430, 932],
-  ])("fits and locks the complete approved detail canvas at %ix%i", (width, height) => {
-    const canvasWidth = Math.min(width, height * 2000 / 4333);
+  ])("keeps the reference width stable and fills tall-screen edges at %ix%i", (width, height) => {
+    const canvasWidth = width;
     const canvasHeight = canvasWidth * 4333 / 2000;
-    expect(canvasWidth).toBeGreaterThanOrEqual(320);
-    expect(canvasWidth).toBeLessThanOrEqual(width);
-    expect(canvasHeight).toBeLessThanOrEqual(height + 1e-8);
+    const sheetHeight = Math.max(height, canvasHeight);
+    expect(canvasWidth).toBe(width);
+    expect(sheetHeight).toBeGreaterThanOrEqual(height);
     expect(canvasHeight / canvasWidth).toBeCloseTo(4333 / 2000, 8);
 
     const css = readFileSync("src/app/globals.css", "utf8");
     const category = readFileSync("src/components/h5/CategoryDetail.tsx", "utf8");
-    expect(css).toContain("@container category-stage (min-width: 320px) and (min-height: 693.28px)");
-    expect(css).toMatch(/@container category-stage[^}]+\.category-page-scroll-region\s*\{[^}]*overflow-y:\s*hidden;[^}]*touch-action:\s*pan-x;[\s\S]*}/);
-    expect(css).toContain("width: min(100cqw,46.1574cqh);");
+    expect(css).not.toContain("@container category-stage (min-width: 320px) and (min-height: 693.28px)");
+    expect(css).not.toContain("width: min(100cqw,46.1574cqh);");
+    expect(css).toContain(".category-page-tail { flex: 1 0 0;");
+    expect(category).toContain("useVisualViewportHeight(!preview)");
     expect(category).toContain("scrollHeight > scrollRegion.clientHeight + 1");
   });
 

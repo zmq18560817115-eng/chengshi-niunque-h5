@@ -12,7 +12,7 @@ export const categoryCardLayouts = mapped<CategoryCardLayout[]>((slug) => design
 const legacyTitles: Record<Slug, string[][]> = { "inspection-projects": [["营养成分检测"], [], ["安全指标检测"]], "review-assurance": [["配方与标签"], [], ["稳定性与感官"]], "production-traceability": [[], ["质量管理"]] };
 export const categoryCardFallbacks = mapped<CategoryCardFallback[]>((slug) => designAssets.categories[slug].cards.map((card, index) => ({ title: card.title, description: card.description, buttonText: "点击查看报告", titleArtwork: card.titleArtwork, descriptionArtwork: card.descriptionArtwork, controls: card.controls, legacyTitles: legacyTitles[slug][index] })));
 export const categoryControlAssets = mapped((slug) => categoryCardFallbacks[slug].flatMap((card) => [card.titleArtwork.src, ...(card.descriptionArtwork ? [card.descriptionArtwork.src] : []), ...card.controls.map((part) => part.src)]));
-export const categoryReadinessAssets = mapped((slug) => [...new Set([...categoryArtworkLayers[slug].map((part) => part.src), ...categoryCardLayouts[slug].map((card) => card.backplate.src), ...categoryControlAssets[slug]])]);
+export const categoryReadinessAssets = mapped((slug) => [...new Set([designAssets.categories[slug].tail, ...categoryArtworkLayers[slug].map((part) => part.src), ...categoryCardLayouts[slug].map((card) => card.backplate.src), ...categoryControlAssets[slug]])]);
 
 export const categoryThemes = {
   "inspection-projects": { theme: "inspection", backgroundClass: "report-page--inspection", label: "检测项目", artworkLayers: categoryArtworkLayers["inspection-projects"], readinessAssets: categoryReadinessAssets["inspection-projects"], cardSlots: 3 },
@@ -44,6 +44,7 @@ export function getCategoryTheme(slug: string) {
   if (!theme) return defaultCategoryTheme;
   return {
     ...theme,
+    tailArtwork: designAssets.categories[slug as Slug].tail,
     cardLayouts: categoryCardLayouts[slug as keyof typeof categoryCardLayouts],
     cardFallbacks: categoryCardFallbacks[slug as keyof typeof categoryCardFallbacks],
   };

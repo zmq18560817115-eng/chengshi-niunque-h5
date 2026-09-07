@@ -5,8 +5,8 @@ class MockVisualViewport extends EventTarget {
   height = 812;
 }
 
-function ViewportConsumer() {
-  useVisualViewportHeight();
+function ViewportConsumer({ enabled = true }: { enabled?: boolean }) {
+  useVisualViewportHeight(enabled);
   return null;
 }
 
@@ -53,6 +53,16 @@ describe("useVisualViewportHeight", () => {
     document.documentElement.removeAttribute("data-guide-route-entry");
     requestVisualViewportHeightSync();
     await waitFor(() => expect(document.documentElement.style.getPropertyValue("--h5-visible-viewport-height")).toBe("667px"));
+    unmount();
+  });
+
+  it("does not change the live viewport when rendering a static admin preview", () => {
+    const { rerender, unmount } = render(<ViewportConsumer enabled={false}/>);
+    expect(document.documentElement.style.getPropertyValue("--h5-visible-viewport-height")).toBe("");
+    rerender(<ViewportConsumer/>);
+    expect(document.documentElement.style.getPropertyValue("--h5-visible-viewport-height")).toBe("812px");
+    rerender(<ViewportConsumer enabled={false}/>);
+    expect(document.documentElement.style.getPropertyValue("--h5-visible-viewport-height")).toBe("");
     unmount();
   });
 });

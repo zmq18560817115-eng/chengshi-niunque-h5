@@ -386,12 +386,9 @@ test(`a slow ${categorySlug} report route keeps immediate card feedback and hand
 
 test("returning from a report restores the category reading position", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  await page.goto("/reports");
-  await waitForArchive(page);
-  const inspection = page.locator('.archive-category-hotspot[data-slug="inspection-projects"]');
-  await expect(inspection).toBeEnabled({ timeout: 15_000 });
-  await inspection.click();
-  await expect(page).toHaveURL(/\/reports\/inspection-projects$/);
+  // Start at this test's source page. The archive folder has a shaped hit area;
+  // its bounding-box center is outside that shape and is not a valid tap.
+  await page.goto("/reports/inspection-projects");
   await waitForCategory(page);
 
   const category = page.locator(".category-page-scroll-region");
