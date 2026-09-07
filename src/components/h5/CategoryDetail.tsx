@@ -118,7 +118,7 @@ function CategoryDetailReady({ module, preview = false }: CategoryDetailProps) {
   return <SwipeBackPage className={`h5-shell category-page category-page-final ${motionEnabled ? "h5-page-transition" : ""} ${leaving ? "is-leaving" : ""} ${theme.backgroundClass}`} fallbackHref="/reports" preview={preview} showBackControl={false} data-category={module.slug} data-theme={theme.theme} data-route-entry={routeEntrySource ?? undefined} data-route-ready={routeReady || undefined} data-preview={preview || undefined}>
     {leaving ? <RuntimeLoadingBuffer label="正在打开报告" reason="report-route"/> : null}
     <div ref={scrollRegionRef} className="category-page-scroll-region">
-      <div className="category-page-sheet">
+      <div className="category-page-sheet" style={{ "--category-content-end": theme.contentEnd } as CSSProperties}>
       <div className="category-page-viewport" data-artwork-source="layered-components">
       <div className="category-page-artwork-layers" role="img" aria-label={module.title}>
       {theme.artworkLayers.map((layer) => {

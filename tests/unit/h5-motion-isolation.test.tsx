@@ -424,7 +424,7 @@ describe("H5 motion isolation", () => {
   ])("keeps the reference width stable and fills tall-screen edges at %ix%i", (width, height) => {
     const canvasWidth = width;
     const canvasHeight = canvasWidth * 4333 / 2000;
-    const sheetHeight = Math.max(height, canvasHeight);
+    const sheetHeight = Math.max(height, (3795 + 40) * width / 2000);
     expect(canvasWidth).toBe(width);
     expect(sheetHeight).toBeGreaterThanOrEqual(height);
     expect(canvasHeight / canvasWidth).toBeCloseTo(4333 / 2000, 8);
@@ -434,6 +434,7 @@ describe("H5 motion isolation", () => {
     expect(css).not.toContain("@container category-stage (min-width: 320px) and (min-height: 693.28px)");
     expect(css).not.toContain("width: min(100cqw,46.1574cqh);");
     expect(css).toContain(".category-page-tail { flex: 1 0 0;");
+    expect(css).toContain("--category-content-end");
     expect(category).toContain("useVisualViewportHeight(!preview)");
     expect(category).toContain("scrollHeight > scrollRegion.clientHeight + 1");
   });

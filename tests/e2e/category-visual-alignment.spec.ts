@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { categoryCardLayouts } from "../../src/config/h5-category-themes";
+import { categoryCardLayouts, categoryContentEnd } from "../../src/config/h5-category-themes";
 
 const routes = ["inspection-projects", "review-assurance", "production-traceability"] as const;
 // Keep the wider Android/iOS viewport coverage that was added during device QA.
@@ -12,6 +12,8 @@ const portraitViewports = [
   { width: 390, height: 844 },
   { width: 412, height: 892 },
   { width: 428, height: 926 },
+  { width: 390, height: 760 },
+  { width: 408, height: 805 },
 ] as const;
 const shortViewports = [
   { width: 320, height: 568 },
@@ -62,7 +64,8 @@ for (const size of portraitViewports) {
       await expect(scrollRegion).toHaveCSS("overflow-y", "auto");
       const sheetBox = await page.locator(".category-page-sheet").boundingBox();
       const tailBox = await page.locator(".category-page-tail").boundingBox();
-      expect(sheetBox?.height).toBeCloseTo(Math.max(size.height, viewportBox?.height ?? 0), 0);
+      const contentHeight = (categoryContentEnd[slug] + 40) * clientWidth / 2000;
+      expect(sheetBox?.height).toBeCloseTo(Math.max(size.height, contentHeight), 0);
       expect(tailBox?.height).toBeCloseTo(Math.max(0, size.height - (viewportBox?.height ?? 0)), 0);
 
       const fixedMetrics = await page.evaluate(() => {
@@ -84,6 +87,7 @@ for (const size of portraitViewports) {
       expect(Math.abs(fixedMetrics.stageScrollHeight - fixedMetrics.stageClientHeight)).toBeLessThanOrEqual(1);
       expect(fixedMetrics.stageScrollTop).toBe(0);
       expect(fixedMetrics.scrollTop).toBeCloseTo(Math.max(0, fixedMetrics.scrollHeight - fixedMetrics.scrollClientHeight), 0);
+      expect(fixedMetrics.scrollTop).toBeCloseTo(Math.max(0, contentHeight - size.height), 0);
       expect(fixedMetrics.windowScrollY).toBe(0);
       await scrollRegion.evaluate((node) => { node.scrollTop = 0; });
 
@@ -197,7 +201,9 @@ test("category coordinates and width remain stable when the visible height chang
     const before = await readNormalizedGeometry();
     expect(before.viewport.width / before.viewport.height).toBeCloseTo(2000 / 4333, 3);
     const shortMetrics = await scrollRegion.evaluate((node) => ({ clientHeight: node.clientHeight, scrollHeight: node.scrollHeight }));
-    expect(shortMetrics.scrollHeight).toBeGreaterThan(shortMetrics.clientHeight);
+    const contentHeight = (categoryContentEnd[slug] + 40) * 375 / 2000;
+    expect(shortMetrics.scrollHeight).toBeCloseTo(Math.max(667, contentHeight), 0);
+    await scrollRegion.evaluate((node) => { node.scrollTop = node.scrollHeight; });
 
     await page.setViewportSize({ width: 375, height: 932 });
     await expect.poll(() => stage.evaluate((node) => node.clientHeight)).toBe(932);

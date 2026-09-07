@@ -9,6 +9,12 @@ const slugs = Object.keys(designAssets.categories) as Slug[];
 const mapped = <T,>(fn: (slug: Slug) => T) => Object.fromEntries(slugs.map((slug) => [slug, fn(slug)])) as Record<Slug, T>;
 export const categoryArtworkLayers = mapped((slug) => designAssets.categories[slug].layers);
 export const categoryCardLayouts = mapped<CategoryCardLayout[]>((slug) => designAssets.categories[slug].cards.map((card) => ({ x: card.x, y: card.y, width: card.width, height: card.height, backplate: card.backplate, contentX: card.titleArtwork.x / 2 - card.x, contentY: card.titleArtwork.y / 2 - card.y, contentWidth: 742 })));
+// Content ends at the last card or foreground note, not at the background's
+// reserved tail. Layer coordinates use the 2000px master; cards use 1000px.
+export const categoryContentEnd = mapped((slug) => Math.max(
+  ...categoryArtworkLayers[slug].filter((layer) => layer.id !== "paper" && layer.id !== "folder").map((layer) => layer.y + layer.height),
+  ...categoryCardLayouts[slug].map((card) => (card.y + card.height) * 2),
+));
 const legacyTitles: Record<Slug, string[][]> = { "inspection-projects": [["营养成分检测"], [], ["安全指标检测"]], "review-assurance": [["配方与标签"], [], ["稳定性与感官"]], "production-traceability": [[], ["质量管理"]] };
 export const categoryCardFallbacks = mapped<CategoryCardFallback[]>((slug) => designAssets.categories[slug].cards.map((card, index) => ({ title: card.title, description: card.description, buttonText: "点击查看报告", titleArtwork: card.titleArtwork, descriptionArtwork: card.descriptionArtwork, controls: card.controls, legacyTitles: legacyTitles[slug][index] })));
 export const categoryControlAssets = mapped((slug) => categoryCardFallbacks[slug].flatMap((card) => [card.titleArtwork.src, ...(card.descriptionArtwork ? [card.descriptionArtwork.src] : []), ...card.controls.map((part) => part.src)]));
@@ -44,6 +50,7 @@ export function getCategoryTheme(slug: string) {
   if (!theme) return defaultCategoryTheme;
   return {
     ...theme,
+    contentEnd: categoryContentEnd[slug as Slug],
     tailArtwork: designAssets.categories[slug as Slug].tail,
     cardLayouts: categoryCardLayouts[slug as keyof typeof categoryCardLayouts],
     cardFallbacks: categoryCardFallbacks[slug as keyof typeof categoryCardFallbacks],

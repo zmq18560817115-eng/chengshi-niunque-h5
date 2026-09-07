@@ -1,4 +1,4 @@
-import { categoryArtworkLayers, categoryCardFallbacks, categoryCardLayouts, categoryControlAssets, categoryReadinessAssets, categoryRouteWarmAssets, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
+import { categoryArtworkLayers, categoryCardFallbacks, categoryCardLayouts, categoryContentEnd, categoryControlAssets, categoryReadinessAssets, categoryRouteWarmAssets, defaultCategoryTheme, getCategoryTheme } from "@/config/h5-category-themes";
 
 describe("H5 category report themes", () => {
   it.each([
@@ -45,6 +45,21 @@ describe("H5 category report themes", () => {
         if (index) expect(card.y).toBeGreaterThan(cards[index - 1].y + cards[index - 1].height);
         expect(card.backplate.src).toMatch(/^\/design\/2026-09-07\/runtime\//);
       }
+    }
+  });
+
+  it("ends scrollable content after the complete footer or final card, excluding reserved background", () => {
+    expect(categoryContentEnd).toEqual({
+      "inspection-projects": 3795,
+      "review-assurance": 3795,
+      "production-traceability": 2481,
+    });
+    for (const [slug, bottom] of Object.entries(categoryContentEnd)) {
+      const theme = getCategoryTheme(slug);
+      if (!theme.artworkLayers) throw new Error(`Missing artwork for ${slug}`);
+      expect(theme.contentEnd).toBe(bottom);
+      expect(theme.cardLayouts.every((card) => (card.y + card.height) * 2 <= bottom)).toBe(true);
+      expect(bottom).toBeLessThan(4333);
     }
   });
 

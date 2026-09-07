@@ -49,6 +49,7 @@
   --category-route-exit-distance: 15dvw;
   --category-route-entry-distance: 8dvw;
   --category-page-master-ratio: 0.461574;
+  --category-content-bottom-space: 40;
   --archive-title-bounce-duration: 1217ms;
   --archive-title-character-step: 120ms;
   --archive-click-cue-duration: 1800ms;
@@ -496,14 +497,15 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-reference-f
 .category-page-final { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); isolation: isolate; display: block; width: auto; height: calc(var(--h5-visible-viewport-height,100vh) - env(safe-area-inset-top)); min-width: 0; min-height: 0; margin-inline: auto; overflow: hidden; container: category-stage / size; background: #f5f0e7; overscroll-behavior: none; }
 .category-page-scroll-region { display: grid; width: 100%; height: 100%; overflow-x: hidden; overflow-y: auto; justify-items: center; align-items: start; background-color: #f5f0e7; background-image: url("/design/2026-09-07/runtime/category-paper.webp"); background-position: center top; background-size: auto min(216.65cqw,1624.875px); background-repeat: repeat-x; overscroll-behavior-x: none; overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .category-page-scroll-region::-webkit-scrollbar { width: 0; height: 0; }
-.category-page-sheet { display: flex; flex-direction: column; width: 100%; min-height: 100%; }
+.category-page-sheet { display: flex; flex-direction: column; width: 100%; height: max(100cqh,calc((var(--category-content-end) + var(--category-content-bottom-space)) * .05cqw + env(safe-area-inset-bottom))); min-height: 0; overflow: hidden; }
 .category-page-viewport { position: relative; z-index: 1; width: 100cqw; max-width: 100%; height: auto; aspect-ratio: 2000 / 4333; flex: 0 0 auto; overflow: hidden; container-type: inline-size; background: transparent; }
-/* Scale the reference by width only. Extra screen height receives the supplied
-   folder texture; typography, cards and mascots keep their original ratio. */
+/* Clip only unused background below the content when it already fits. The full
+   artboard keeps its width-based coordinates; extra screen height receives the
+   supplied folder texture without creating additional scrolling. */
 .category-page-tail { flex: 1 0 0; min-height: 0; width: 100%; background-image: var(--category-tail-image); background-position: center top; background-size: 100% auto; background-repeat: repeat-y; pointer-events: none; }
 .category-page-final[data-preview] { position: relative; inset: auto; display: block; height: auto; min-height: 0; overflow: visible; container-name: none; container-type: inline-size; touch-action: auto; }
 .category-page-final[data-preview] .category-page-scroll-region { display: block; width: 100%; height: auto; overflow: visible; background-size: auto min(216.65cqw,1624.875px); touch-action: auto; }
-.category-page-final[data-preview] .category-page-sheet { min-height: 0; }
+.category-page-final[data-preview] .category-page-sheet { height: auto; min-height: 0; overflow: visible; }
 .category-page-final[data-preview] .category-page-viewport { width: 100%; max-width: none; height: auto; }
 .reports-archive-art { display: block; width: 100%; height: auto; }
 .category-page-artwork-layers { position: absolute; z-index: 0; inset: 0; pointer-events: none; }
