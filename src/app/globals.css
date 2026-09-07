@@ -141,6 +141,36 @@ button, a { font: inherit; }
 .button-danger { border-color: #c89a94; color: #7a2118; background: #fff7f5; }
 .button-link { min-height: auto; padding: 0; border: 0; color: var(--color-muted); background: transparent; }
 .admin-section, .create-panel { margin-bottom: var(--space-6); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-paper); }
+.report-images-manager { min-width: 0; }
+.report-images-manager h3 { margin: 0 0 var(--space-4); font-size: 1.15rem; }
+.managed-report-card { border-top: 1px solid var(--color-border); scroll-margin-top: var(--space-6); }
+.managed-report-card > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) 0; cursor: pointer; }
+.managed-report-card > summary::after { content: "+"; font-size: 1.5rem; }
+.managed-report-card[open] > summary::after { content: "−"; }
+.managed-report-card > summary span { margin-left: auto; color: var(--color-muted); font-size: .85rem; }
+.managed-report-body { display: grid; gap: var(--space-4); min-width: 0; padding-bottom: var(--space-6); }
+.managed-report, .report-new-upload { min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: white; }
+.managed-report header { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.managed-report h4, .report-new-upload h4 { margin: 0 0 var(--space-3); font-size: 1rem; }
+.managed-report header span { color: var(--color-muted); font-size: .85rem; }
+.managed-report-thumbnails { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; padding: 0; list-style: none; }
+.managed-report-thumbnails a { display: grid; gap: var(--space-1); text-align: center; font-size: .75rem; }
+.managed-report-thumbnails img, .report-image-selection img { object-fit: contain; border: 1px solid var(--color-border); border-radius: .3rem; background: var(--color-paper); }
+.report-replace > summary { padding: var(--space-3) 0; cursor: pointer; font-weight: 600; }
+.report-upload-form { max-width: 100%; margin-bottom: 0; }
+.report-upload-form .field-help { margin: 0; }
+.report-image-selection { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.report-image-selection li { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); min-width: 0; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-paper); }
+.report-image-selection li > span { flex: 1; min-width: 8rem; overflow-wrap: anywhere; font-size: .85rem; }
+.report-image-selection img { flex: none; width: 72px; height: 92px; }
+.report-remove-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+.report-upload-form button:disabled, .report-remove-form button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 600px) {
+  .report-images-manager .admin-section { padding: var(--space-4); }
+  .managed-report-card > summary { flex-wrap: wrap; }
+  .managed-report-card > summary span { margin-left: 0; }
+  .managed-report, .report-new-upload { padding: var(--space-3); }
+}
 .create-panel > summary { width: fit-content; list-style: none; }
 .create-panel[open] > summary { margin-bottom: var(--space-6); }
 .admin-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
@@ -679,11 +709,14 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .archive-latest-circle.is-complete .archive-latest-circle-stroke { stroke-dashoffset: 0; }
 @keyframes archive-latest-circle-stroke-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .archive-unlock-tab-motion { position: absolute; z-index: 20; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.archive-ribbon-backing { position: absolute; z-index: 15; overflow: hidden; pointer-events: none; }
+.archive-ribbon-backing-texture { position: absolute; left: 0; width: 100%; background-repeat: no-repeat; }
+.archive-ribbon-backing-strap { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; }
 .archive-unlock-tab-clip { position: absolute; left: var(--archive-ribbon-left); top: var(--archive-ribbon-top); width: var(--archive-ribbon-width); height: var(--archive-ribbon-height); overflow: hidden; contain: layout paint style; }
 .archive-unlock-tab-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; backface-visibility: hidden; transform: translateZ(0); }
-.archive-unlock-tab-motion[data-unlock-state="hidden"] .archive-unlock-tab-image { transform: translate3d(var(--archive-ribbon-enter-offset),0,0); }
-.archive-unlock-tab-motion[data-unlock-state="entering"] .archive-unlock-tab-image { animation: archive-ribbon-enter var(--archive-ribbon-enter-duration) var(--h5-route-transition-easing) both; will-change: transform; }
-@keyframes archive-ribbon-enter { from { transform: translate3d(var(--archive-ribbon-enter-offset),0,0); } to { transform: translate3d(0,0,0); } }
+.archive-unlock-tab-motion[data-unlock-state="hidden"] .archive-unlock-tab-image { opacity: 0; visibility: hidden; transform: translate3d(var(--archive-ribbon-enter-offset),0,0); }
+.archive-unlock-tab-motion[data-unlock-state="entering"] .archive-unlock-tab-image { animation: archive-ribbon-enter var(--archive-ribbon-enter-duration) var(--h5-route-transition-easing) both; will-change: transform, opacity; }
+@keyframes archive-ribbon-enter { from { opacity: 0; transform: translate3d(var(--archive-ribbon-enter-offset),0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 .archive-result-color { position: absolute; z-index: 21; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .archive-result-color > .motion-stage { position: absolute; inset: auto; top: 32.751485%; left: 6.3%; width: 62.8%; height: 2.033471%; overflow: visible; contain: layout paint style; isolation: isolate; }
 .archive-result-color-trigger { position: absolute; top: 24.8%; left: 10.2%; width: 46.5%; height: 1.8%; pointer-events: none; }

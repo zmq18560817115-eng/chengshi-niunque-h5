@@ -8,10 +8,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <header className="admin-header">
       <div className="admin-brand"><strong>诚实纽雀内容后台</strong><small>{admin.displayName}</small></div>
       <nav aria-label="后台主导航">
-        <Link href="/admin">工作台</Link>
-        <Link href="/admin/modules">报告资料</Link>
-        <Link href="/admin/site">公开批次</Link>
-        <Link href="/admin/audit">操作记录</Link>
+        <Link href="/admin#latest-batch">公开批次</Link>
+        <Link href="/admin#report-images">报告图片</Link>
         <a href="/" target="_blank" rel="noreferrer">预览 H5</a>
         <form action={logoutAction}><button className="button-link">退出登录</button></form>
       </nav>

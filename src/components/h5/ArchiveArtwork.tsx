@@ -5,6 +5,7 @@ import { ArchiveUnlockTabMotion } from "@/components/h5/motion/modules/ArchiveUn
 import { ArchiveFolderPaperMotion } from "@/components/h5/motion/modules/ArchiveFolderPaperMotion";
 import { defaultLatestBatch, type LatestBatch } from "@/config/h5-latest-batch";
 import { ArchiveBatchDetails } from "./ArchiveBatchDetails";
+import { ArchiveRibbonBacking } from "./ArchiveRibbonBacking";
 import { batchArtworkSource } from "./archive-batch-details";
 import {
   archiveEntryMasterWidth,
@@ -12,6 +13,7 @@ import {
   archiveEntryBatchLayers,
   archiveEntryBookLayers,
   archiveEntryPaperLayer,
+  archiveRibbonBacking,
 } from "@/components/h5/archive-entry-transition-visual";
 
 const masterWidth = archiveEntryMasterWidth;
@@ -49,8 +51,8 @@ const layerStack = (id: string) => {
 const guideEntryBookParts = new Set(archiveEntryBookLayers.map((part) => part.id));
 const guideEntryBatchParts = new Set(archiveEntryBatchLayers.map((part) => part.id));
 const layerEntryStage = (id: string) => id === "paper-texture" ? 0 : guideEntryBookParts.has(id) ? 1 : guideEntryBatchParts.has(id) ? 3 : 4;
-export const archiveArtworkWarmAssets = artworkLayers.map((layer) => layer.src);
-export const archiveArtworkCriticalAssets = artworkLayers.filter((layer) => layerEntryStage(layer.id) <= 3).map((layer) => layer.src);
+export const archiveArtworkWarmAssets = [...artworkLayers.map((layer) => layer.src), archiveRibbonBacking.strap.src];
+export const archiveArtworkCriticalAssets = [...artworkLayers.filter((layer) => layerEntryStage(layer.id) <= 3).map((layer) => layer.src), archiveRibbonBacking.strap.src];
 export const archiveArtworkDeferredAssets = artworkLayers.filter((layer) => layerEntryStage(layer.id) > 3).map((layer) => layer.src);
 const deepDeferredParts = new Set(["module-2-review-folder", "module-2-production-folder", "module-3-complete-output"]);
 const risingPaperParts = new Set(["module-2-inspection-paper", "module-2-production-paper"]);
@@ -99,6 +101,7 @@ export const ArchiveArtwork = memo(function ArchiveArtwork({ preview = false, mo
       <div className="reports-archive-entry-group reports-archive-entry-book" data-guide-entry-group="archive-book">
         <div className="reports-archive-entry-coordinate-layer">
           {bookLayers.map(renderLayer)}
+          <ArchiveRibbonBacking />
           <ArchiveUnlockTabMotion preview={preview} active={ribbonMotionReady} />
         </div>
       </div>

@@ -19,7 +19,8 @@ describe("batch publishing action", () => {
     for (const [key, item] of Object.entries(value)) form.set(key, item);
     expect(await publishLatestBatchAction({}, form)).toEqual({ saved: true, value });
     expect(publish).toHaveBeenCalledWith(value, "operator");
-    for (const path of ["/go", "/reports", "/admin/site", "/api/public/content"]) expect(revalidate).toHaveBeenCalledWith(path);
+    for (const path of ["/go", "/admin", "/admin/site", "/api/public/content"]) expect(revalidate).toHaveBeenCalledWith(path);
+    expect(revalidate).toHaveBeenCalledWith("/reports", "layout");
   });
   it("keeps the previous published value when validation fails", async () => {
     requireAdmin.mockResolvedValueOnce({ id: "operator" });

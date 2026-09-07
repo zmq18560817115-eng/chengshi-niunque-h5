@@ -1,18 +1,17 @@
-import Link from "next/link";
-import { AdminContentService } from "@/server/services/admin-content-service";
+import { LatestBatchForm } from "@/components/admin/LatestBatchForm";
+import { ReportImagesManager } from "@/components/admin/ReportImagesManager";
+import { LatestBatchService } from "@/server/services/latest-batch-service";
+import { AdminReportImagesService } from "@/server/services/admin-report-images-service";
+import { requireCurrentAdmin } from "@/server/auth/request-session";
 
 export default async function AdminPage() {
-  const stats = await new AdminContentService().dashboard();
+  await requireCurrentAdmin();
+  const [batch, cards] = await Promise.all([new LatestBatchService().get(), new AdminReportImagesService().list()]);
   return <main>
     <div className="admin-page-heading">
-      <div><p className="eyebrow">内容维护工作台</p><h1>H5 内容概览</h1><p>维护分类、卡片与报告资料；固定视觉文案、布局、字体、颜色和动画由前端版本统一管理。</p></div>
-      <div className="row-actions"><Link className="button button-primary" href="/admin/modules">管理报告资料</Link><Link className="button" href="/admin/site">管理公开批次</Link></div>
+      <div><h1>批次与报告图片管理</h1><p>在此更新首页公开批次和对应项目的报告图片。</p></div>
     </div>
-    <div className="admin-grid">
-      <section><span>全部分类</span><strong>{stats.total}</strong><small>当前未删除的档案分类</small></section>
-      <section><span>待处理草稿</span><strong>{stats.draft + stats.draftCards + stats.draftAssets}</strong><small>{stats.draft} 个分类 · {stats.draftCards} 张卡片 · {stats.draftAssets} 条资料</small></section>
-      <section><span>正在展示</span><strong>{stats.published}</strong><small>已发布且在线的分类</small></section>
-      <section><span>已下线</span><strong>{stats.offline}</strong><small>保留内容但不公开展示</small></section>
-    </div>
+    <div id="latest-batch"><LatestBatchForm initialValue={batch}/></div>
+    <ReportImagesManager cards={cards}/>
   </main>;
 }

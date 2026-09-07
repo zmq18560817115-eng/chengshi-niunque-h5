@@ -1,47 +1,36 @@
 import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
-
-const { redirectMock } = vi.hoisted(() => ({ redirectMock: vi.fn() }));
+const { redirectMock, list } = vi.hoisted(() => ({ redirectMock: vi.fn(), list: vi.fn().mockResolvedValue([]) }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock, useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/server/auth/request-session", () => ({ requireCurrentAdmin: vi.fn().mockResolvedValue({ displayName: "管理员" }) }));
 vi.mock("@/server/services/latest-batch-service", () => ({ LatestBatchService: class { get() { return Promise.resolve({ regularBatch: "GD00046087", trialBatch: "GD00046086", inspectionDate: "2026-08" }); } } }));
-
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
-vi.mock("@/server/auth/request-session", () => ({
-  requireCurrentAdmin: vi.fn().mockResolvedValue({ displayName: "管理员" }),
-}));
-vi.mock("@/server/services/admin-content-service", () => ({
-  AdminContentService: class {
-    dashboard() {
-      return Promise.resolve({ total: 3, draft: 0, draftCards: 0, draftAssets: 0, published: 3, offline: 0 });
-    }
-  },
-}));
+vi.mock("@/server/services/admin-report-images-service", () => ({ AdminReportImagesService: class { list = list; } }));
 vi.mock("@/app/admin/actions", () => ({ logoutAction: vi.fn(), publishLatestBatchAction: vi.fn() }));
-
+vi.mock("@/app/admin/report-image-actions", () => ({ publishReportImagesAction: vi.fn(), removeReportImagesAction: vi.fn() }));
 import AdminLayout from "@/app/admin/(protected)/layout";
 import AdminPage from "@/app/admin/(protected)/page";
 import SiteSettingsPage from "@/app/admin/(protected)/site/page";
+import ModulesPage from "@/app/admin/(protected)/modules/page";
 
-describe("scoped homepage batch administration", () => {
-  it("offers only the three approved batch fields at the site settings URL", async () => {
-    render(await SiteSettingsPage());
+describe("single-page batch and report administration", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("places exactly the three batch fields and report uploads on the same page", async () => {
+    render(await AdminPage());
     expect(screen.getByRole("textbox", { name: "正装批次号" })).toHaveValue("GD00046087");
     expect(screen.getByRole("textbox", { name: "试用装批次号" })).toHaveValue("GD00046086");
     expect(screen.getByRole("textbox", { name: /检测日期/ })).toHaveValue("2026-08");
     expect(screen.getAllByRole("textbox")).toHaveLength(3);
-    expect(redirectMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "报告图片" })).toBeInTheDocument();
   });
-
-  it("does not expose a homepage settings link in admin navigation", async () => {
-    render(await AdminLayout({ children: <div>内容</div> }));
-    expect(screen.queryByRole("link", { name: /首页|页面内容|站点设置/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "报告资料" })).toHaveAttribute("href", "/admin/modules");
-    expect(screen.getByRole("link", { name: "公开批次" })).toHaveAttribute("href", "/admin/site");
+  it("navigates within one management page", async () => {
+    render(await AdminLayout({ children: <div/> }));
+    expect(screen.getByRole("link", { name: "报告图片" })).toHaveAttribute("href", "/admin#report-images");
+    expect(screen.getByRole("link", { name: "公开批次" })).toHaveAttribute("href", "/admin#latest-batch");
+    expect(screen.queryByRole("link", { name: "操作记录" })).not.toBeInTheDocument();
   });
-
-  it("keeps the dashboard focused on report content management", async () => {
-    render(await AdminPage());
-    expect(screen.queryByRole("link", { name: /首页|页面内容|站点设置/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "管理报告资料" })).toHaveAttribute("href", "/admin/modules");
-    expect(screen.getByRole("link", { name: "管理公开批次" })).toHaveAttribute("href", "/admin/site");
+  it("redirects old management levels to the corresponding section", async () => {
+    await SiteSettingsPage();
+    expect(redirectMock).toHaveBeenCalledWith("/admin#latest-batch");
+    await ModulesPage();
+    expect(redirectMock).toHaveBeenCalledWith("/admin#report-images");
   });
 });

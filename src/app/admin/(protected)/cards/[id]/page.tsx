@@ -1,9 +1,7 @@
-import { notFound, redirect } from "next/navigation";
-import { AdminContentService } from "@/server/services/admin-content-service";
+import { redirect } from "next/navigation";
+import { requireCurrentAdmin } from "@/server/auth/request-session";
 
-export default async function LegacyCardPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const card = await new AdminContentService().getCard(id);
-  if (!card) notFound();
-  redirect(`/admin/modules/${card.moduleId}`);
+export default async function LegacyAdminPage() {
+  await requireCurrentAdmin();
+  redirect("/admin#report-images");
 }

@@ -23,6 +23,8 @@ import {
 } from "@/components/h5/guide-route-transition";
 import { releaseHomepagePreloadedAssets } from "@/components/h5/homepage-preload";
 import { ArchiveBatchDetails } from "./ArchiveBatchDetails";
+import { ArchiveRibbonBacking } from "./ArchiveRibbonBacking";
+import { H5_MOTION_ENABLED, h5MotionModules } from "./motion/motion-config";
 import { archiveFallbackSource, batchArtworkSource } from "./archive-batch-details";
 import { defaultLatestBatch, formatInspectionDate } from "@/config/h5-latest-batch";
 import { designAssets } from "@/config/design-assets.generated";
@@ -358,6 +360,7 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
       {(preview || deferredMounted) && <ArchiveSectionTitleMotion preview={preview} activeSlug={pressedSlug} />}
       <div className="reports-archive-reference-fallback" data-fallback-image={fallbackImageMounted ? "mounted" : "released"}>
         {fallbackImageMounted ? <><Image className="reports-archive-reference-fallback-image" src={archiveFallbackSource(config.latestBatch)} alt="" fill sizes="(max-width: 750px) 100vw, 750px" priority unoptimized style={{ objectFit: "fill" }} onError={() => setLayerArtworkFailed(true)} /><ArchiveBatchDetails value={config.latestBatch}/></> : null}
+        {fallbackImageMounted && !preview && !artworkFailed && H5_MOTION_ENABLED && h5MotionModules.archiveUnlockTab ? <ArchiveRibbonBacking/> : null}
       </div>
       {artworkFailed ? <div className="reports-archive-artwork-error" role="alert">
         <span>部分档案素材加载失败，已保留预览。</span>
