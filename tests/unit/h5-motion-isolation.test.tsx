@@ -584,7 +584,7 @@ describe("H5 motion isolation", () => {
     expect(designAssets.archiveModule2[0].y).toBeGreaterThan(3733);
     expect(designAssets.archiveModule3.y).toBe(7974);
     expect(designAssets.archiveModule3.y + designAssets.archiveModule3.height).toBe(designAssets.archiveHeight);
-    for (const part of [...designAssets.archiveBook, ...designAssets.archiveBatch, ...designAssets.archiveModule2, designAssets.archiveModule3]) expect(existsSync(`public${part.src}`)).toBe(true);
+    for (const part of [...designAssets.archiveBook, ...designAssets.archiveBatch, ...designAssets.archiveModule2, designAssets.archiveModule3]) expect(existsSync(`public${part.src.split("?")[0]}`)).toBe(true);
   });
 
   it("restores four original fish poses with the shared click-cue rhythm and visibility gate", () => {

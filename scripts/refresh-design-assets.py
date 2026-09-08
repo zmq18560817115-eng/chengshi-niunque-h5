@@ -11,9 +11,8 @@ import json
 import math
 import shutil
 
-import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "public/design/2026-09-07"
@@ -21,7 +20,7 @@ SOURCES = OUTPUT / "source"
 QA = ROOT / "artifacts/asset-refresh"
 GROUPS = {
     "guide": ("1-kv", "h5kv - 9.4完整图.png"),
-    "archive-1": ("2-长图模块1", "长图模块一完整.png"),
+    "archive-1": ("2-长图模块1", "长图模块1完整图.jpg"),
     "archive-2": ("2-长图模块2", "长图模块二完整.jpg"),
     "archive-3": ("2-长图模块3", "长图模块三.jpg"),
     "inspection": ("3-报告检测页面-模块1", "报告点击页-模块1-完整图.jpg"),
@@ -41,6 +40,7 @@ def register(reference, image, scale=1.0):
     The coarse match is refined at source resolution. Opaque samples avoid
     treating transparent pixels as a black background.
     """
+    import cv2
     # Texture/illustration components may have been uniformly resized by the
     # designer. Derive their transform from matching internal source features.
     if image.width > 500 and image.height > 500:
@@ -107,6 +107,8 @@ def inventory(source=None):
     for name, (folder, ref_name) in GROUPS.items():
         reference = rgba(SOURCES / folder / ref_name)
         group = {"reference": f"{folder}/{ref_name}", "size": list(reference.size), "parts": {}}
+        if name == "archive-1":
+            group.update(canvasSize=[2000, 3733], revision="20260908")
         for path in (SOURCES/folder).rglob("*.png"):
             if path.name == ref_name or "底" in path.name or "背景" in path.name or path.name == "h5kv - 输出.png": continue
             im = rgba(path)
@@ -152,6 +154,36 @@ def build_fish_motion(config):
     (ROOT/"src/app/design-motion.generated.css").write_text("\n".join(css)+"\n",encoding="utf-8")
 
 
+def runtime_path(src):
+    return ROOT / "public" / src.split("?", 1)[0].lstrip("/")
+
+
+def archive_one_reference(manifest):
+    group = manifest["groups"]["archive-1"]
+    reference = rgba(SOURCES / group["reference"])
+    # The replacement export is 35px shorter. Preserve the existing module
+    # boundary using the supplied common texture, without stretching the art.
+    canvas_size = (2000, 3733)
+    if reference.size == canvas_size:
+        return reference
+    if reference.width != canvas_size[0] or reference.height > canvas_size[1]:
+        raise ValueError(f"Unexpected module-one canvas: {reference.size}")
+    paper = rgba(SOURCES / "2-长图模块1/三个模块的底图（都是一样的）.jpg")
+    canvas = paper.crop((0, 0, *canvas_size))
+    canvas.alpha_composite(reference)
+    return canvas
+
+
+def version_archive_one(config, manifest):
+    revision = manifest["groups"]["archive-1"].get("revision")
+    if not revision:
+        return
+    for item in [*config["archiveBook"], *config["archiveBatch"]]:
+        item["src"] = item["src"].split("?", 1)[0] + f"?v={revision}"
+    for key in ["archiveBatchEditable", "archiveFallback", "archiveFallbackEditable"]:
+        config[key] = config[key].split("?", 1)[0] + f"?v={revision}"
+
+
 def build_archive_entry(config, manifest):
     """Two complete groups, with the approved final frame preserved pixel-for-pixel.
 
@@ -160,7 +192,7 @@ def build_archive_entry(config, manifest):
     no old artwork, painted shape or rectangular moving page slice is used.
     """
     group=manifest["groups"]["archive-1"]
-    a1=rgba(SOURCES/group["reference"])
+    a1=archive_one_reference(manifest)
     parts=group["parts"]
     for n,x,y in [(11,745,2904),(7,100,2846),(18,134,3312),(19,134,3173)]:
         parts[f"资源 {n}"].update(x=x,y=y)
@@ -171,8 +203,7 @@ def build_archive_entry(config, manifest):
         layer=Image.new("L",a1.size)
         layer.paste(part.getchannel("A"),(p["x"],p["y"]))
         mask=np.maximum(mask,np.asarray(layer))
-    mask=cv2.dilate((mask>8).astype(np.uint8)*255,np.ones((7,7),np.uint8))
-    batch_mask=Image.fromarray(mask)
+    batch_mask=Image.fromarray((mask>8).astype(np.uint8)*255).filter(ImageFilter.MaxFilter(7))
 
     underlay=a1.copy()
     yellow=a1.crop((10,1800,210,2400))
@@ -236,7 +267,7 @@ def build_editable_batch(config):
     from PIL import ImageDraw
     boxes=[(270,2904,637,2968),(328,2970,650,3034),(740,2904,1065,2968)]
     part=config["archiveBatch"][0]
-    batch=rgba(ROOT/"public"/part["src"].lstrip("/"))
+    batch=rgba(runtime_path(part["src"]))
     alpha=batch.getchannel("A")
     draw=ImageDraw.Draw(alpha)
     sx,sy=batch.width/part["width"],batch.height/part["height"]
@@ -245,8 +276,8 @@ def build_editable_batch(config):
     batch.putalpha(alpha)
     batch.save(OUTPUT/"runtime/archive-batch-editable.webp","WEBP",lossless=True,method=6,exact=True)
     config["archiveBatchEditable"]="/design/2026-09-07/runtime/archive-batch-editable.webp"
-    fallback=rgba(ROOT/"public"/config["archiveFallback"].lstrip("/"))
-    book=rgba(ROOT/"public"/config["archiveBook"][0]["src"].lstrip("/"))
+    fallback=rgba(runtime_path(config["archiveFallback"]))
+    book=rgba(runtime_path(config["archiveBook"][0]["src"]))
     scale=fallback.width/2000
     book=book.resize((fallback.width,round(3733*scale)),Image.Resampling.LANCZOS)
     for x1,y1,x2,y2 in boxes:
@@ -254,6 +285,23 @@ def build_editable_batch(config):
         fallback.paste(book.crop(box),box[:2])
     fallback.save(OUTPUT/"runtime/archive-reference-editable.webp","WEBP",quality=92,method=6,exact=True)
     config["archiveFallbackEditable"]="/design/2026-09-07/runtime/archive-reference-editable.webp"
+
+
+def build_archive_module_one(config, manifest):
+    """Replace module one only; retain the later fallback artwork and layout."""
+    previous_editable = rgba(runtime_path(config["archiveFallbackEditable"]))
+    build_archive_entry(config, manifest)
+    reference = archive_one_reference(manifest)
+    fallback = rgba(runtime_path(config["archiveFallback"]))
+    height = round(reference.height * fallback.width / reference.width)
+    first_module = reference.resize((fallback.width, height), Image.Resampling.LANCZOS)
+    fallback.paste(first_module, (0, 0))
+    fallback.save(runtime_path(config["archiveFallback"]), "WEBP", quality=92, method=6, exact=True)
+    build_editable_batch(config)
+    editable = rgba(runtime_path(config["archiveFallbackEditable"]))
+    editable.paste(previous_editable.crop((0, height, editable.width, editable.height)), (0, height))
+    editable.save(runtime_path(config["archiveFallbackEditable"]), "WEBP", quality=92, method=6, exact=True)
+    config["archiveRibbon"]["x"] = manifest["groups"]["archive-1"]["parts"]["资源 4"]["x"]
 
 
 def build_category_tails(config, manifest):
@@ -271,11 +319,12 @@ def build_category_tails(config, manifest):
 
 
 def build():
+    import cv2
     manifest = json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8"))
     groups = manifest["groups"]
     runtime = OUTPUT/"runtime"
     runtime.mkdir(exist_ok=True)
-    def ref(group): return rgba(SOURCES/groups[group]["reference"])
+    def ref(group): return archive_one_reference(manifest) if group == "archive-1" else rgba(SOURCES/groups[group]["reference"])
     def item(group, n): return groups[group]["parts"][f"资源 {n}" if isinstance(n,int) else n]
     def fix(group,n,x,y): item(group,n).update(x=x,y=y)
     def part(group,n):
@@ -455,6 +504,7 @@ def build():
         points=[[round((int(px)-x)/w*100,4),round((int(py)-y)/h*100,4)] for px,py in contour]
         config["archiveFolderHotspots"].append({"slug":slug,"x":x,"y":y+3733,"width":w,"height":h,"points":points})
     config["archiveModule3"]= {"src":"/design/2026-09-07/runtime/archive-3-static.webp","x":0,"y":7974,"width":2000,"height":2809}
+    version_archive_one(config, manifest)
     (ROOT/"src/config/design-assets.generated.ts").write_text("// Generated by scripts/refresh-design-assets.py --build. Do not hand edit.\nexport const designAssets = "+json.dumps(config,ensure_ascii=False,indent=2)+" as const;\n",encoding="utf-8")
     for group in manifest["groups"].values():
         for placement in group["parts"].values():
@@ -470,19 +520,23 @@ if __name__ == "__main__":
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--fish-motion", action="store_true")
     parser.add_argument("--archive-entry", action="store_true")
+    parser.add_argument("--archive-module-one", action="store_true")
     parser.add_argument("--category-tails", action="store_true")
     parser.add_argument("--editable-batch", action="store_true")
     parser.add_argument("--loading-motion", action="store_true")
     args = parser.parse_args()
     if args.build: build()
-    elif args.fish_motion or args.archive_entry or args.category_tails or args.editable_batch or args.loading_motion:
+    elif args.fish_motion or args.archive_entry or args.archive_module_one or args.category_tails or args.editable_batch or args.loading_motion:
         target=ROOT/"src/config/design-assets.generated.ts"
         prefix="// Generated by scripts/refresh-design-assets.py --build. Do not hand edit.\nexport const designAssets = "
         config=json.loads(target.read_text(encoding="utf-8").split("export const designAssets = ",1)[1].removesuffix(" as const;\n"))
+        manifest=json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8"))
         if args.fish_motion: build_fish_motion(config)
+        elif args.archive_module_one: build_archive_module_one(config,manifest)
         elif args.archive_entry: build_archive_entry(config,json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8")))
         elif args.editable_batch: build_editable_batch(config)
         elif args.loading_motion: build_loading_motion(config)
         else: build_category_tails(config,json.loads((OUTPUT/"manifest.json").read_text(encoding="utf-8")))
+        version_archive_one(config,manifest)
         target.write_text(prefix+json.dumps(config,ensure_ascii=False,indent=2)+" as const;\n",encoding="utf-8")
     else: inventory(args.source)

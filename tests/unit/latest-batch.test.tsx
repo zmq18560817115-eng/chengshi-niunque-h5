@@ -4,6 +4,7 @@ import { validateLatestBatch } from "@/server/services/latest-batch-service";
 import { publicSiteConfig } from "@/server/services/public-content-service";
 import { ArchiveArtwork } from "@/components/h5/ArchiveArtwork";
 import { createArchiveEntryTransitionVisual } from "@/components/h5/archive-entry-transition-visual";
+import { designAssets } from "@/config/design-assets.generated";
 
 const edited = { regularBatch: "GD00049001", trialBatch: "GD00049002", inspectionDate: "2026-09-07" };
 
@@ -28,10 +29,10 @@ describe("editable latest public batch", () => {
   });
   it("preserves the exact default assets and uses matching custom text in live and handoff groups", () => {
     const { container, rerender } = render(<ArchiveArtwork preview/>);
-    expect(container.querySelector('[data-source-part="module-1-batch-0"]')).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-module.webp");
+    expect(container.querySelector('[data-source-part="module-1-batch-0"]')).toHaveAttribute("src", designAssets.archiveBatch[0].src);
     expect(container.querySelector(".archive-batch-values")).toBeNull();
     rerender(<ArchiveArtwork preview latestBatch={edited}/>);
-    expect(container.querySelector('[data-source-part="module-1-batch-0"]')).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-batch-editable.webp");
+    expect(container.querySelector('[data-source-part="module-1-batch-0"]')).toHaveAttribute("src", designAssets.archiveBatchEditable);
     const handoff = createArchiveEntryTransitionVisual(undefined, edited);
     for (const root of [container, handoff.visual]) {
       expect(root.querySelector('[data-batch-field="regularBatch"]')).toHaveTextContent(edited.regularBatch);

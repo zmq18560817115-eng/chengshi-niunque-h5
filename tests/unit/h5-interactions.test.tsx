@@ -1,4 +1,5 @@
 import { archiveClickCueLayout, getArchiveModuleLayout } from "@/config/h5-archive-modules";
+import { designAssets } from "@/config/design-assets.generated";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrandGuide, guideLiveStageTransitionWatchdogMs } from "@/components/h5/BrandGuide";
 import { GuideExperience } from "@/components/h5/GuideExperience";
@@ -341,7 +342,7 @@ describe("multi-page H5 interactions", () => {
       "module-1-batch-0",
     ]);
     const batch = batchGroup.querySelector<HTMLElement>('[data-source-part="module-1-batch-0"]');
-    expect(batch).toHaveAttribute("src", "/design/2026-09-07/runtime/archive-1-batch-module.webp");
+    expect(batch).toHaveAttribute("src", designAssets.archiveBatch[0].src);
     expect(batch).toHaveAttribute("data-guide-entry-stage", "3");
     expect(container.querySelector(".archive-module-one")).not.toBeInTheDocument();
     expect(container.querySelector('[data-slug="inspection-projects"]')).toBeInTheDocument();

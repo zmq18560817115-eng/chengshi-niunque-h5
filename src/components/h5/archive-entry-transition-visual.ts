@@ -54,7 +54,7 @@ export const archiveRibbonBacking = {
   donorTop: 3120, tileHeight: 100,
   book: designAssets.archiveBook[0],
   strap: {
-    src: "/design/2026-09-07/source/2-长图模块1/长图模块一，部件/资源 22.png",
+    src: "/design/2026-09-07/source/2-长图模块1/长图模块一，部件/资源 24.png",
     x: 206, y: 470, width: 2037, height: 2527,
   },
 } as const;

@@ -152,7 +152,7 @@ export const designAssets = {
   ],
   "archiveBook": [
     {
-      "src": "/design/2026-09-07/runtime/archive-1-book-stage.webp",
+      "src": "/design/2026-09-07/runtime/archive-1-book-stage.webp?v=20260908",
       "x": 0,
       "y": 0,
       "width": 2000,
@@ -161,7 +161,7 @@ export const designAssets = {
   ],
   "archiveBatch": [
     {
-      "src": "/design/2026-09-07/runtime/archive-1-batch-module.webp",
+      "src": "/design/2026-09-07/runtime/archive-1-batch-module.webp?v=20260908",
       "x": 0,
       "y": 2594,
       "width": 1631,
@@ -188,7 +188,7 @@ export const designAssets = {
   ],
   "archiveRibbon": {
     "src": "/design/2026-09-07/runtime/archive-1-4.webp",
-    "x": 1849,
+    "x": 1852,
     "y": 2509,
     "width": 158,
     "height": 597
@@ -867,7 +867,7 @@ export const designAssets = {
       "tail": "/design/2026-09-07/runtime/traceability-page-tail.webp"
     }
   },
-  "archiveFallback": "/design/2026-09-07/runtime/archive-reference.webp",
+  "archiveFallback": "/design/2026-09-07/runtime/archive-reference.webp?v=20260908",
   "archiveModule2": [
     {
       "id": "module-2-heading",
@@ -9214,8 +9214,8 @@ export const designAssets = {
     "width": 2000,
     "height": 2809
   },
-  "archiveBatchEditable": "/design/2026-09-07/runtime/archive-batch-editable.webp",
-  "archiveFallbackEditable": "/design/2026-09-07/runtime/archive-reference-editable.webp",
+  "archiveBatchEditable": "/design/2026-09-07/runtime/archive-batch-editable.webp?v=20260908",
+  "archiveFallbackEditable": "/design/2026-09-07/runtime/archive-reference-editable.webp?v=20260908",
   "loadingMotion": {
     "width": 2000,
     "height": 4333,

@@ -26,6 +26,9 @@
   --font-body: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --h5-content-width: 750px;
   --report-description-line-height: 1.4;
+  --report-title-size: clamp(1.375rem, 6vw, 1.75rem);
+  --report-summary-size: .8125rem;
+  --report-label-size: .75rem;
   --guide-entry-hint-width: 43.4%;
   --guide-entry-hint-bottom: max(3.3%, env(safe-area-inset-bottom));
   --guide-entry-hint-enter-duration: 900ms;
@@ -1147,17 +1150,20 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .report-page--traceability { --report-accent: #d97935; --report-accent-soft: #f3cf58; background-color: #c87843; }
 .report-page--default { --report-accent: #805f48; --report-accent-soft: #ead9bd; background-color: var(--color-canvas); }
 .report-page-final > .swipe-back-control { position: relative; top: auto; left: auto; display: block; margin: max(var(--space-4), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left)); }
-.report-page-title { padding: calc(env(safe-area-inset-top) + clamp(2rem, 8vw, 4rem)) max(var(--space-6), env(safe-area-inset-right)) var(--space-8) max(var(--space-6), env(safe-area-inset-left)); }
+.report-page-title { padding: calc(env(safe-area-inset-top) + var(--space-3)) max(var(--space-4), env(safe-area-inset-right)) var(--space-3) max(var(--space-4), env(safe-area-inset-left)); }
 .report-page-final > .swipe-back-control + .report-page-title { padding-top: var(--space-4); }
-.report-page-title > p { margin: 0 0 var(--space-2); color: var(--report-accent); font-weight: 800; letter-spacing: .08em; }
-.report-page-title h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 9vw, 3.5rem); line-height: 1.15; }
-.report-page-title > div { max-width: 32rem; margin-top: var(--space-4); line-height: var(--report-description-line-height); }
+.report-page-title > p { margin: 0 0 var(--space-1); color: var(--report-accent); font-size: var(--report-label-size); font-weight: 800; letter-spacing: .08em; }
+.report-page-title h1 { margin: 0; font-family: var(--font-display); font-size: var(--report-title-size); line-height: 1.2; overflow-wrap: anywhere; }
+.report-page-title > div { max-width: 32rem; margin-top: var(--space-2); font-size: var(--report-summary-size); line-height: var(--report-description-line-height); overflow-wrap: anywhere; }
 /* Report images use the full safe viewport width; only text and controls have gutters. */
 .report-page-content { display: grid; min-width: 0; gap: var(--space-6); padding: 0 0 max(var(--space-8), env(safe-area-inset-bottom)); }
 .image-report, .report-file-card { min-width: 0; max-width: 100%; overflow: hidden; background: var(--color-paper); }
 .report-file-card { border: 2px solid rgb(255 255 255 / .75); border-radius: var(--radius-md); box-shadow: var(--shadow-paper); }
 .image-report > header, .report-file-card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); }
 .image-report h2, .report-file-card h2 { margin: 0; font-size: 1rem; }
+.image-report > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+.image-report > header > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.image-report h2 { font-size: var(--report-summary-size); line-height: 1.4; }
 .image-report header p, .report-file-card p { margin: var(--space-1) 0 0; color: var(--color-muted); font-size: .82rem; line-height: 1.5; }
 .report-page-count { display: block; margin-top: var(--space-1); color: var(--color-muted); font-size: .75rem; }
 .report-zoom-controls { display: flex; flex: none; align-items: center; gap: var(--space-1); }
@@ -1253,7 +1259,7 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 
 @media (orientation: landscape) and (max-height: 500px) {
   .brand-guide-enter-action { height: max(2.75rem,18dvh); }
-  .report-page-title { padding-top: max(var(--space-4), env(safe-area-inset-top)); padding-bottom: var(--space-4); }
+  .report-page-title { padding-top: max(var(--space-2), env(safe-area-inset-top)); padding-bottom: var(--space-2); }
   .report-image-stage.is-zoomed { height: min(70vh,26rem); height: min(70svh,26rem); }
 }
 
@@ -1266,8 +1272,6 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
   .admin-header, .admin-header nav { align-items: flex-start; flex-direction: column; }
   .admin-header div { width: 100%; justify-content: space-between; }
   .admin-list li { align-items: flex-start; flex-direction: column; }
-  .image-report > header { align-items: flex-start; flex-direction: column; }
-  .report-zoom-controls { width: 100%; justify-content: space-between; }
   .admin-page-heading, .workspace-heading, .admin-toolbar { flex-direction: column; }
   .admin-toolbar label { width: 100%; max-width: none; }
   .module-table { min-width: 0; }
