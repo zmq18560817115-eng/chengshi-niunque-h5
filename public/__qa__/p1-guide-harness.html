@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html, body { margin: 0; min-width: 0; min-height: 0; background: #202020; }
+    iframe { display: block; border: 0; background: #f8e89d; }
+  </style>
+</head>
+<body>
+  <iframe id="viewport" title="P1 local visual QA"></iframe>
+  <label>QA state <input id="qa-state" value="w=375&amp;h=812&amp;p=0"></label>
+  <button id="qa-apply" type="button">Apply QA state</button>
+  <script>
+    const frame = document.getElementById("viewport");
+    document.getElementById("qa-apply").addEventListener("click", () => {
+      location.hash = document.getElementById("qa-state").value;
+    });
+    frame.src = `/go?local-visual-qa=${Date.now()}`;
+    frame.addEventListener("load", async () => {
+      const doc = frame.contentDocument;
+      let root = null;
+      for (let tick = 0; tick < 240 && !root; tick += 1) {
+        root = doc.querySelector(".brand-guide");
+        if (!root) await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      if (!root) return;
+      const images = Array.from(doc.querySelectorAll(".brand-guide img"));
+      await Promise.all(images.map(async (image) => {
+        if (!image.complete) await new Promise((resolve) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        });
+        if (image.naturalWidth > 0 && image.decode) await image.decode().catch(() => undefined);
+      }));
+      const stage = doc.querySelector(".brand-guide-stage");
+      for (let tick = 0; tick < 300 && stage.dataset.swipeState !== "ready"; tick += 1) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      const portal = doc.querySelector("nextjs-portal");
+      if (portal) portal.style.display = "none";
+      const applyState = async () => {
+        const state = new URLSearchParams(location.hash.slice(1));
+        const width = Math.max(320, Number(state.get("w")) || 375);
+        const height = Math.max(320, Number(state.get("h")) || 812);
+        const progress = Math.min(1, Math.max(0, Number(state.get("p")) || 0));
+        frame.width = String(width);
+        frame.height = String(height);
+        frame.style.width = `${width}px`;
+        frame.style.height = `${height}px`;
+        const travel = height * .18;
+        root.classList.add("is-dragging");
+        root.style.setProperty("--guide-swipe-guide-offset", `${-progress * travel}px`);
+        root.style.setProperty("--guide-swipe-destination-offset", `${(1 - progress) * travel}px`);
+        root.style.setProperty("--guide-swipe-guide-opacity", String(Math.max(0, 1 - progress)));
+        root.style.setProperty("--guide-swipe-destination-opacity", String(Math.min(1, progress / .45)));
+        root.dataset.swipeProgress = progress.toFixed(3);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        document.documentElement.dataset.qaState = `${width}x${height}-p${Math.round(progress * 100)}`;
+      };
+      window.addEventListener("hashchange", applyState);
+      await applyState();
+      document.documentElement.dataset.qaReady = "true";
+    }, { once: true });
+  </script>
+</body>
+</html>
