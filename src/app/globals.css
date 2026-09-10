@@ -786,7 +786,8 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .archive-category-hotspot, .archive-click-cue-hotspot, .category-card-hotspot { position: absolute; z-index: 2; display: block; min-width: 44px; min-height: 44px; border-radius: 1rem; color: transparent; text-decoration: none; touch-action: manipulation; user-select: none; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
 .archive-category-hotspot span, .archive-click-cue-hotspot span, .category-card-hotspot span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .archive-category-hotspot:focus-visible, .archive-click-cue-hotspot:focus-visible, .category-card-hotspot:focus-visible { outline: 3px solid #40291f; outline-offset: -3px; }
-.archive-category-hotspot, .archive-click-cue-hotspot { padding: 0; border: 0; opacity: 0; background: transparent; transform: none; transition: opacity 100ms ease, background-color 100ms ease; }
+/* Keep hit targets visible to iOS hit testing; the artwork provides the visuals. */
+.archive-category-hotspot, .archive-click-cue-hotspot { padding: 0; border: 0; opacity: 1; background: transparent; transform: none; transition: background-color 100ms ease; }
 .archive-click-cue-hotspot { z-index: 3; }
 .archive-inspection-mascot-hotspot { z-index: 4; }
 .archive-category-hotspot.is-visible { opacity: 1; transform: none; }

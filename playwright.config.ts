@@ -53,7 +53,7 @@ export default defineConfig({
       // Keep the historical suite on Chromium, but run the P1 visual and
       // touch-heavy image viewer contracts against mobile WebKit as well.
       name: "mobile-webkit-p1",
-      testMatch: /(?:p1-regression|report-image-viewer)\.spec\.ts/,
+      testMatch: /(?:p1-regression|report-image-viewer|archive-native-taps)\.spec\.ts/,
       use: {
         browserName: "webkit",
         isMobile: true,

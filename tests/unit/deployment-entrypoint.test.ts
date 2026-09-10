@@ -82,7 +82,7 @@ describe("production deployment entrypoint", () => {
     expect(playwright).toContain('name: "android-chromium"');
     expect(playwright).toContain('name: "mobile-webkit-p1"');
     expect(playwright).not.toContain('devices["iPhone 13"]');
-    expect(playwright).toContain("(?:p1-regression|report-image-viewer)\\.spec\\.ts");
+    expect(playwright).toContain("(?:p1-regression|report-image-viewer|archive-native-taps)\\.spec\\.ts");
     expect(packageJson).toContain('"test:e2e:p1"');
     expect(packageJson).toContain('"test:e2e:rollback"');
   });

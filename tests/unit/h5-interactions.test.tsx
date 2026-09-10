@@ -26,6 +26,16 @@ const originalImageDecode = Object.getOwnPropertyDescriptor(HTMLImageElement.pro
 const originalImageNaturalWidth = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "naturalWidth");
 const originalInnerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
 const originalInnerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
+const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+const originalElementFromPoint = Object.getOwnPropertyDescriptor(document, "elementFromPoint");
+
+function archiveTouch(target: HTMLElement, type: string, values: Record<string, string | number | boolean> = {}) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  for (const [key, value] of Object.entries({ pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 200, clientY: 300, ...values })) {
+    Object.defineProperty(event, key, { value });
+  }
+  fireEvent(target, event);
+}
 
 class PreloadImageMock {
   decoding = "auto";
@@ -149,6 +159,7 @@ describe("multi-page H5 interactions", () => {
     vi.stubGlobal("Image", PreloadImageMock);
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: vi.fn(() => null) });
     Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, get: () => 750 });
     Object.defineProperty(HTMLImageElement.prototype, "decode", {
       configurable: true,
@@ -187,6 +198,9 @@ describe("multi-page H5 interactions", () => {
     if (originalImageNaturalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalImageNaturalWidth);
     if (originalInnerWidth) Object.defineProperty(window, "innerWidth", originalInnerWidth);
     if (originalInnerHeight) Object.defineProperty(window, "innerHeight", originalInnerHeight);
+    if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    if (originalElementFromPoint) Object.defineProperty(document, "elementFromPoint", originalElementFromPoint);
+    else delete (document as Partial<Document>).elementFromPoint;
   });
 
   it("maps the three archive folders to their matching category routes", () => {
@@ -271,6 +285,72 @@ describe("multi-page H5 interactions", () => {
     fireEvent.click(hotspot);
     expect(archive).toHaveClass("is-leaving");
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
+    window.dispatchEvent(new Event("pagehide"));
+  });
+
+  it.each(["inspection-projects", "review-assurance", "production-traceability"].flatMap((slug) => [
+    [slug, ".archive-category-hotspot"], [slug, ".archive-click-cue-hotspot"],
+  ]))("opens %s from %s on touch release even if iOS never sends click", (slug, selector) => {
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: slug, description: null, cards: [] }]}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>(selector)!;
+    vi.mocked(document.elementFromPoint).mockReturnValue(hotspot);
+    archiveTouch(hotspot, "pointerdown");
+    archiveTouch(hotspot, "pointermove", { clientX: 208, clientY: 308 });
+    expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
+    archiveTouch(hotspot, "pointerup", { clientX: 208, clientY: 308 });
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
+    const attempt = document.documentElement.getAttribute(categoryRouteAttemptAttribute)!;
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, attempt);
+    expect(fireEvent.touchEnd(hotspot, { touches: [] })).toBe(false);
+    fireEvent.click(hotspot);
+    expect(document.documentElement).toHaveAttribute(categoryRouteAttemptAttribute, attempt);
+    window.dispatchEvent(new Event("pagehide"));
+  });
+
+  it.each(["drag", "pointercancel", "touchcancel", "multitouch", "contextmenu", "outside", "scroll", "other-pointer"])("does not turn %s into a release-triggered navigation", (reason) => {
+    const slug = "review-assurance";
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: slug, description: null, cards: [] }]}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>(".archive-category-hotspot")!;
+    vi.mocked(document.elementFromPoint).mockReturnValue(hotspot);
+    archiveTouch(hotspot, "pointerdown");
+    if (reason === "drag") {
+      archiveTouch(hotspot, "pointermove", { clientY: 400 });
+      archiveTouch(hotspot, "pointermove", { clientY: 300 });
+    }
+    if (reason === "pointercancel") archiveTouch(hotspot, "pointercancel");
+    if (reason === "touchcancel") fireEvent.touchCancel(hotspot);
+    if (reason === "multitouch") fireEvent.touchStart(document.body, { touches: [{ identifier: 1 }, { identifier: 2 }] });
+    if (reason === "contextmenu") fireEvent.contextMenu(hotspot);
+    if (reason === "outside") vi.mocked(document.elementFromPoint).mockReturnValue(null);
+    if (reason === "scroll") Object.defineProperty(window, "scrollY", { configurable: true, value: window.scrollY + 20 });
+    archiveTouch(hotspot, "pointerup", { pointerId: reason === "other-pointer" ? 2 : 1 });
+    expect(container.querySelector(".reports-archive")).not.toHaveClass("is-leaving");
+    expect(document.documentElement).not.toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
+    vi.mocked(document.elementFromPoint).mockReturnValue(hotspot);
+    archiveTouch(hotspot, "pointerdown");
+    archiveTouch(hotspot, "pointerup");
+    expect(container.querySelector(".reports-archive")).toHaveClass("is-leaving");
+    window.dispatchEvent(new Event("pagehide"));
+  });
+
+  it("unlocks the archive when Safari restores a cached document after navigation", () => {
+    const slug = "inspection-projects";
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: slug, description: null, cards: [] }]}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>(".archive-category-hotspot")!;
+    vi.mocked(document.elementFromPoint).mockReturnValue(hotspot);
+    archiveTouch(hotspot, "pointerdown");
+    archiveTouch(hotspot, "pointerup");
+    const attempt = document.documentElement.getAttribute(categoryRouteAttemptAttribute);
+    expect(hotspot).toBeDisabled();
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+      window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+    });
+    expect(hotspot).toBeEnabled();
+    archiveTouch(hotspot, "pointerdown");
+    archiveTouch(hotspot, "pointerup");
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute);
+    expect(document.documentElement.getAttribute(categoryRouteAttemptAttribute)).not.toBe(attempt);
     window.dispatchEvent(new Event("pagehide"));
   });
 

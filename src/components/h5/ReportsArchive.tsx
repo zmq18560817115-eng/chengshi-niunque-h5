@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { archiveClickCueLayouts, getArchiveModuleLayout } from "@/config/h5-archive-modules";
 import type { PublicModule } from "@/server/services/public-content-service";
 import { defaultH5SiteConfig, type H5SiteConfig } from "@/server/services/h5-site-config";
@@ -36,6 +36,7 @@ const reportsReadinessRequests = [
   ...archiveUnlockWarmAssets.map((src) => ({ src, priority: "high" as const })),
 ] as const;
 type ReportsArchiveProps = { modules: PublicModule[]; preview?: boolean; config?: H5SiteConfig };
+const archiveTouchTapSlop = 16;
 
 function waitForDecodedImage(image: HTMLImageElement, timeoutMs = 12000) {
   return new Promise<boolean>((resolve) => {
@@ -123,13 +124,38 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
   const [pressedSlug, setPressedSlug] = useState<string | null>(null);
   const [navigationSlug, setNavigationSlug] = useState<string | null>(null);
   const navigating = useRef(false);
-  const pressGesture = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const pressGesture = useRef<{ pointerId: number; x: number; y: number; scrollY: number; distance: number } | null>(null);
   const cancelledPress = useRef(false);
   const enteredFromGuide = useRef(false);
   const archiveCanvas = useRef<HTMLDivElement | null>(null);
   const artworkFailed = readinessFailed || layerArtworkFailed;
   const artworkComplete = artworkReady && !artworkFailed;
   const visibleModules = useMemo(() => [...modules].filter((module) => getArchiveModuleLayout(module.slug)).sort((a, b) => getArchiveModuleLayout(a.slug)!.order - getArchiveModuleLayout(b.slug)!.order), [modules]);
+
+  useEffect(() => {
+    const cancelMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length < 2 || !pressGesture.current) return;
+      pressGesture.current = null;
+      cancelledPress.current = true;
+      if (!navigating.current) setPressedSlug(null);
+    };
+    const restoreCachedPage = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      // Safari may restore the document with the previous navigation lock.
+      navigating.current = false;
+      pressGesture.current = null;
+      cancelledPress.current = false;
+      setLeaving(false);
+      setNavigationSlug(null);
+      setPressedSlug(null);
+    };
+    document.addEventListener("touchstart", cancelMultiTouch, { capture: true, passive: true });
+    window.addEventListener("pageshow", restoreCachedPage);
+    return () => {
+      document.removeEventListener("touchstart", cancelMultiTouch, true);
+      window.removeEventListener("pageshow", restoreCachedPage);
+    };
+  }, []);
 
   useEffect(() => {
     if (preview) return;
@@ -321,29 +347,55 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     clearPressFeedback();
   };
 
-  const modulePressHandlers = (slug: string) => ({
+  const modulePressHandlers = (module: PublicModule) => ({
     onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === "touch" && event.isPrimary === false) {
+        releasePress(true);
+        return;
+      }
       if (event.isPrimary === false || event.button > 0) return;
       cancelledPress.current = false;
-      pressGesture.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-      pressModule(slug);
+      pressGesture.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, scrollY: window.scrollY, distance: 0 };
+      pressModule(module.slug);
     },
     onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
       const gesture = pressGesture.current;
       // Movement can end the visual press without cancelling a native click.
       // Mobile browsers still accept taps with small finger drift; only an
       // actual pointercancel (native scrolling) should suppress navigation.
-      if (gesture && gesture.pointerId === event.pointerId
-        && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) clearPressFeedback();
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      gesture.distance = Math.max(gesture.distance, Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y));
+      if (gesture.distance > 10) clearPressFeedback();
     },
-    onPointerUp: () => releasePress(),
+    onPointerUp: (event: PointerEvent<HTMLButtonElement>) => {
+      const gesture = pressGesture.current;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      const distance = Math.max(gesture.distance, Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y));
+      // iOS can withhold the compatibility click after a valid touch. Commit
+      // the tap on release, while cancelled scrolls, drags and multi-touch do
+      // not navigate. Mouse/keyboard and other native clicks keep onClick.
+      const touchTap = event.pointerType === "touch" && event.isPrimary !== false
+        && !cancelledPress.current && distance <= archiveTouchTapSlop
+        && Math.abs(window.scrollY - gesture.scrollY) <= 1;
+      const hit = touchTap ? document.elementFromPoint?.(event.clientX, event.clientY) : null;
+      const target = hit?.closest<HTMLElement>(".archive-category-hotspot, .archive-click-cue-hotspot");
+      const sameModule = target?.dataset.slug === module.slug || target?.dataset.cueSlug === module.slug;
+      releasePress();
+      if (touchTap && sameModule) enter(module);
+    },
     onPointerCancel: () => releasePress(true),
+    onTouchEnd: (event: ReactTouchEvent<HTMLButtonElement>) => {
+      // Do not let a delayed compatibility click reach the destination page.
+      if (navigating.current && event.cancelable) event.preventDefault();
+    },
+    onTouchCancel: () => releasePress(true),
+    onContextMenu: () => releasePress(true),
     onPointerLeave: clearPressFeedback,
     onBlur: () => releasePress(),
     onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       cancelledPress.current = false;
-      pressModule(slug);
+      pressModule(module.slug);
     },
     onKeyUp: () => releasePress(),
   });
@@ -379,13 +431,13 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
           const targetModule = visibleModules.find((item) => item.slug === slug);
           if (!targetModule) return null;
           return preview ? <div key={slug} className="archive-click-cue-hotspot" data-cue-slug={slug} style={layout}><span>{targetModule.title}</span></div> :
-            <button key={slug} type="button" className={`archive-click-cue-hotspot ${pressedSlug === slug ? "is-pressed" : ""}`} data-cue-slug={slug} style={layout} aria-label={`点击进入${targetModule.title}`} disabled={leaving || guideEntry} {...modulePressHandlers(slug)} onClick={() => enter(targetModule)}><span>{targetModule.title}</span></button>;
+            <button key={slug} type="button" className={`archive-click-cue-hotspot ${pressedSlug === slug ? "is-pressed" : ""}`} data-cue-slug={slug} style={layout} aria-label={`点击进入${targetModule.title}`} disabled={leaving || guideEntry} {...modulePressHandlers(targetModule)} onClick={() => enter(targetModule)}><span>{targetModule.title}</span></button>;
         })}
         {visibleModules.map((module) => {
           const layout = getArchiveModuleLayout(module.slug)!;
           const style = { left: layout.left, top: layout.top, width: layout.width, height: layout.height, clipPath: layout.clipPath, "--archive-order": layout.order } as CSSProperties;
           return preview ? <div key={module.id} className="archive-category-hotspot" data-slug={module.slug} style={style}><span>{module.title}</span></div> :
-            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving || guideEntry} {...modulePressHandlers(module.slug)} onClick={() => enter(module)}><span>{module.title}</span></button>;
+            <button key={module.id} type="button" className={`archive-category-hotspot ${pressedSlug === module.slug ? "is-pressed" : ""}`} data-slug={module.slug} style={style} aria-label={`${layout.label}，${module.cards.length}项档案`} disabled={leaving || guideEntry} {...modulePressHandlers(module)} onClick={() => enter(module)}><span>{module.title}</span></button>;
         })}
       </nav>
     </div>
