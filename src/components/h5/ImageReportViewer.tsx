@@ -21,6 +21,9 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
+  const reportRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const scrollToPageStart = useRef(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
   const pinchStart = useRef<{ distance: number; scale: number; contentX: number; contentY: number } | null>(null);
@@ -35,6 +38,15 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
     if (pinchFrame.current !== null) window.cancelAnimationFrame(pinchFrame.current);
     if (anchorFrame.current !== null) window.cancelAnimationFrame(anchorFrame.current);
   }, []);
+
+  useEffect(() => {
+    if (!scrollToPageStart.current || !reportRef.current) return;
+    scrollToPageStart.current = false;
+    // Bottom pagination should start the new image at its heading, including
+    // when the next image is shorter or has not finished loading yet.
+    titleRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: window.scrollY + reportRef.current.getBoundingClientRect().top, behavior: "instant" });
+  }, [pageIndex]);
 
   const touchDistance = (event: TouchEvent<HTMLDivElement>) => {
     const [first, second] = [event.touches[0], event.touches[1]];
@@ -118,6 +130,7 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
 
   const selectPage = (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= pages.length || nextIndex === pageIndex) return;
+    scrollToPageStart.current = true;
     setPageIndex(nextIndex);
     setFailed(false);
     setLoaded(false);
@@ -137,9 +150,9 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
     setRetry((value) => value + 1);
   };
 
-  return <article className="image-report" data-scale={scale} data-page={pageIndex + 1}>
+  return <article ref={reportRef} className="image-report" data-scale={scale} data-page={pageIndex + 1}>
     <header>
-      <div><h2>{asset.title}</h2>{asset.description && <p>{asset.description}</p>}<small className="report-page-count">第 {pageIndex + 1} / {pages.length} 页</small></div>
+      <div><h2 ref={titleRef} tabIndex={-1}>{asset.title}</h2>{asset.description && <p>{asset.description}</p>}<small className="report-page-count">第 {pageIndex + 1} / {pages.length} 页</small></div>
       <div className="report-zoom-controls" aria-label="图片缩放">
         <button type="button" onClick={() => updateScale(scale - .25)} aria-label="缩小报告图片" disabled={scale === 1}>−</button>
         <output aria-live="polite">{Math.round(scale * 100)}%</output>
@@ -147,7 +160,6 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
         <button type="button" onClick={() => updateScale(1)} aria-label="恢复报告图片原始大小" disabled={scale === 1}>还原</button>
       </div>
     </header>
-    {pages.length > 1 && <nav className="report-page-controls" aria-label={`${asset.title}图片页`}><button type="button" onClick={() => selectPage(pageIndex - 1)} disabled={pageIndex === 0}>上一页</button><span>{pageIndex + 1} / {pages.length}</span><button type="button" onClick={() => selectPage(pageIndex + 1)} disabled={pageIndex === pages.length - 1}>下一页</button></nav>}
     {failed ? <div className="report-error" role="alert"><span className="report-error-brand">诚实纽雀检测档案</span><strong>{asset.title} · 第 {pageIndex + 1} 页</strong><p>报告图片暂时没有加载出来，请检查网络后重试。</p><div className="report-error-actions"><button type="button" onClick={retryPage}>重新加载</button>{returnHref ? <button className="button button-secondary" type="button" onClick={() => router.replace(returnHref)}>{returnLabel}</button> : null}</div></div> :
       <div ref={stageRef} data-swipe-back-ignore={scale > 1 || undefined} className={`report-image-stage ${scale > 1 ? "is-zoomed" : "is-natural"} ${loaded ? "is-loaded" : "is-loading"} ${dragging ? "is-dragging" : ""} ${pinching ? "is-pinching" : ""}`} aria-label={scale > 1 ? "报告图片已放大，可在图片区域内平移或双指缩放" : "报告图片按整页显示，原始大小随页面滚动；放大后才可平移"} onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); updateScale(scale === 1 ? 2 : 1, { x: event.clientX - bounds.left, y: event.clientY - bounds.top }); }}
         onTouchStart={(event) => {
@@ -207,5 +219,11 @@ export function ImageReportViewer({ asset, returnHref, returnLabel = "返回分�
         {!loaded && <div className="report-image-skeleton" aria-hidden="true"/>}
         <div className="report-image-scroll"><Image key={`${page.id}-${retry}`} unoptimized width={1200} height={1600} src={page.href} alt={`${asset.title} 第 ${pageIndex + 1} 页`} draggable={false} style={{ width: `${scale * 100}%` }} onLoad={() => setLoaded(true)} onError={() => setFailed(true)}/></div>
       </div>}
+    {pages.length > 1 && <nav className="report-page-controls" aria-label={`${asset.title}图片页`}>
+      <p className="report-page-turn-hint">{pageIndex < pages.length - 1 ? "点击翻页，查看下一份报告" : "当前为最后一页，可返回查看上一份报告"}</p>
+      <button type="button" onClick={() => selectPage(pageIndex - 1)} disabled={pageIndex === 0}>上一页</button>
+      <span aria-live="polite">{pageIndex + 1} / {pages.length}</span>
+      <button className="report-page-next" type="button" onClick={() => selectPage(pageIndex + 1)} disabled={pageIndex === pages.length - 1}>下一页</button>
+    </nav>}
   </article>;
 }

@@ -1170,9 +1170,11 @@ html[data-guide-route-entry] .reports-archive-final .reports-archive-entry-batch
 .report-zoom-controls button, .report-error button { min-width: 44px; min-height: 44px; border: 1px solid var(--color-border); border-radius: .65rem; color: var(--color-ink); background: white; }
 .report-zoom-controls button:disabled { opacity: .4; }
 .report-zoom-controls output { min-width: 3rem; text-align: center; font-size: .75rem; }
-.report-page-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-top: 1px solid var(--color-border); background: rgb(255 255 255 / .72); }
-.report-page-controls button { min-height: 40px; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-ink); background: white; }
-.report-page-controls button:last-child { justify-self: stretch; }.report-page-controls button:disabled { opacity: .42; }
+.report-page-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-3) var(--space-2); padding: var(--space-4); border-top: 1px solid var(--color-border); background: rgb(255 255 255 / .72); }
+.report-page-turn-hint { grid-column: 1 / -1; margin: 0; color: var(--color-ink); font-size: var(--report-summary-size); line-height: 1.5; text-align: center; }
+.report-page-controls button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-ink); background: white; }
+.report-page-controls .report-page-next:not(:disabled) { border-color: var(--report-accent); background: var(--report-accent-soft); font-weight: 700; }
+.report-page-controls button:disabled { opacity: .42; }
 .report-page-controls span { min-width: 4rem; text-align: center; color: var(--color-muted); font-size: .78rem; }
 .report-image-stage { position: relative; width: 100%; height: auto; min-height: 0; overflow: visible; contain: layout; background: #eee8de; cursor: zoom-in; touch-action: pan-y; }
 .report-image-stage.is-zoomed { height: clamp(22rem,68vh,46rem); height: clamp(22rem,68svh,46rem); overflow: auto; contain: layout paint; overscroll-behavior: contain; cursor: grab; touch-action: none; -webkit-overflow-scrolling: touch; }

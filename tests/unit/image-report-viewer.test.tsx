@@ -12,6 +12,33 @@ describe("ImageReportViewer", () => {
 
   beforeEach(() => vi.clearAllMocks());
 
+  it("starts each page at the report heading and allows paging away from a failed image", () => {
+    const { container } = render(<ImageReportViewer asset={asset}/>);
+    const report = container.querySelector(".image-report") as HTMLElement;
+    const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY")!;
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 2400 });
+    vi.spyOn(report, "getBoundingClientRect").mockReturnValue({ top: -2000 } as DOMRect);
+    const scrollTo = vi.mocked(window.scrollTo);
+    try {
+      expect(scrollTo).not.toHaveBeenCalled();
+      fireEvent.load(screen.getByRole("img"));
+      fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+      expect(screen.getByRole("heading", { name: asset.title })).toHaveFocus();
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 400, behavior: "instant" });
+      expect(screen.getByRole("img")).toHaveAttribute("src", asset.pages[1].href);
+      fireEvent.load(screen.getByRole("img"));
+      // A delayed image load must not move a reader who has started scrolling.
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      fireEvent.error(screen.getByRole("img"));
+      fireEvent.click(screen.getByRole("button", { name: "上一页" }));
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByRole("img")).toHaveAttribute("src", asset.pages[0].href);
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+    } finally {
+      Object.defineProperty(window, "scrollY", originalScrollY);
+    }
+  });
+
   it("keeps the currently visible reading anchor when entering zoom", () => {
     const frames: FrameRequestCallback[] = [];
     const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frames.push(callback); return frames.length; });
