@@ -246,7 +246,7 @@ describe("multi-page H5 interactions", () => {
     window.dispatchEvent(new Event("pagehide"));
   });
 
-  it.each(["pointercancel", "pointerleave", "pointermove"])("clears folder feedback on %s without navigating, and accepts the next tap", (type) => {
+  it("suppresses a native scroll cancellation after movement and accepts the next tap", () => {
     const slug = "review-assurance";
     const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: "复核保障", description: null, cards: [] }]}/>);
     const hotspot = container.querySelector<HTMLButtonElement>(`[data-slug="${slug}"]`)!;
@@ -260,7 +260,8 @@ describe("multi-page H5 interactions", () => {
     };
     pointer("pointerdown");
     expect(archive).toHaveAttribute("data-pressed-slug", slug);
-    pointer(type === "pointerleave" ? "pointerout" : type, 280);
+    pointer("pointermove", 280);
+    pointer("pointercancel", 280);
     expect(archive).not.toHaveAttribute("data-pressed-slug");
     fireEvent.click(hotspot);
     expect(archive).not.toHaveClass("is-leaving");
@@ -270,6 +271,30 @@ describe("multi-page H5 interactions", () => {
     fireEvent.click(hotspot);
     expect(archive).toHaveClass("is-leaving");
     expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
+    window.dispatchEvent(new Event("pagehide"));
+  });
+
+  it.each(["pointermove", "pointerout"])("accepts the browser's valid click after %s instead of requiring another tap", (type) => {
+    const slug = "review-assurance";
+    const { container } = render(<ReportsArchive modules={[{ id: slug, slug, title: "复核保障", description: null, cards: [] }]}/>);
+    const hotspot = container.querySelector<HTMLButtonElement>(`[data-slug="${slug}"]`)!;
+    const archive = container.querySelector(".reports-archive");
+    const pointer = (name: string, x = 200, y = 300) => {
+      const event = new Event(name, { bubbles: true, cancelable: true });
+      for (const [key, value] of Object.entries({ pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: x, clientY: y })) {
+        Object.defineProperty(event, key, { value });
+      }
+      fireEvent(hotspot, event);
+    };
+    pointer("pointerdown");
+    // A native Chromium tap still emits click after this 11.3px diagonal drift.
+    pointer(type, 208, 308);
+    expect(archive).not.toHaveAttribute("data-pressed-slug");
+    pointer("pointerup", 208, 308);
+    fireEvent.click(hotspot);
+    expect(archive).toHaveClass("is-leaving");
+    expect(document.documentElement).toHaveAttribute("data-category-route-entry", slug);
+    expect(document.documentElement).toHaveAttribute(categoryRouteLoadingFeedbackAttribute, document.documentElement.getAttribute(categoryRouteAttemptAttribute)!);
     window.dispatchEvent(new Event("pagehide"));
   });
 

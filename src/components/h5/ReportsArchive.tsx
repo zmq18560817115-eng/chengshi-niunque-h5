@@ -311,10 +311,14 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     setPressedSlug(slug);
   };
 
+  const clearPressFeedback = () => {
+    if (!navigating.current) setPressedSlug(null);
+  };
+
   const releasePress = (cancelled = false) => {
     if (cancelled && pressGesture.current) cancelledPress.current = true;
     pressGesture.current = null;
-    if (!navigating.current) setPressedSlug(null);
+    clearPressFeedback();
   };
 
   const modulePressHandlers = (slug: string) => ({
@@ -326,14 +330,15 @@ function ReportsArchiveReady({ modules, preview = false, config = defaultH5SiteC
     },
     onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
       const gesture = pressGesture.current;
-      // Clear feedback as soon as a touch turns into scrolling; never leave a
-      // highlighted folder behind or turn a cancelled drag into navigation.
+      // Movement can end the visual press without cancelling a native click.
+      // Mobile browsers still accept taps with small finger drift; only an
+      // actual pointercancel (native scrolling) should suppress navigation.
       if (gesture && gesture.pointerId === event.pointerId
-        && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) releasePress(true);
+        && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) clearPressFeedback();
     },
     onPointerUp: () => releasePress(),
     onPointerCancel: () => releasePress(true),
-    onPointerLeave: () => releasePress(true),
+    onPointerLeave: clearPressFeedback,
     onBlur: () => releasePress(),
     onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => {
       if (event.key !== "Enter" && event.key !== " ") return;
