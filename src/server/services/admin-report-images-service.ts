@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { DEFAULT_H5_CONTENT } from "@/config/default-h5-content";
-import { resolveCategoryCardCopy } from "@/config/h5-card-copy";
+import { resolveCategoryCardCopy, resolveCategoryReportTitle } from "@/config/h5-card-copy";
 import { getCategoryTheme } from "@/config/h5-category-themes";
 import { prisma } from "@/server/db/prisma";
 import { isProductionPublicRecord } from "@/server/public-report-policy";
@@ -51,7 +51,7 @@ export class AdminReportImagesService {
       return [{ id: card.id, title: copy.title, category: getCategoryTheme(item.slug).label, slug: item.slug,
         href: `/reports/${item.slug}/items/${card.id}/reports`, revision: revision(card),
         reports: card.assets.filter((asset) => asset.assetType === "IMAGE" && isProductionPublicRecord(asset)).map((asset) => ({
-          id: asset.id, title: asset.title, published: asset.contentStatus === "PUBLISHED" && asset.isOnline,
+          id: asset.id, title: resolveCategoryReportTitle(item.slug, card, asset.title), published: asset.contentStatus === "PUBLISHED" && asset.isOnline,
           pages: (asset.pages.length ? asset.pages : asset.storageKey ? [{ id: asset.id }] : []).map((page) => ({ id: page.id,
             href: `/api/admin/report-images/${asset.id}?pageId=${encodeURIComponent(page.id)}&v=${asset.updatedAt.getTime()}` })),
         })),

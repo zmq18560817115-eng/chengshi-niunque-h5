@@ -15,7 +15,7 @@ export const categoryContentEnd = mapped((slug) => Math.max(
   ...categoryArtworkLayers[slug].filter((layer) => layer.id !== "paper" && layer.id !== "folder").map((layer) => layer.y + layer.height),
   ...categoryCardLayouts[slug].map((card) => (card.y + card.height) * 2),
 ));
-const legacyTitles: Record<Slug, string[][]> = { "inspection-projects": [["营养成分检测"], [], ["安全指标检测"]], "review-assurance": [["配方与标签"], [], ["稳定性与感官"]], "production-traceability": [[], ["质量管理"]] };
+const legacyTitles: Record<Slug, string[][]> = { "inspection-projects": [["营养成分检测"], [], ["安全指标检测"]], "review-assurance": [["配方与标签"], [], ["稳定性与感官", "产品基础型检"]], "production-traceability": [[], ["质量管理"]] };
 export const categoryCardFallbacks = mapped<CategoryCardFallback[]>((slug) => designAssets.categories[slug].cards.map((card, index) => ({ title: card.title, description: card.description, buttonText: "点击查看报告", titleArtwork: card.titleArtwork, descriptionArtwork: card.descriptionArtwork, controls: card.controls, legacyTitles: legacyTitles[slug][index] })));
 export const categoryControlAssets = mapped((slug) => categoryCardFallbacks[slug].flatMap((card) => [card.titleArtwork.src, ...(card.descriptionArtwork ? [card.descriptionArtwork.src] : []), ...card.controls.map((part) => part.src)]));
 export const categoryReadinessAssets = mapped((slug) => [...new Set([designAssets.categories[slug].tail, ...categoryArtworkLayers[slug].map((part) => part.src), ...categoryCardLayouts[slug].map((card) => card.backplate.src), ...categoryControlAssets[slug]])]);

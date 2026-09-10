@@ -23,12 +23,12 @@ export const DEFAULT_H5_CONTENT = [
     id: "seed-module-review",
     slug: "review-assurance",
     title: "复核保障",
-    description: "查看非必要物质实测、原料与工艺及产品基础型检资料。",
+    description: "查看非必要物质实测、原料与工艺及过敏原项筛查资料。",
     sortOrder: 20,
     cards: [
       { id: "seed-card-review-formula-label", title: "非必要物质实测", description: "包含EPA、肉豆蔻酸实测含量，总糖实测含量，避免宝宝摄入过多的非必要脂肪酸和糖分，让每口都是需要的营养", sortOrder: 10, legacyTitle: "配方与标签" },
       { id: "seed-card-review-raw-process", title: "原料与工艺", description: "包含FMT580藻油原料COA、原料溯源。妈妈可以看到原料来自哪里", sortOrder: 20 },
-      { id: "seed-card-review-stability-sensory", title: "产品基础型检", description: "工厂出厂检测和第三方检测，双层兜底检测", sortOrder: 30, legacyTitle: "稳定性与感官" },
+      { id: "seed-card-review-stability-sensory", title: "过敏原项筛查", description: "提前为宝宝排查150项致敏风险", sortOrder: 30, legacyTitle: "稳定性与感官" },
     ],
   },
   {

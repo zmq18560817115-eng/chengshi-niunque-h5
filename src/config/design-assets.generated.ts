@@ -673,21 +673,21 @@ export const designAssets = {
             "width": 1751,
             "height": 807
           },
-          "title": "产品基础型检",
-          "description": "工厂出厂检测和第三方检测，双层兜底检测",
+          "title": "过敏原项筛查",
+          "description": "提前为宝宝排查150项致敏风险",
           "titleArtwork": {
-            "src": "/design/2026-09-07/runtime/review-111.webp",
-            "x": 257,
+            "src": "/design/2026-09-07/runtime/review-147.webp",
+            "x": 258,
             "y": 2876,
-            "width": 588,
-            "height": 92
+            "width": 585,
+            "height": 94
           },
           "descriptionArtwork": {
-            "src": "/design/2026-09-07/runtime/review-128.webp",
-            "x": 257,
-            "y": 3011,
-            "width": 1073,
-            "height": 56
+            "src": "/design/2026-09-07/runtime/review-146.webp",
+            "x": 256,
+            "y": 3000,
+            "width": 795,
+            "height": 55
           },
           "controls": [
             {

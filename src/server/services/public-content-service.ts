@@ -8,6 +8,7 @@ import { isProductionPublicRecord } from "@/server/public-report-policy";
 import { hasMatchingReportImageExtension, isStaticReportImageMimeType } from "@/server/report-image-policy";
 import { resolveH5SiteConfig, type H5SiteConfig } from "./h5-site-config";
 import { latestBatchSettingKey } from "@/config/h5-latest-batch";
+import { resolveCategoryReportTitle } from "@/config/h5-card-copy";
 
 export type PublicAsset = {
   id: string;
@@ -129,7 +130,7 @@ export class PublicContentService {
             footerNote: card.footerNote,
             assets: assets.map((asset) => ({
               id: asset.id,
-              title: asset.title,
+              title: resolveCategoryReportTitle(module.slug, card, asset.title),
               description: asset.description,
               type: "IMAGE" as const,
               href: assetHref(asset),

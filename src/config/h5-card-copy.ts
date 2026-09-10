@@ -29,10 +29,28 @@ export function resolveCategoryCardCopy(slug: string, card: CardCopy | null, slo
   const placeholderTitle = !card || /^第\d+项资料$/.test(card.title.trim())
     || (identityIndex >= 0 && fallback?.legacyTitles.includes(card.title));
   const placeholderDescription = !description || description === "资料整理中，正式发布后可在此查看。"
-    || (identityIndex >= 0 && legacyDescriptions.has(description));
+    || (identityIndex >= 0 && legacyDescriptions.has(description))
+    || (slug === "review-assurance" && card?.id === "seed-card-review-stability-sensory"
+      && description === "工厂出厂检测和第三方检测，双层兜底检测");
   return {
     title: fallback && placeholderTitle ? fallback.title : card?.title ?? fallback?.title ?? "报告资料",
     description: fallback && placeholderDescription ? fallback.description : description,
     buttonText: card?.assets.length ? `查看${card.assets.length}份报告` : card ? "暂无报告" : fallback?.buttonText ?? "查看报告",
   };
+}
+
+// Older uploads used the card's former title as their automatic report name.
+// Resolve only those exact names for the same fixed card; retain custom names.
+export function resolveCategoryReportTitle(slug: string, card: CardCopy, reportTitle: string) {
+  const defaults = DEFAULT_H5_CONTENT.find((item) => item.slug === slug);
+  const index = defaults?.cards.findIndex((item) => item.id === card.id) ?? -1;
+  const theme = getCategoryTheme(slug);
+  if (index < 0 || !theme.artworkLayers) return reportTitle;
+  const legacyTitles = theme.cardFallbacks[index].legacyTitles;
+  const title = resolveCategoryCardCopy(slug, card).title;
+  for (const legacyTitle of legacyTitles) {
+    if (reportTitle === legacyTitle) return title;
+    if (reportTitle === `${legacyTitle}报告`) return `${title}报告`;
+  }
+  return reportTitle;
 }
